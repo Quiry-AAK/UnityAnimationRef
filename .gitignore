@@ -11,3 +11,4 @@ models/*
 props/*
 !props/.gitkeep
 animations/*.fbx
+.ports/

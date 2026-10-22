@@ -1,5 +1,6 @@
 // Anim Ref MCP sunucusu (stdio). Editör sunucusuna (server.js) HTTP ile bağlanır; çalışmıyorsa başlatır.
 import { spawn } from 'node:child_process';
+import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,8 +10,28 @@ import { z } from 'zod';
 import * as THREE from 'three';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.ANIMREF_PORT || 5177);
+// Her MCP süreci (= her chat) kendi editör portunu alır; ANIMREF_PORT verilirse o sabit kullanılır (ör. 5177 elle açılan editör).
+const freePort = (port) => new Promise((ok) => { const s = net.createServer(); s.once('error', () => ok(false)); s.listen(port, '127.0.0.1', () => s.close(() => ok(true))); });
+let lockFile = null;
+async function pickPort() {
+  if (process.env.ANIMREF_PORT) return Number(process.env.ANIMREF_PORT);
+  const dir = path.join(ROOT, '.ports'); fs.mkdirSync(dir, { recursive: true });
+  for (let p = 5178; p < 5278; p++) {
+    const lock = path.join(dir, p + '.lock');
+    try { const pid = Number(fs.readFileSync(lock, 'utf8')); try { process.kill(pid, 0); continue; } catch { fs.unlinkSync(lock); } } catch { /* kilit yok */ }
+    try { fs.writeFileSync(lock, String(process.pid), { flag: 'wx' }); } catch { continue; }
+    if (await freePort(p)) { lockFile = lock; return p; }
+    fs.unlinkSync(lock);
+  }
+  throw new Error('Boş editör portu yok');
+}
+const PORT = await pickPort();
 const BASE = `http://127.0.0.1:${PORT}`;
+let child = null;
+const stopChild = () => { try { child?.kill(); } catch { /* yok */ } try { if (lockFile) fs.unlinkSync(lockFile); } catch { /* yok */ } };
+process.on('exit', stopChild);
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { stopChild(); process.exit(0); });
+process.stdin.on('end', () => { stopChild(); process.exit(0); });
 const EXPORTS = path.join(ROOT, 'exports');
 
 const get = (p) => fetch(BASE + p).then((r) => r.json());
@@ -20,7 +41,7 @@ const post = async (p, body) => {
 };
 async function ensureServer() {
   try { await get('/api/ping'); return; } catch { /* başlat */ }
-  spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  child = spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, stdio: 'ignore', windowsHide: true, env: { ...process.env, ANIMREF_PORT: String(PORT) } });
   for (let i = 0; i < 30; i++) { await new Promise((r) => setTimeout(r, 200)); try { await get('/api/ping'); return; } catch { /* bekle */ } }
   throw new Error('Editör sunucusu başlatılamadı');
 }
