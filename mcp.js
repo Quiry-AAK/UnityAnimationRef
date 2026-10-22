@@ -284,5 +284,22 @@ server.registerTool('export_for_unity', {
   return text({ paths });
 });
 
+
+// ── Unity'ye tek adımda gönderim
+server.registerTool('get_unity_info', {
+  description: 'Unity entegrasyonu durumu: ayarlı proje klasörü, seçili karakter, Unity projesindeki karakter adayları (fbx/prefab).',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(await get('/api/unity')); });
+
+server.registerTool('set_unity_project', {
+  description: 'Unity proje klasörünü ve karakterini ayarlar (bir kez yapılır). Importer scriptleri projeye otomatik kurulur/güncellenir. character: Unity içindeki yol, örn. "Assets/Characters/YBot.fbx" (get_unity_info ile adayları gör). mode: Auto (önerilen; Humanoid avatar varsa Humanoid yoksa Generic) | Generic (birebir, avatarı Generic olmalı) | Humanoid.',
+  inputSchema: { project: z.string().describe('Unity proje klasörü (içinde Assets ve ProjectSettings olan)'), character: z.string().optional(), mode: z.enum(['Auto', 'Generic', 'Humanoid']).optional() },
+}, async ({ project, character, mode }) => { await ensureServer(); const r = await post('/api/unity/config', { project, character, mode }); return text({ project: r.project, character: r.character || r.guess, mode: r.mode, valid: r.valid, candidates: r.characters.slice(0, 30) }); });
+
+server.registerTool('send_to_unity', {
+  description: 'Animasyonu TEK ADIMDA Unity projesine gönderir: Assets/AnimRef/ içine yazar ve Unity otomatik .anim (Assets/AnimRef/Clips/<ad>.anim) üretir. animation: kütüphaneden ad (yoksa editördeki mevcut), all: tüm kütüphane. Unity açıksa ~birkaç saniyede biter; kapalıysa açılınca aktarılır. Önce set_unity_project ayarlı olmalı.',
+  inputSchema: { animation: z.string().optional(), all: z.boolean().default(false) },
+}, async ({ animation, all }) => { await ensureServer(); return text(await post('/api/unity/send', { animation, all })); });
+
 await ensureServer().catch(() => {});
 await server.connect(new StdioServerTransport());

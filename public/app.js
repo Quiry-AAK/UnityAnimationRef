@@ -725,6 +725,37 @@ $('#togRight').onclick = () => setPanel('right', !panelOpen('right'));
   setPanel('left', saved('left', false)); setPanel('right', saved('right', false));
 }
 
+
+// ───────────────────────── Unity'ye tek tık gönderim
+async function refreshUnity() {
+  const u = await fetch('/api/unity').then((r) => r.json()).catch(() => null); if (!u) return;
+  if (document.activeElement !== $('#uProject')) $('#uProject').value = u.project || '';
+  const sel_ = $('#uChar'); sel_.innerHTML = '';
+  const short = (c) => c.replace(/^Assets[/]/, '');
+  for (const c of u.characters) sel_.add(new Option(short(c), c));
+  if (u.character && !u.characters.includes(u.character)) sel_.add(new Option(short(u.character), u.character));
+  sel_.value = u.character || u.guess || (u.characters[0] || '');
+  $('#uMode').value = u.mode || 'Auto';
+  $('#uStatus').textContent = u.valid ? `Proje bulundu · ${u.characters.length} karakter adayı` : u.project ? 'Geçersiz klasör (Assets/ProjectSettings yok)' : 'Önce Unity proje klasörünü yaz';
+  return u;
+}
+async function saveUnityCfg() {
+  const r = await api('/api/unity/config', { project: $('#uProject').value, character: $('#uChar').value || null, mode: $('#uMode').value });
+  if (r.error) { toast(r.error); $('#uStatus').textContent = r.error; return false; }
+  await refreshUnity(); return true;
+}
+async function sendUnity() {
+  if (!$('#uProject').value.trim()) { setPanel('right', true); $('#secUnity').open = true; toast("Önce Unity proje klasörünü seç"); return; }
+  if (!(await saveUnityCfg())) return;
+  toast("Unity'ye gönderiliyor…"); $('#uStatus').textContent = 'Gönderiliyor…';
+  await api('/api/anim', anim);
+  const r = await api('/api/unity/send', { all: $('#uAll').checked });
+  const msg = r.error ? 'Hata: ' + r.error : r.ok ? "Unity'ye aktarıldı: " + (r.clips || []).join(', ') : (r.note || 'Gönderildi');
+  toast(msg); $('#uStatus').textContent = msg;
+}
+$('#btnUSave').onclick = async () => { if (await saveUnityCfg()) toast('Unity ayarı kaydedildi'); };
+$('#btnUSend').onclick = sendUnity; $('#btnUnitySend').onclick = sendUnity;
+
 // ───────────────────────── klavye
 window.addEventListener('keydown', (e) => {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'checkbox') return;
@@ -770,7 +801,7 @@ es.addEventListener('render', async (e) => {
 
 // ───────────────────────── başlangıç
 (async function init() {
-  onResize(); await refreshModelList(); refreshPropFiles(); refreshLib();
+  onResize(); await refreshModelList(); refreshPropFiles(); refreshLib(); refreshUnity();
   const st = await fetch('/api/state').then((r) => r.json());
   props = (st.props || []).map((p) => ({ ...p }));
   try {

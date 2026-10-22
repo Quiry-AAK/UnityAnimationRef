@@ -7,6 +7,12 @@
 - Kod değişince (özellikle `server.js`, `mcp.js`) sunucuyu durdurup yeniden başlat; sadece `public/` dosyaları için sayfayı yenilemek yeter.
 - Windows'ta sunucuyu durdurmak: `Get-NetTCPConnection -LocalPort 5177 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
 
+## Unity'ye tek tıkla gönderme (önerilen)
+1. Sağ panel → **Unity**: Unity proje klasörünü yaz (içinde `Assets` ve `ProjectSettings` olan klasör), karakteri seç (Unity'deki Y Bot FBX/prefab'ı; adı eşleşiyorsa otomatik seçilir), **Kaydet**. Importer scriptleri projeye `Assets/Editor/AnimRef/` altına kendiliğinden kurulur ve her gönderimde güncellenir.
+2. **Dışa aktar → Unity'ye gönder** (ya da sağ paneldeki buton / MCP `send_to_unity`). Animasyon `Assets/AnimRef/` içine yazılır, Unity kendisi `Assets/AnimRef/Clips/<ad>.anim` üretir (Unity odakta olmasa da birkaç saniye içinde; kapalıysa açılınca).
+3. Mod **Otomatik**: karakter Humanoid ise Humanoid, değilse Generic. Mod seçmen gerekmez.
+4. Eşyalar (silah) için Unity'de Tools > Anim Ref > Import penceresindeki "Eşyaları karaktere ekle" kullanılır.
+
 ## Tipik akış
 1. Mixamo'dan karakteri **FBX, T-pose** olarak indir → `models/` klasörüne at (ya da editöre sürükle). Mixamo'dan animasyon indirirsen (FBX) editöre sürükle: kareler düzenlenebilir key'lere çevrilir ve kütüphaneye kaydolur.
 2. Editörde kemiği seç (viewport'taki mavi nokta ya da ☰ Kemikler), döndür/taşı, **◆ Key** ile key koy. Küçük düzeltmeler için "Tüm kareleri etkile" işaretle.

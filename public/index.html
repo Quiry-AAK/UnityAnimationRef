@@ -38,8 +38,9 @@
   <details class="menu right">
     <summary class="primary">Dışa aktar ▾</summary>
     <div class="menu-list">
+      <button class="item" id="btnUnitySend"><b>Unity'ye gönder</b> (otomatik .anim)</button>
       <button class="item" id="btnGif">GIF olarak kaydet</button>
-      <button class="item" id="btnUnity">Unity için kaydet (.json)</button>
+      <button class="item" id="btnUnity">Unity JSON dosyası olarak kaydet</button>
       <div class="hint-s">GIF ayarları: sağ panel → GIF</div>
     </div>
   </details>
@@ -90,6 +91,16 @@
         <label>Z<input type="number" id="ez" step="1"></label>
       </div>
       <label class="chk" title="Döndürmeyi tüm key'lere ekler (bütün animasyonu kaydırır)"><input type="checkbox" id="offsetAll"> Tüm kareleri etkile</label>
+    </details>
+
+    <details id="secUnity">
+      <summary>Unity</summary>
+      <label class="fl">Unity proje klasörü<input id="uProject" placeholder="örn: D:/Projeler/Oyunum"></label>
+      <label class="fl">Karakter (Unity'deki)<select id="uChar"></select></label>
+      <label class="fl">Mod<select id="uMode"><option value="Auto">Otomatik (önerilen)</option><option value="Generic">Generic (birebir)</option><option value="Humanoid">Humanoid</option></select></label>
+      <label class="chk"><input type="checkbox" id="uAll"> Kütüphanedeki tüm animasyonları gönder</label>
+      <div class="row"><button id="btnUSave">Kaydet</button><button id="btnUSend" class="primary">Unity'ye gönder</button></div>
+      <div id="uStatus" class="hint-s"></div>
     </details>
 
     <details id="secLib">

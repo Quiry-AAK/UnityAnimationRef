@@ -88,3 +88,6 @@ button.big { min-width:40px; background:var(--acc); color:#04121f; border-color:
 .li small { color:var(--dim); }
 .li button { padding:0 6px; }
 .btn.small { display:inline-block; margin-top:4px; font-size:12px; }
+
+.fl { display:flex; flex-direction:column; gap:2px; color:var(--dim); font-size:11px; margin:6px 0; }
+.fl input, .fl select { width:100%; }

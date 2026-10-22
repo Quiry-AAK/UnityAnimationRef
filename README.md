@@ -23,8 +23,8 @@ Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md)
 ## Klasörler
 - `models/` karakterler (Mixamo FBX, repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX)
 - `animations/` animasyon kütüphanesi (json repoda, fbx değil) · `exports/` çıktılar (gif, *.animref.json)
-- `unity/AnimRefImporter.cs` → Unity projesinde `Assets/Editor/` → Tools > Anim Ref > Import (Generic birebir, Humanoid yaklaşık; eşya ekleme dahil)
+- `unity/` Unity scriptleri — editörden "Unity'ye gönder" dediğinde projeye otomatik kurulur. Elle: `unity/AnimRefImporter.cs` → Unity projesinde `Assets/Editor/` → Tools > Anim Ref > Import (Generic birebir, Humanoid yaklaşık; eşya ekleme dahil)
 - `tools/run-cycle.mjs` örnek run animasyonu üretici
 
 ## MCP araçları
-get_status, set_keys, set_animation, get_user_edits, render_frame, list/save/load/delete_animation, list_props, attach/update/detach_prop, load_model, export_gif, export_for_unity (animation / all)
+get_status, set_keys, set_animation, get_user_edits, render_frame, list/save/load/delete_animation, list_props, attach/update/detach_prop, load_model, export_gif, export_for_unity, set_unity_project, get_unity_info, send_to_unity (Unity'ye tek adımda gönder)
