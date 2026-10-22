@@ -22,7 +22,11 @@ Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı · B kemi
 - **Mixamo kemik eksenleri dünya eksenine hizalı değil.** `tools/run-cycle.mjs` poz verirken dünya eksenlerinde (+Z ileri, +X karakterin solu, +Y yukarı) tanımlayıp FK ile local'e çevirir. `set_keys` ise parent-uzayı euler ile çalışır; "offset" modu rest poza göre sapma vermenin en kolay yoludur.
 - **Y Bot FBX'inde her kemiğin aynı isimli bir "skin" kopyası var** (three.js FBXLoader üretiyor). Kod, ebeveyniyle aynı adı taşıyan kemikleri atlar; yoksa liste sonsuz döngüye girer.
 - **Eşyalar** kemiğin REST (T-pose) dünya yönelimine göre konumlanır. Eşya modelinde +Z = ileri (namlu), +Y = yukarı, orijin = tutma noktası. Varsayılan el rotasyonu: sağ el `[0,0,-90]`, sol el `[0,0,90]`. Dosya eşyaları 1 metreye normalize edilir (varsayılan ölçek 0.3).
-- **Unity importer** karakteri bind/T-pose'ta bekler (rest pozu hedeften okur). Humanoid avatar varsa kareleri muscle eğrilerine çevirir, yoksa Transform eğrileri yazar. X ekseni aynalanır (sağ-el → sol-el). `props` bilgisi JSON'da var ama importer eşya oluşturmaz. **Unity tarafı henüz gerçek projede test edilmedi.**
+- **Unity importer** (Unity 6000.0.58f1 + Y Bot ile test edildi): karakteri bind/T-pose'ta bekler (rest pozu hedeften okur), X ekseni aynalanır (sağ-el → sol-el).
+  - **Generic** mod: Transform eğrileri yazar; gerçek Animator'da kemik konumları editörle birebir (mm düzeyi) çıktı. Animator'ın avatarı **Generic/None** olmalı (Humanoid avatarlı Animator transform eğrilerini yok sayar).
+  - **Humanoid** mod: kareleri HumanPoseHandler ile muscle eğrilerine bake eder. Humanoid kas limitleri yüzünden yaklaşık sonuç verir (el/ayak ~1–4 cm sapma, kalça yüksekliği birkaç cm). Humanoid karakterde bunu kullan.
+  - Eşyalar: Window'daki "Eşyaları karaktere ekle" (ya da `AnimRefImporter.AddProps`) JSON'daki `props`'u kemiklere takar. `builtin:*` eşyalar primitiflerle üretilir; dosya eşyaları projedeki aynı adlı prefab/model ile eşleşir (yoksa küp yer tutucu). Karakter T-pose'ta ve sahnede olmalı.
+  - Batch/`-nographics` testlerinde Animator'ı `cullingMode = AlwaysAnimate` yap; yoksa FBX'in varsayılan "Based On Renderers" ayarı yüzünden poz hiç güncellenmez (yanlış hata gibi görünür).
 - Veri klasörleri: `models/` (karakter), `animations/` (kütüphane: json düzenlenebilir, fbx ham), `props/` (eşya), `exports/` (çıktı). `project.json` son oturumun durumunu tutar (repoda yok).
 - Mixamo FBX'leri repoda yok (yeniden dağıtım); yeni kurulumda `models/` içine tekrar koy.
 

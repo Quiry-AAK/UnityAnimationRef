@@ -18,7 +18,8 @@ public static class AnimRefImporter
 
     [Serializable] class BoneInfo { public string name, parent; public float[] restQ, restP; }
     [Serializable] class TrackInfo { public string bone; public float[] rot, pos; }
-    [Serializable] class Data { public string format, name; public float fps, unitScale; public int length; public bool loop; public BoneInfo[] bones; public TrackInfo[] trackList; }
+    [Serializable] class PropInfo { public string id, prop, bone; public float[] pos, rot; public float scale; }
+    [Serializable] class Data { public string format, name; public float fps, unitScale; public int length; public bool loop; public BoneInfo[] bones; public TrackInfo[] trackList; public PropInfo[] props; }
 
     static string Norm(string s)
     {
@@ -198,6 +199,88 @@ public static class AnimRefImporter
         finally { Object.DestroyImmediate(inst); }
     }
 
+
+    // ---- Eşyalar (silah vb.): JSON'daki props'u karakterin kemiklerine ekler ----
+    // Karakter bind/T-pose'ta olmalı. builtin:* eşyalar basit primitiflerle üretilir; dosya eşyaları
+    // projedeki aynı adlı prefab/model ile eşleşir (bulunamazsa küp yer tutucu). Sahnedeki karaktere eklenir.
+    static readonly Dictionary<string, (Vector3 size, Vector3 pos)[]> Builtin = new Dictionary<string, (Vector3, Vector3)[]>
+    {
+        ["pistol"] = new[] { (new Vector3(0.032f, 0.11f, 0.045f), new Vector3(0, -0.02f, -0.005f)), (new Vector3(0.036f, 0.045f, 0.19f), new Vector3(0, 0.055f, 0.06f)), (new Vector3(0.02f, 0.03f, 0.05f), new Vector3(0, 0, 0.04f)) },
+        ["rifle"] = new[] { (new Vector3(0.05f, 0.07f, 0.55f), new Vector3(0, 0.04f, 0.2f)), (new Vector3(0.035f, 0.1f, 0.04f), new Vector3(0, -0.03f, 0)), (new Vector3(0.045f, 0.09f, 0.2f), new Vector3(0, 0.03f, -0.2f)), (new Vector3(0.02f, 0.02f, 0.3f), new Vector3(0, 0.05f, 0.62f)), (new Vector3(0.03f, 0.14f, 0.06f), new Vector3(0, -0.07f, 0.2f)) },
+        ["sword"] = new[] { (new Vector3(0.03f, 0.12f, 0.03f), new Vector3(0, 0, 0)), (new Vector3(0.12f, 0.02f, 0.04f), new Vector3(0, 0.07f, 0)), (new Vector3(0.04f, 0.8f, 0.01f), new Vector3(0, 0.48f, 0)) },
+        ["box"] = new[] { (new Vector3(0.2f, 0.2f, 0.2f), Vector3.zero) },
+    };
+
+    static GameObject BuildProp(string prop)
+    {
+        var root = new GameObject("prop");
+        if (prop.StartsWith("builtin:"))
+        {
+            if (!Builtin.TryGetValue(prop.Substring(8), out var parts)) parts = Builtin["box"];
+            foreach (var (size, pos) in parts)
+            {
+                var c = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(c.GetComponent<Collider>());
+                c.transform.SetParent(root.transform, false);
+                c.transform.localScale = size; c.transform.localPosition = new Vector3(-pos.x, pos.y, pos.z);
+            }
+            return root;
+        }
+        string nameOnly = Path.GetFileNameWithoutExtension(prop);
+        GameObject asset = null;
+        foreach (var guid in AssetDatabase.FindAssets(nameOnly + " t:GameObject"))
+        {
+            var p = AssetDatabase.GUIDToAssetPath(guid);
+            if (Path.GetFileNameWithoutExtension(p) == nameOnly) { asset = AssetDatabase.LoadAssetAtPath<GameObject>(p); break; }
+        }
+        if (asset == null)
+        {
+            Debug.LogWarning("AnimRef: eşya asset'i bulunamadı (" + prop + "), küp yer tutucu kullanıldı");
+            var c = GameObject.CreatePrimitive(PrimitiveType.Cube); Object.DestroyImmediate(c.GetComponent<Collider>());
+            c.transform.SetParent(root.transform, false); c.transform.localScale = Vector3.one * 0.2f; return root;
+        }
+        // editördeki gibi: 1 m'ye normalize et ve merkeze al
+        var inst = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+        inst.transform.SetParent(root.transform, false);
+        var b = new Bounds(); bool first = true;
+        foreach (var r in inst.GetComponentsInChildren<Renderer>()) { if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds); }
+        float max = Mathf.Max(b.size.x, b.size.y, b.size.z, 1e-6f);
+        inst.transform.position -= b.center; // merkeze al (root kimlikte)
+        root.transform.localScale = Vector3.one / max;
+        var wrapper = new GameObject("prop"); root.transform.SetParent(wrapper.transform, false); return wrapper;
+    }
+
+    static Quaternion EulerXYZ(float rx, float ry, float rz)
+    {
+        Quaternion Ax(float a, Vector3 v) { float h = a * Mathf.Deg2Rad * 0.5f; return new Quaternion(v.x * Mathf.Sin(h), v.y * Mathf.Sin(h), v.z * Mathf.Sin(h), Mathf.Cos(h)); }
+        return Ax(rx, Vector3.right) * Ax(ry, Vector3.up) * Ax(rz, Vector3.forward); // three.js XYZ (sağ-el)
+    }
+
+    public static GameObject[] AddProps(string jsonPath, GameObject character)
+    {
+        var data = JsonUtility.FromJson<Data>(File.ReadAllText(jsonPath));
+        var result = new List<GameObject>();
+        if (data?.props == null) return result.ToArray();
+        var byNorm = new Dictionary<string, Transform>();
+        foreach (var t in character.GetComponentsInChildren<Transform>(true)) byNorm[Norm(t.name)] = t;
+        foreach (var p in data.props)
+        {
+            if (!byNorm.TryGetValue(Norm(p.bone), out var bone)) { Debug.LogWarning("AnimRef: eşya kemiği yok: " + p.bone); continue; }
+            var pivot = new GameObject("AnimRefProp_" + p.prop.Replace("builtin:", "") + "_" + p.id);
+            pivot.transform.SetPositionAndRotation(bone.position, Quaternion.identity); // dünya eksenlerine hizalı (bind pozda)
+            pivot.transform.SetParent(bone, true);
+            pivot.transform.localScale = Vector3.one / Mathf.Max(bone.lossyScale.x, 1e-6f);
+            var item = BuildProp(p.prop);
+            item.transform.SetParent(pivot.transform, false);
+            item.transform.localPosition = new Vector3(-p.pos[0], p.pos[1], p.pos[2]);
+            item.transform.localRotation = Mirror(EulerXYZ(p.rot[0], p.rot[1], p.rot[2]));
+            item.transform.localScale *= p.scale;
+            result.Add(pivot);
+        }
+        Debug.Log("AnimRef: " + result.Count + " eşya eklendi");
+        return result.ToArray();
+    }
+
     // Kod/MCP ile çağırmak için: targetPath "Assets/..." ise prefab, değilse sahnedeki obje adı.
     public static string ImportByPaths(string jsonPath, string targetPath, string outAssetPath, string mode = "Auto")
     {
@@ -225,6 +308,12 @@ public class AnimRefImportWindow : EditorWindow
         target = (GameObject)EditorGUILayout.ObjectField("Karakter (bind pozda)", target, typeof(GameObject), true);
         outPath = EditorGUILayout.TextField("Çıktı (.anim)", outPath);
         mode = (AnimRefImporter.Mode)EditorGUILayout.EnumPopup("Mod", mode);
+        using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(jsonPath) || target == null))
+            if (GUILayout.Button("Eşyaları karaktere ekle (sahne objesi, T-pose)"))
+            {
+                try { AnimRefImporter.AddProps(jsonPath, target); }
+                catch (Exception e) { Debug.LogError("AnimRef: " + e.Message); }
+            }
         using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(jsonPath) || target == null))
             if (GUILayout.Button("Import"))
             {

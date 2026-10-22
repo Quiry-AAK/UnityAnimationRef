@@ -23,7 +23,7 @@ Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md)
 ## Klasörler
 - `models/` karakterler (Mixamo FBX, repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX)
 - `animations/` animasyon kütüphanesi (json repoda, fbx değil) · `exports/` çıktılar (gif, *.animref.json)
-- `unity/AnimRefImporter.cs` → Unity projesinde `Assets/Editor/` → Tools > Anim Ref > Import
+- `unity/AnimRefImporter.cs` → Unity projesinde `Assets/Editor/` → Tools > Anim Ref > Import (Generic birebir, Humanoid yaklaşık; eşya ekleme dahil)
 - `tools/run-cycle.mjs` örnek run animasyonu üretici
 
 ## MCP araçları
