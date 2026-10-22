@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "anim-ref": {
+      "command": "node",
+      "args": ["C:/YOL/BURAYA/AnimRef/mcp.js"]
+    }
+  }
+}

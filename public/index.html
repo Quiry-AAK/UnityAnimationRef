@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anim Ref Editör</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three/build/three.module.js",
+  "three/addons/": "/vendor/three/examples/jsm/",
+  "gifenc": "/vendor/gifenc/dist/gifenc.esm.js"
+} }
+</script>
+</head>
+<body>
+<header>
+  <button id="togLeft" class="tog" title="Kemik listesi (B)">☰ Kemikler</button>
+  <select id="modelSelect" title="Karakter"></select>
+
+  <details class="menu">
+    <summary>Dosya ▾</summary>
+    <div class="menu-list">
+      <label class="item">Karakter yükle (FBX/GLB)…<input type="file" id="fileModel" accept=".fbx,.glb,.gltf" hidden></label>
+      <label class="item">Mixamo animasyonu ekle (FBX)…<input type="file" id="fileAnim" accept=".fbx" hidden></label>
+      <label class="item chk"><input type="checkbox" id="inPlace"> Animasyonu yerinde tut (in-place)</label>
+      <label class="item">Proje JSON'u aç…<input type="file" id="fileJson" accept=".json" hidden></label>
+      <div class="sep"></div>
+      <button class="item" id="btnDemo">Demo iskeleti yükle</button>
+      <button class="item" id="btnLibSave2">Animasyonu kütüphaneye kaydet</button>
+    </div>
+  </details>
+
+  <span class="sp"></span>
+  <button id="btnUndo" title="Geri al (Ctrl+Z)">↶</button>
+  <button id="btnRedo" title="Yinele (Ctrl+Y)">↷</button>
+
+  <details class="menu right">
+    <summary class="primary">Dışa aktar ▾</summary>
+    <div class="menu-list">
+      <button class="item" id="btnGif">GIF olarak kaydet</button>
+      <button class="item" id="btnUnity">Unity için kaydet (.json)</button>
+      <div class="hint-s">GIF ayarları: sağ panel → GIF</div>
+    </div>
+  </details>
+  <button id="togRight" class="tog" title="Ayarlar paneli (P)">⚙</button>
+</header>
+
+<main>
+  <aside id="left">
+    <input id="boneSearch" placeholder="Kemik ara…">
+    <div id="boneList"></div>
+  </aside>
+
+  <section id="center">
+    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
+    <div id="transport">
+      <button id="btnPrev" title="Önceki kare (←)">⏮</button>
+      <button id="btnPlay" class="big" title="Oynat / Durdur (Space)">▶</button>
+      <button id="btnNext" title="Sonraki kare (→)">⏭</button>
+      <span id="frameLabel">0 / 0</span>
+      <span class="sp"></span>
+      <button id="btnKey" title="Bu karede bu kemiğe key koy / sil (K)">◆ Key</button>
+      <details class="menu up right">
+        <summary title="Diğer araçlar">⋯</summary>
+        <div class="menu-list">
+          <button class="item" id="btnKeyAll">Tüm kemiklere key koy</button>
+          <button class="item" id="btnCopy">Pozu kopyala</button>
+          <button class="item" id="btnPaste">Pozu yapıştır</button>
+          <button class="item" id="btnLoop">Son kareyi ilk kareyle eşitle (loop)</button>
+          <div class="sep"></div>
+          <button class="item" id="btnRestBone">Seçili kemiği rest'e al</button>
+          <button class="item" id="btnRestAll">Tüm kemikleri rest'e al</button>
+        </div>
+      </details>
+    </div>
+    <canvas id="timeline"></canvas>
+  </section>
+
+  <aside id="right">
+    <details open>
+      <summary>Seçili kemik</summary>
+      <div id="boneName">—</div>
+      <div class="seg">
+        <button id="modeRot" class="on" title="E">Döndür</button><button id="modePos" title="W">Taşı</button><button id="spaceBtn" title="Eksen">Local</button>
+      </div>
+      <div class="row eul">
+        <label>X<input type="number" id="ex" step="1"></label>
+        <label>Y<input type="number" id="ey" step="1"></label>
+        <label>Z<input type="number" id="ez" step="1"></label>
+      </div>
+      <label class="chk" title="Döndürmeyi tüm key'lere ekler (bütün animasyonu kaydırır)"><input type="checkbox" id="offsetAll"> Tüm kareleri etkile</label>
+    </details>
+
+    <details id="secLib">
+      <summary>Animasyon kütüphanesi</summary>
+      <div class="row"><input id="libName" placeholder="isim (örn: run)" style="flex:1;min-width:0"><button id="btnLibSave" class="primary">Kaydet</button></div>
+      <div id="libList" class="list"></div>
+      <label class="btn small">FBX/JSON animasyon yükle…<input type="file" id="fileLib" accept=".fbx,.json" hidden></label>
+    </details>
+
+    <details id="secProps">
+      <summary>Eşyalar (silah vs.)</summary>
+      <div class="row"><select id="propSelect" style="flex:1;min-width:0"></select></div>
+      <div class="row"><select id="propBone" style="flex:1;min-width:0"></select><button id="btnPropAdd" class="primary">Tak</button></div>
+      <div id="propList" class="list"></div>
+      <label class="btn small">Eşya dosyası yükle (GLB/FBX)…<input type="file" id="filePropUp" accept=".fbx,.glb,.gltf" hidden></label>
+      <div class="hint-s">Takılan eşyayı listeden seç, sonra sahnede taşı/döndür (W/E).</div>
+    </details>
+
+    <details>
+      <summary>Animasyon ayarları</summary>
+      <div class="grid2">
+        <label>Ad<input id="animName"></label>
+        <label>FPS<input type="number" id="animFps" min="1" max="120"></label>
+        <label>Kare sayısı<input type="number" id="animLen" min="2" max="2000"></label>
+        <label class="chk"><input type="checkbox" id="animLoop"> Loop</label>
+      </div>
+    </details>
+
+    <details>
+      <summary>Claude'a not</summary>
+      <textarea id="noteText" rows="3" placeholder="örn: kol biraz daha yukarı, 12. kare"></textarea>
+      <div class="row"><button id="btnNote" class="primary">Gönder</button><button id="btnBaseline" title="Şu anki hali Claude'un karşılaştırma noktası yap">Bu hali referans al</button></div>
+    </details>
+
+    <details>
+      <summary>GIF ayarları</summary>
+      <div class="grid2">
+        <label>Boyut (px)<input type="number" id="gifSize" value="400" step="50"></label>
+        <label>FPS<input type="number" id="gifFps" value="25"></label>
+        <label>Arka plan<input type="color" id="gifBg" value="#ffffff"></label>
+        <label class="chk"><input type="checkbox" id="gifTransparent"> Şeffaf</label>
+        <label class="chk"><input type="checkbox" id="gifGuide"> Kadraj göster</label>
+      </div>
+      <div id="gifStatus"></div>
+    </details>
+
+    <div class="hint">Space oynat · ←/→ kare · K key · E/W mod · B/P paneller · Ctrl+Z geri al</div>
+  </aside>
+</main>
+<div id="toast"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

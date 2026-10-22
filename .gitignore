@@ -1,0 +1,13 @@
+node_modules/
+runtime/
+project.json
+server.log
+exports/
+.mcp.json
+st.tmp.json
+# Mixamo karakterleri/animasyon FBX'leri yeniden dağıtılmasın; klasörler .gitkeep ile kalır
+models/*
+!models/.gitkeep
+props/*
+!props/.gitkeep
+animations/*.fbx

@@ -1,0 +1,232 @@
+// Animasyon editörü sunucusu: statik dosyalar + state API + SSE (editör <-> MCP köprüsü)
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.ANIMREF_PORT || 5177);
+const STATE_FILE = path.join(ROOT, 'project.json');
+const MODELS_DIR = path.join(ROOT, 'models');
+const EXPORTS_DIR = path.join(ROOT, 'exports');
+const ANIMS_DIR = path.join(ROOT, 'animations');
+const PROPS_DIR = path.join(ROOT, 'props');
+for (const d of [ANIMS_DIR, PROPS_DIR]) fs.mkdirSync(d, { recursive: true });
+const safeName = (n) => path.basename(String(n || '')).replace(/[^\w .-]+/g, '_');
+fs.mkdirSync(MODELS_DIR, { recursive: true });
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript',
+  '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.fbx': 'application/octet-stream',
+  '.glb': 'model/gltf-binary', '.map': 'application/json',
+};
+
+let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0 };
+try { state = { ...state, ...JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
+
+let saveTimer = null;
+const save = () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => fs.writeFile(STATE_FILE, JSON.stringify(state), () => {}), 300);
+};
+
+const clients = new Set();
+const emit = (event, data) => {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const c of clients) c.write(msg);
+};
+
+const pendingRenders = new Map();
+const pendingGifs = new Map();
+
+const listAnims = () => fs.readdirSync(ANIMS_DIR).filter((f) => /\.(json|fbx)$/i.test(f)).map((f) => {
+  const full = path.join(ANIMS_DIR, f); const st = fs.statSync(full); const o = { file: f, name: f.replace(/\.(json|fbx)$/i, ''), kind: /\.fbx$/i.test(f) ? 'fbx' : 'json', modified: st.mtimeMs };
+  if (o.kind === 'json') { try { const a = JSON.parse(fs.readFileSync(full, 'utf8')); o.fps = a.fps; o.length = a.length; o.tracks = Object.keys(a.tracks || {}).length; } catch { /* bozuk */ } }
+  return o;
+});
+
+const readBody = (req) => new Promise((resolve, reject) => {
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', () => resolve(Buffer.concat(chunks)));
+  req.on('error', reject);
+});
+const readJson = async (req) => JSON.parse((await readBody(req)).toString('utf8') || '{}');
+const send = (res, code, obj) => {
+  res.writeHead(code, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(obj));
+};
+
+const staticMaps = [
+  ['/vendor/three/', path.join(ROOT, 'node_modules/three/')],
+  ['/vendor/gifenc/', path.join(ROOT, 'node_modules/gifenc/')],
+  ['/models/', MODELS_DIR + path.sep],
+  ['/props/', PROPS_DIR + path.sep],
+  ['/animations/', ANIMS_DIR + path.sep],
+  ['/', path.join(ROOT, 'public') + path.sep],
+];
+
+function serveStatic(req, res, urlPath) {
+  if (urlPath === '/') urlPath = '/index.html';
+  for (const [prefix, dir] of staticMaps) {
+    if (!urlPath.startsWith(prefix)) continue;
+    const rel = decodeURIComponent(urlPath.slice(prefix.length));
+    const file = path.normalize(path.join(dir, rel));
+    if (!file.startsWith(path.normalize(dir))) break;
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) continue;
+    res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'cache-control': 'no-cache' });
+    fs.createReadStream(file).pipe(res);
+    return;
+  }
+  res.writeHead(404); res.end('not found');
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  const p = url.pathname;
+  try {
+    if (p === '/api/ping') return send(res, 200, { ok: true, version: state.version, clients: clients.size });
+    if (p === '/api/events') {
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+      res.write('retry: 1000\n\n');
+      clients.add(res);
+      req.on('close', () => clients.delete(res));
+      return;
+    }
+    if (p === '/api/state' && req.method === 'GET') return send(res, 200, state);
+    if (p === '/api/models' && req.method === 'GET') {
+      return send(res, 200, fs.readdirSync(MODELS_DIR).filter((f) => /\.(fbx|glb|gltf)$/i.test(f)));
+    }
+    if (p === '/api/upload-model' && req.method === 'POST') {
+      const name = path.basename(url.searchParams.get('name') || 'model.fbx');
+      fs.writeFileSync(path.join(MODELS_DIR, name), await readBody(req));
+      return send(res, 200, { name });
+    }
+    if (p === '/api/export' && req.method === 'POST') { // GIF / Unity JSON çıktıları exports/ klasörüne
+      const name = path.basename(url.searchParams.get('name') || 'export.bin');
+      fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+      const file = path.join(EXPORTS_DIR, name);
+      fs.writeFileSync(file, await readBody(req));
+      return send(res, 200, { path: file });
+    }
+    if (p === '/api/animations' && req.method === 'GET') return send(res, 200, listAnims());
+    if (p === '/api/animations/get' && req.method === 'GET') {
+      const f = path.join(ANIMS_DIR, safeName(url.searchParams.get('name')) + '.json');
+      if (!fs.existsSync(f)) return send(res, 404, { error: 'Animasyon bulunamadı' });
+      return send(res, 200, JSON.parse(fs.readFileSync(f, 'utf8')));
+    }
+    if (p === '/api/animations/save' && req.method === 'POST') {
+      const name = safeName(url.searchParams.get('name')); const body = await readJson(req);
+      if (!name) return send(res, 400, { error: 'İsim gerekli' });
+      fs.writeFileSync(path.join(ANIMS_DIR, name + '.json'), JSON.stringify({ ...body, name }));
+      return send(res, 200, { name });
+    }
+    if (p === '/api/animations/delete' && req.method === 'POST') {
+      const base = safeName(url.searchParams.get('name'));
+      for (const ext of ['.json', '.fbx']) fs.rmSync(path.join(ANIMS_DIR, base + ext), { force: true });
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/upload-animation' && req.method === 'POST') {
+      const name = safeName(url.searchParams.get('name') || 'anim.fbx');
+      fs.writeFileSync(path.join(ANIMS_DIR, name), await readBody(req));
+      return send(res, 200, { name });
+    }
+    if (p === '/api/claude/load-animation' && req.method === 'POST') {
+      const b = await readJson(req); const base = safeName(b.name).replace(/\.(json|fbx)$/i, '');
+      const jf = path.join(ANIMS_DIR, base + '.json');
+      if (fs.existsSync(jf)) {
+        state.anim = JSON.parse(fs.readFileSync(jf, 'utf8')); state.baseline = JSON.parse(JSON.stringify(state.anim)); state.version++; save();
+        emit('anim', { anim: state.anim, version: state.version });
+        return send(res, 200, { ok: true, kind: 'json' });
+      }
+      if (fs.existsSync(path.join(ANIMS_DIR, base + '.fbx'))) { emit('load-animation-fbx', { name: base + '.fbx' }); return send(res, 200, { ok: true, kind: 'fbx', clients: clients.size }); }
+      return send(res, 404, { error: 'Kütüphanede yok: ' + b.name });
+    }
+    if (p === '/api/props-files' && req.method === 'GET') return send(res, 200, fs.readdirSync(PROPS_DIR).filter((f) => /\.(fbx|glb|gltf)$/i.test(f)));
+    if (p === '/api/upload-prop' && req.method === 'POST') {
+      const name = safeName(url.searchParams.get('name') || 'prop.glb');
+      fs.writeFileSync(path.join(PROPS_DIR, name), await readBody(req));
+      return send(res, 200, { name });
+    }
+    if (p === '/api/props' && req.method === 'POST') { state.props = (await readJson(req)).props || []; save(); return send(res, 200, { ok: true }); }
+    if (p === '/api/claude/props' && req.method === 'POST') {
+      state.props = (await readJson(req)).props || []; save(); emit('props', { props: state.props });
+      return send(res, 200, { ok: true, clients: clients.size });
+    }
+    if (p === '/api/claude/gif' && req.method === 'POST') {
+      if (!clients.size) return send(res, 409, { error: 'Editör tarayıcıda açık değil (http://localhost:' + PORT + ')' });
+      const b = await readJson(req); const id = Math.random().toString(36).slice(2);
+      const result = await new Promise((resolve) => {
+        const t = setTimeout(() => { pendingGifs.delete(id); resolve(null); }, 180000);
+        pendingGifs.set(id, (r) => { clearTimeout(t); resolve(r); });
+        emit('gif', { id, ...b });
+      });
+      if (!result) return send(res, 504, { error: 'GIF zaman aşımı' });
+      return send(res, 200, result);
+    }
+    if (p === '/api/gif-result' && req.method === 'POST') {
+      const id = url.searchParams.get('id'); const name = safeName(url.searchParams.get('name') || 'anim.gif');
+      fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+      const file = path.join(EXPORTS_DIR, name); fs.writeFileSync(file, await readBody(req));
+      pendingGifs.get(id)?.({ path: file }); pendingGifs.delete(id);
+      return send(res, 200, { path: file });
+    }
+    if (p === '/api/rig' && req.method === 'POST') {
+      const b = await readJson(req);
+      state.rig = b.rig; state.modelName = b.modelName; save();
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/anim' && req.method === 'POST') { // editörden gelen güncelleme
+      state.anim = await readJson(req); state.version++; save();
+      return send(res, 200, { version: state.version });
+    }
+    if (p === '/api/baseline' && req.method === 'POST') {
+      state.baseline = JSON.parse(JSON.stringify(state.anim)); save();
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/note' && req.method === 'POST') {
+      const n = await readJson(req);
+      state.notes.push({ ...n, time: Date.now() }); save();
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/notes/clear' && req.method === 'POST') { state.notes = []; save(); return send(res, 200, { ok: true }); }
+    if (p === '/api/claude/anim' && req.method === 'POST') { // MCP'den gelen animasyon
+      const b = await readJson(req);
+      state.anim = b.anim; state.version++;
+      if (b.setBaseline !== false) state.baseline = JSON.parse(JSON.stringify(b.anim));
+      save(); emit('anim', { anim: state.anim, version: state.version });
+      return send(res, 200, { version: state.version });
+    }
+    if (p === '/api/claude/load-model' && req.method === 'POST') {
+      const b = await readJson(req);
+      emit('load-model', b);
+      return send(res, 200, { ok: true, clients: clients.size });
+    }
+    if (p === '/api/claude/render' && req.method === 'POST') {
+      if (!clients.size) return send(res, 409, { error: 'Editör tarayıcıda açık değil (http://localhost:' + PORT + ')' });
+      const b = await readJson(req);
+      const id = Math.random().toString(36).slice(2);
+      const result = await new Promise((resolve) => {
+        const t = setTimeout(() => { pendingRenders.delete(id); resolve(null); }, 15000);
+        pendingRenders.set(id, (png) => { clearTimeout(t); resolve(png); });
+        emit('render', { id, ...b });
+      });
+      if (!result) return send(res, 504, { error: 'Render zaman aşımı' });
+      return send(res, 200, { png: result });
+    }
+    if (p === '/api/render-result' && req.method === 'POST') {
+      const b = await readJson(req);
+      pendingRenders.get(b.id)?.(b.png); pendingRenders.delete(b.id);
+      return send(res, 200, { ok: true });
+    }
+    serveStatic(req, res, p);
+  } catch (e) {
+    send(res, 500, { error: String(e?.message || e) });
+  }
+});
+
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') { console.error(`Port ${PORT} zaten kullanımda (editör zaten çalışıyor olabilir).`); process.exit(0); }
+  throw e;
+});
+server.listen(PORT, '127.0.0.1', () => console.error(`Animation Ref editör: http://localhost:${PORT}`));
