@@ -291,6 +291,12 @@ tc.addEventListener('dragging-changed', (e) => {
     }
   } else if (drag) { drag = null; refreshPose(); refreshBoneList(); uiUpdate(); scheduleSync(); }
 });
+tc.addEventListener('axis-changed', (e) => {
+  if (!e.value || propGizmo()) return;
+  if (playing) playing = false;
+  if (curFrame !== Math.round(curFrame)) { curFrame = Math.round(curFrame); refreshPose(); }
+  uiUpdate();
+});
 tc.addEventListener('objectChange', () => {
   if (propGizmo()) return readPropTransform(selProp);
   if (!drag) return;
@@ -553,7 +559,7 @@ function tick(now) {
   updateOverlay(); orbit.update(); renderer.render(scene, camera);
 }
 
-$('#btnPlay').onclick = () => { playing = !playing; if (playing) curFrame = Math.floor(curFrame); uiUpdate(); };
+$('#btnPlay').onclick = () => { playing = !playing; if (playing) curFrame = Math.floor(curFrame); else { curFrame = Math.round(curFrame); refreshPose(); } uiUpdate(); };
 $('#btnPrev').onclick = () => { playing = false; setFrame(Math.max(0, Math.round(curFrame) - 1)); };
 $('#btnNext').onclick = () => { playing = false; setFrame(Math.min(anim.length - 1, Math.round(curFrame) + 1)); };
 
