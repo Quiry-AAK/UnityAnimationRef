@@ -18,6 +18,8 @@ claude mcp add anim-ref -- node C:/YOL/AnimRef/mcp.js
 ```
 ya da kullandığın proje klasörüne `.mcp.json.example` dosyasını `.mcp.json` olarak kopyalayıp yolu düzelt. MCP çalışınca editör sunucusu otomatik başlar.
 
+Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md)
+
 ## Klasörler
 - `models/` karakterler (Mixamo FBX, repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX)
 - `animations/` animasyon kütüphanesi (json repoda, fbx değil) · `exports/` çıktılar (gif, *.animref.json)
