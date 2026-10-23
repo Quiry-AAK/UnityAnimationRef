@@ -143,7 +143,7 @@ function sections(shader) {
 }
 export const SECTION_NAMES = { 0: 'şablon', 1: 'common', 2: 'vertex', 3: 'fragment', 4: 'outlineFragment' };
 
-export function buildPrograms(shader, { outline = false } = {}) {
+function programParts(shader, outline) {
   const secs = sections(shader);
   const user = (ids) => secs.filter((s) => ids.includes(s.id)).map((s) => `#line 1 ${s.id}\n${s.glsl}\n`).join('');
   const hasVert = secs.some((s) => s.id === 2), hasOutFrag = secs.some((s) => s.id === 4);
@@ -151,6 +151,39 @@ export function buildPrograms(shader, { outline = false } = {}) {
     outline && `#define UPE_OUTLINE_WIDTH ${shader.outline.width}`, outline && `#define UPE_OUTLINE_COLOR ${shader.outline.color}`].filter(Boolean).join('\n');
   const uniforms = shader.properties.map(uniformDecl).join('\n');
   const common = `${defs}\n${PRELUDE}\n${uniforms}\nuniform vec4 _Time;\n${STRUCTS}`;
+  return { secs, user, common, warnings: secs.flatMap((s) => s.warnings.map((w) => `${s.name}: ${w}`)) };
+}
+const fragmentSource = (common, userCode) => `${common}${PRELUDE_FRAG}
+uniform vec3 upeLightDir; uniform vec3 upeLightColor; uniform vec3 upeAmbient; uniform vec2 upeResolution;
+${userCode}
+#line 10000 0
+varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
+void main() {
+  UPEInput i;
+  i.uv = vUv; i.color = vColor;
+  i.positionWS = upeToU(vPosWS);
+  i.normalWS = upeToU(normalize(vNormalWS));
+  i.viewDirWS = upeToU(normalize(cameraPosition - vPosWS));
+  i.positionCS = gl_FragCoord; i.screenUV = gl_FragCoord.xy / upeResolution;
+  i.lightDir = upeLightDir; i.lightColor = upeLightColor; i.shadow = 1.0; i.ambient = upeAmbient;
+  i.cameraRightWS = upeToU(vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]));
+  i.cameraUpWS = upeToU(vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]));
+  i.cameraPosWS = upeToU(cameraPosition); i.time = _Time.y; i.facing = gl_FrontFacing ? 1.0 : -1.0;
+  #ifdef UPE_OUTLINE
+    #ifdef UPE_HAS_OUTLINE_FRAG
+    gl_FragColor = outlineFrag(i);
+    #else
+    gl_FragColor = vec4(UPE_OUTLINE_COLOR.rgb, 1.0);
+    #endif
+  #else
+  gl_FragColor = frag(i);
+  #endif
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+export function buildPrograms(shader, { outline = false } = {}) {
+  const { user, common, warnings } = programParts(shader, outline);
   const vertexShader = `${common}${PRELUDE_VERT}
 #include <skinning_pars_vertex>
 ${user([1, 2])}
@@ -181,35 +214,55 @@ void main() {
   vPosWS = wp.xyz; vNormalWS = nW; vUv = v.uv; vColor = v.color;
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
-  const fragmentShader = `${common}${PRELUDE_FRAG}
-uniform vec3 upeLightDir; uniform vec3 upeLightColor; uniform vec3 upeAmbient; uniform vec2 upeResolution;
-${user([1, 3, 4])}
+  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3, 4])), warnings };
+}
+
+// VFX emitter'ı için: quad'ı Unity ParticleSystemRenderer gibi açar (vfx-sim.js ile aynı instanced girdiler). Unity'de parçacık
+// köşeleri dünya uzayındadır (nesne matrisi birim): v.positionOS = köşenin dünya konumu, v.color = parçacık rengi (Linear projede
+// doğrusala çevrilir), v.uv = quad UV'si (flipbook açıksa o anki kare). Kullanıcının vert/frag'ı aynen çalışır; outline yok.
+export function buildParticlePrograms(shader) {
+  const { user, common, warnings } = programParts(shader, false);
+  const vertexShader = `${common}${PRELUDE_VERT}
+${user([1, 2])}
 #line 10000 0
+attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF;
+uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles;
 varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
+vec3 upeLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
-  UPEInput i;
-  i.uv = vUv; i.color = vColor;
-  i.positionWS = upeToU(vPosWS);
-  i.normalWS = upeToU(normalize(vNormalWS));
-  i.viewDirWS = upeToU(normalize(cameraPosition - vPosWS));
-  i.positionCS = gl_FragCoord; i.screenUV = gl_FragCoord.xy / upeResolution;
-  i.lightDir = upeLightDir; i.lightColor = upeLightColor; i.shadow = 1.0; i.ambient = upeAmbient;
-  i.cameraRightWS = upeToU(vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]));
-  i.cameraUpWS = upeToU(vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]));
-  i.cameraPosWS = upeToU(cameraPosition); i.time = _Time.y; i.facing = gl_FrontFacing ? 1.0 : -1.0;
-  #ifdef UPE_OUTLINE
-    #ifdef UPE_HAS_OUTLINE_FRAG
-    gl_FragColor = outlineFrag(i);
-    #else
-    gl_FragColor = vec4(UPE_OUTLINE_COLOR.rgb, 1.0);
-    #endif
-  #else
-  gl_FragColor = frag(i);
+  vec2 c = position.xy; float size = iSRF.x, rot = iSRF.y;
+  float cs = cos(rot), sn = sin(rot);
+  vec2 rc = vec2(c.x * cs + c.y * sn, -c.x * sn + c.y * cs); // pozitif açı = saat yönü (Unity gibi)
+  mat4 iv = inverse(viewMatrix);
+  vec3 wp, nW;
+  if (uMode == 1) {
+    vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+    vec3 vv = mat3(modelViewMatrix) * iVel; float sp = length(iVel);
+    vec2 d = length(vv.xy) > 1e-5 ? normalize(vv.xy) : vec2(0.0, 1.0); vec2 pr = vec2(-d.y, d.x);
+    mv.xy += pr * c.x * size + d * c.y * (size * uLengthScale + sp * uVelScale);
+    wp = (iv * mv).xyz; nW = mat3(iv) * vec3(0.0, 0.0, 1.0);
+  } else if (uMode == 2) {
+    wp = (modelMatrix * vec4(iPos, 1.0)).xyz + vec3(rc.x, 0.0, -rc.y) * size; nW = vec3(0.0, 1.0, 0.0);
+  } else if (uMode == 3) {
+    vec3 p = (modelMatrix * vec4(iPos, 1.0)).xyz;
+    vec3 tc = cameraPosition - p; tc.y = 0.0; vec3 f = length(tc) > 1e-5 ? normalize(tc) : vec3(0.0, 0.0, 1.0);
+    vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
+    wp = p + (r * rc.x + vec3(0.0, 1.0, 0.0) * rc.y) * size; nW = f;
+  } else {
+    vec4 mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += rc * size;
+    wp = (iv * mv).xyz; nW = mat3(iv) * vec3(0.0, 0.0, 1.0);
+  }
+  float tiles = uTiles.x * uTiles.y, fr = mod(floor(iSRF.z + 0.5), tiles);
+  vec2 cell = vec2(mod(fr, uTiles.x), uTiles.y - 1.0 - floor(fr / uTiles.x));
+  UPEVertex v; v.positionOS = upeToU(wp); v.normalOS = upeToU(nW); v.uv = (cell + c + 0.5) / uTiles; v.color = vec4(upeLinear(iCol.rgb), iCol.a);
+  #ifdef UPE_HAS_VERT
+  vert(v);
   #endif
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
+  vec3 w = upeToU(v.positionOS);
+  vPosWS = w; vNormalWS = normalize(upeToU(v.normalOS)); vUv = v.uv; vColor = v.color;
+  gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
 }`;
-  return { vertexShader, fragmentShader, warnings: secs.flatMap((s) => s.warnings.map((w) => `${s.name}: ${w}`)) };
+  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3])), warnings };
 }
 
 // ── derleme hatalarını yakala ("ERROR: 3:12: ..." → bölüm fragment, satır 12)
@@ -319,6 +372,19 @@ export function createUPEMaterial(shader, values, { meshMap = null, vertexColors
   const main = mk(false);
   const outline = shader.outline.enabled ? mk(true) : null;
   return { main, outline, uniforms, warnings: main.userData.upeWarnings };
+}
+// VFX emitter materyali: parçacık programı + materyal değerleri + emitter'ın quad uniform'ları (uMode, uTiles…). blend: sıralama için
+export function createUPEParticleMaterial(shader, values, particleUniforms, { onTexture } = {}) {
+  const uniforms = { ...shared, ...particleUniforms };
+  for (const p of shader.properties) {
+    const u = propUniformValue(p, values?.[p.name], null, onTexture);
+    if (p.type === 'texture') { uniforms[p.name] = { value: u.tex }; uniforms[p.name + '_ST'] = { value: u.st }; } else uniforms[p.name] = { value: u };
+  }
+  const pr = buildParticlePrograms(shader);
+  const m = new THREE.ShaderMaterial({ vertexShader: pr.vertexShader, fragmentShader: pr.fragmentShader, uniforms });
+  const rs = renderStateOf(shader, values); applyState(m, rs);
+  m.userData.upeWarnings = pr.warnings;
+  return { material: m, blend: rs.blend, warnings: pr.warnings };
 }
 // var olan örnekte değerleri güncelle (yeniden derlemeden)
 export function updateUPEValues(inst, shader, values, meshMap, onTexture) {

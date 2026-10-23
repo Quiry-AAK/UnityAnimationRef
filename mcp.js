@@ -82,7 +82,7 @@ const notesOf = (st, mode) => (st.notes || []).filter((n) => (n.mode || 'anim') 
 const curVfx = (st) => (st.vfx ? normalizeEffect(st.vfx).effect : null);
 const vfxSummary = (e) => (e ? {
   name: e.name, duration: e.duration, loop: e.loop, attach: e.attach.target === 'none' ? undefined : e.attach,
-  emitters: e.emitters.map((m) => ({ name: m.name, enabled: m.enabled, rateOverTime: m.emission.rateOverTime, bursts: m.emission.bursts.length, texture: m.renderer.texture })),
+  emitters: e.emitters.map((m) => ({ name: m.name, enabled: m.enabled, rateOverTime: m.emission.rateOverTime, bursts: m.emission.bursts.length, ...(m.renderer.material ? { material: m.renderer.material } : { texture: m.renderer.texture }) })),
 } : null);
 // emitter içinde { preset:'fire', ...üzerineYazılanlar } kısayolu → presetEmitter ile açılır
 const expandPresets = (effect) => (Array.isArray(effect?.emitters)
@@ -378,14 +378,18 @@ const presetList = () => Object.entries(PRESETS).map(([k, p]) => {
 }).join('\n');
 
 server.registerTool('vfx_reference', {
-  description: 'VFX efekt formatının tam başvurusu (alanlar, birimler, Unity eksenleri, modüller), doku listesi ve hazır emitter şablonları. VFX işine başlamadan ÖNCE bunu oku.',
+  description: 'VFX efekt formatının tam başvurusu (alanlar, birimler, Unity eksenleri, modüller), doku listesi, emitter\'a bağlanabilecek kütüphane materyalleri ve hazır emitter şablonları. VFX işine başlamadan ÖNCE bunu oku.',
   inputSchema: {},
 }, async () => {
   await ensureServer(); const files = await get('/api/vfx/textures').catch(() => []);
   const tex = Object.entries(TEXTURES).map(([k, d]) => `- ${k}: ${d}${files.includes(k) ? '' : ' (dosya henüz yok)'}`).concat(files.filter((f) => !(f in TEXTURES)).map((f) => `- ${f}: özel doku (vfx/textures/${f}.png)`)).join('\n');
+  const mats = (await get('/api/materials/list').catch(() => [])).map((m) => `- ${m.name}: ${m.shader ?? '?'}`).join('\n') || '- (kütüphanede materyal yok — new_material/set_material + save_material ile oluştur)';
   return text(`${VFX_REFERENCE}
 ## Dokular (renderer.texture alanına uzantısız ad)
 ${tex}
+
+## Kütüphane materyalleri (renderer.material alanına ad; shader'ı ve değerleriyle parçacığı çizer)
+${mats}
 
 ## Hazır emitter şablonları (add_emitter preset / set_vfx'te emitters[i].preset)
 ${presetList()}
@@ -395,7 +399,9 @@ ${presetList()}
 - İnce ayar: update_vfx changes=[{ emitter:'alev', path:'main.startSize', value:[0.2,0.4] }, { path:'preview.bloom', value:1.2 }].
 - Görsel kontrol: render_vfx (editör tarayıcıda açık olmalı) → zaman karelerinden kontak sayfası.
 - Kullanıcı editörde düzeltince: get_vfx_user_edits (fark + notlar), farkı öğren; acknowledge:true ile referansı yenile.
-- Bitince: save_vfx { name } → send_vfx_to_unity { name } (Unity'de Assets/UnityPreview/VFX/<ad>.prefab).
+- Özel görünüm (dissolve, kayan doku, fresnel…): material_reference → new_shader/set_shader (UPE-SL) → new_material/set_material + save_material
+  → update_vfx [{ emitter:'alev', path:'renderer.material', value:'<materyal>' }] ('' kaldırır) → render_vfx ile kontrol.
+- Bitince: save_vfx { name } → send_vfx_to_unity { name } (Unity'de Assets/UnityPreview/VFX/<ad>.prefab; bağlı materyaller de gönderilir).
 `);
 });
 
@@ -423,7 +429,7 @@ server.registerTool('set_vfx', {
 });
 
 server.registerTool('update_vfx', {
-  description: 'Efektte yol bazlı küçük değişiklikler (editör anında güncellenir; sonuç yeni referans olur). changes: [{ emitter?, path, value }]. emitter verilirse yol emitter içinde (ör. "main.startSize" → [0.1,0.3], "main.startColor" → ["#ffb347","#ff5a1f"], "emission.rateOverTime" → 40, "renderer.intensity" → 3, "renderer.texture" → "spark", "shape.angle" → 25, "noise.enabled" → true, "enabled" → false); '
+  description: 'Efektte yol bazlı küçük değişiklikler (editör anında güncellenir; sonuç yeni referans olur). changes: [{ emitter?, path, value }]. emitter verilirse yol emitter içinde (ör. "main.startSize" → [0.1,0.3], "main.startColor" → ["#ffb347","#ff5a1f"], "emission.rateOverTime" → 40, "renderer.intensity" → 3, "renderer.texture" → "spark", "renderer.material" → "ates_parcacik" (kütüphane materyali; "" kaldırır), "shape.angle" → 25, "noise.enabled" → true, "enabled" → false); '
     + 'emitter yoksa efekt düzeyi (ör. "duration" → 1.2, "preview.bloom" → 1.2, "attach.target" → "bone"). value bütün bir alt nesne de olabilir (ör. path "colorOverLifetime.alpha"). Geçerli değişiklikler uygulanır, geçersiz yollar errors\'ta döner; değerler sınırlara kırpılır (applied\'da son değeri gör). Editörde efekt yoksa varsayılan efektle başlar.',
   inputSchema: { changes: z.array(z.object({ emitter: emitterSel.optional(), path: z.string().describe('Nokta ile yol, ör. "main.startSize"'), value: z.any() })).min(1) },
 }, async ({ changes }) => {
@@ -553,7 +559,8 @@ server.registerTool('set_editor_mode', {
 
 server.registerTool('send_vfx_to_unity', {
   description: 'Efekti TEK ADIMDA Unity projesine gönderir: Assets/UnityPreview/VFX/<ad>.vfx.json + kullandığı dokular (Textures/) yazılır, importer script\'leri Assets/Editor/UnityPreview/\'a kurulur; Unity açıksa birkaç saniyede Assets/UnityPreview/VFX/<ad>.prefab (kökte Play() tüm emitter\'ları oynatır) üretir. '
-    + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. ≤20 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Karakter gerekmez; önce set_unity_project ile proje ayarlı olmalı. Yanıt: { ok, sent, imported, waiting, prefabs, missingTextures, note | error }.',
+    + 'renderer.material bağlı emitter\'ların kütüphane materyalleri (+ özel shader\'ları, dokuları) da Assets/UnityPreview/Materials/\'a yazılır ve prefab\'daki renderer\'a bağlanır; kütüphanede olmayan materyal o efekti durdurur (errors). '
+    + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. ≤20 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Karakter gerekmez; önce set_unity_project ile proje ayarlı olmalı. Yanıt: { ok, sent, imported, waiting, prefabs, missingTextures, materials?, materialErrors?, shaderErrors?, note | error }.',
   inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
 }, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-vfx', { name, all })); });
 

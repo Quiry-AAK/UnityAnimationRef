@@ -3,6 +3,7 @@
 // importer'ıyla aynı dönüşüm). Sabit adım + tohumlu RNG: aynı efekt aynı zamanda hep aynı görüntüyü verir.
 import * as THREE from 'three';
 import { evalCurve, parseColor } from './vfx-schema.js';
+import { createUPEParticleMaterial } from './shader-compile.js';
 
 export const STEP = 1 / 60;
 const D2R = Math.PI / 180;
@@ -95,7 +96,8 @@ const MODE = { billboard: 0, stretched: 1, horizontal: 2, vertical: 3 };
 // ── tek emitter: parçacık havuzu + Unity modül davranışı
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 class EmitterSim {
-  constructor(em, seed, onTexture) {
+  // upe: { shader, values } — renderer.material kütüphaneden çözüldüyse; yoksa doku/karışım/parlaklıkla yerleşik çizim
+  constructor(em, seed, onTexture, upe = null) {
     this.em = em; this.seed = seed;
     const cap = Math.max(1, em.main.maxParticles); this.cap = cap;
     this.P = new Float32Array(cap * 3); this.V = new Float32Array(cap * 3); this.D = new Float32Array(cap * 3);
@@ -110,17 +112,25 @@ class EmitterSim {
     // çizim
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0]), 3));
-    g.setIndex([0, 1, 2, 0, 2, 3]);
+    // UPE materyalinde ters sarım: düğüm X aynalı (three ön yüzü çevirir), quad kameraya ön yüzünü versin (Unity'deki gibi; cull back çalışır)
+    g.setIndex(upe ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3]);
     const ia = (n) => new THREE.InstancedBufferAttribute(new Float32Array(cap * n), n).setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('iPos', ia(3)); g.setAttribute('iVel', ia(3)); g.setAttribute('iCol', ia(4)); g.setAttribute('iSRF', ia(4));
     g.instanceCount = 0;
     const r = em.renderer, ts = em.textureSheet;
-    this.mat = new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      blending: r.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
-      uniforms: { uMap: { value: getTexture(r.texture, onTexture) }, uIntensity: { value: r.intensity }, uMode: { value: MODE[r.mode] ?? 0 },
-        uLengthScale: { value: r.lengthScale }, uVelScale: { value: r.velocityScale }, uTiles: { value: new THREE.Vector2(ts.enabled ? ts.tilesX : 1, ts.enabled ? ts.tilesY : 1) } },
-    });
+    const quad = { uMode: { value: MODE[r.mode] ?? 0 }, uLengthScale: { value: r.lengthScale }, uVelScale: { value: r.velocityScale },
+      uTiles: { value: new THREE.Vector2(ts.enabled ? ts.tilesX : 1, ts.enabled ? ts.tilesY : 1) } };
+    if (upe) {
+      const u = createUPEParticleMaterial(upe.shader, upe.values, quad, { onTexture });
+      this.mat = u.material; this.sortBack = ['alpha', 'premultiply', 'multiply'].includes(u.blend);
+    } else {
+      this.mat = new THREE.ShaderMaterial({
+        vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        blending: r.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
+        uniforms: { uMap: { value: getTexture(r.texture, onTexture) }, uIntensity: { value: r.intensity }, ...quad },
+      });
+      this.sortBack = r.blend === 'alpha';
+    }
     this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false;
     this.reset();
   }
@@ -245,7 +255,7 @@ class EmitterSim {
     const em = this.em, g = this.mesh.geometry, n = this.n;
     const aP = g.attributes.iPos.array, aV = g.attributes.iVel.array, aC = g.attributes.iCol.array, aS = g.attributes.iSRF.array;
     let order = null;
-    if (em.renderer.blend === 'alpha' && n > 1) {
+    if (this.sortBack && n > 1) {
       _s.copy(camPos).applyMatrix4(meshWorldInv); const d = new Float32Array(n);
       for (let i = 0; i < n; i++) d[i] = (this.P[i * 3] - _s.x) ** 2 + (this.P[i * 3 + 1] - _s.y) ** 2 + (this.P[i * 3 + 2] - _s.z) ** 2;
       order = Array.from({ length: n }, (_, i) => i).sort((a, b) => d[b] - d[a]);
@@ -281,6 +291,7 @@ export class EffectPlayer {
     this.sims = []; this.nodes = []; this.time = 0; this.acc = 0; this.effect = null;
     this.onBeforeStep = null; // (t) => poz güncelle (animasyonla oynatma)
     this.onTexture = null;
+    this.materialFor = null; // (ad) => { shader, values } | null — renderer.material'ı kütüphaneden çözer (yüklenmediyse null)
   }
   setVisible(v) { this.root.visible = this.worldRoot.visible = v; }
   setEffect(effect) {
@@ -291,7 +302,8 @@ export class EffectPlayer {
     effect.emitters.forEach((em, i) => {
       const node = new THREE.Group(); node.position.set(...em.position); unityQuat(em.rotation, node.quaternion); this.offset.add(node); this.nodes.push(node);
       if (!em.enabled) { this.sims.push(null); return; }
-      const sim = new EmitterSim(em, (base ^ hashStr(em.name) ^ Math.imul(i + 1, 2654435761)) >>> 0, () => this.onTexture?.());
+      const upe = em.renderer.material ? this.materialFor?.(em.renderer.material) || null : null;
+      const sim = new EmitterSim(em, (base ^ hashStr(em.name) ^ Math.imul(i + 1, 2654435761)) >>> 0, () => this.onTexture?.(), upe);
       sim.mesh.renderOrder = 100 + em.renderer.sortingOrder * 10 + i;
       (sim.world ? this.worldRoot : node).add(sim.mesh); this.sims.push(sim);
     });

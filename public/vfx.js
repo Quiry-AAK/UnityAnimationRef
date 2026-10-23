@@ -6,6 +6,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { EffectPlayer, clearTextureCache, texturesLoaded } from './vfx-sim.js';
+import { materialTexturesLoaded } from './shader-compile.js';
 import { MODULES, TEXTURES, defaultEffect, defaultEmitter, normalizeEffect, presetEmitter, evalGradient, evalCurve, clone } from './vfx-schema.js';
 
 const PRESET_LABELS = { sparks: 'Kıvılcım', embers: 'Kor', fire: 'Alev', smoke: 'Duman', flash: 'Parlama', shockwave: 'Şok dalgası', glow: 'Hale', slash: 'Kılıç kesiği' };
@@ -72,6 +73,22 @@ export function initVfx(ctx) {
     f = anim.loop ? f % end : Math.min(f, end); ctx.poseAt(f);
   };
   player.onTexture = () => {};
+
+  // ── emitter materyalleri (renderer.material): kütüphaneden shader'ıyla çözülür; yüklenince efekt yeniden kurulur
+  const matRes = new Map(); // ad → { shader, values } | null (kütüphanede yok / shader bulunamadı)
+  const matLoading = new Map(); // ad → söz (çözülüp efekt yeniden kurulunca biter)
+  let matList = []; // [{ name, shader }] — seçici için
+  async function loadMatList() { matList = await fetch('/api/materials/list').then((r) => r.json()).catch(() => matList); return matList; }
+  function loadMat(name) {
+    if (matRes.has(name) || matLoading.has(name)) return;
+    matLoading.set(name, Promise.resolve(ctx.libMaterial?.(name)).catch(() => null).then((r) => {
+      matRes.set(name, r || null); matLoading.delete(name);
+      for (const s of document.querySelectorAll('.vmatstat')) if (s.dataset.mat === name) s.textContent = matStatus(name);
+      if (active) rebuildPlayer(true);
+    }));
+  }
+  player.materialFor = (name) => { if (matRes.has(name)) return matRes.get(name); loadMat(name); return null; };
+  const matStatus = (name) => (!matRes.has(name) ? 'Yükleniyor…' : matRes.get(name) ? `Shader: ${matRes.get(name).shader.unityName} · doku, karışım ve parlaklık materyalden gelir` : 'Kütüphanede yok ya da shader\'ı bulunamadı — önizleme yerleşik görünümle çizer, Unity\'ye gönderilemez');
 
   // ── veri akışı
   let syncTimer = null;
@@ -227,6 +244,17 @@ export function initVfx(ctx) {
         fi.onchange = async () => { const f = fi.files[0]; if (!f) return; await fetch('/api/upload-vfx-texture?name=' + encodeURIComponent(f.name), { method: 'POST', body: f }); clearTextureCache(); await loadTextures(); pushUndo(); set(f.name.replace(/\.png$/i, ''), true); };
         row.append(img, s); wrap.append(row, up); break;
       }
+      case 'material': {
+        const s = el('select'); const cur = ref.get();
+        s.add(new Option('Yok — doku, karışım, parlaklık', ''));
+        for (const m of matList) s.add(new Option(m.shader ? `${m.name} — ${m.shader}` : m.name, m.name));
+        if (cur && !matList.some((m) => m.name === cur)) s.add(new Option(cur + ' (yok)', cur));
+        s.value = cur; s.onchange = () => { pushUndo(); set(s.value, true); };
+        wrap.appendChild(s);
+        if (cur) { const st = el('div', 'hint-s vmatstat'); st.dataset.mat = cur; st.textContent = matStatus(cur); wrap.appendChild(st); }
+        else wrap.appendChild(el('div', 'hint-s', 'Materyal/Shader modunda yapıp kaydettiğin bir materyali seçebilirsin.'));
+        break;
+      }
       case 'gradient': wrap.appendChild(gradientUI(ref)); break;
       case 'curve': wrap.appendChild(curveUI(ref)); break;
       case 'bursts': wrap.appendChild(burstsUI(ref)); break;
@@ -360,6 +388,7 @@ export function initVfx(ctx) {
         for (const [key, type, label, o] of mod.fields) {
           if (mod.key === 'shape') { const ty = M().type; if ((key === 'angle' && ty !== 'cone') || (key === 'boxSize' && ty !== 'box') || (key === 'donutRadius' && ty !== 'donut') || (['radius', 'radiusThickness'].includes(key) && ty === 'box') || (key === 'arc' && !['cone', 'circle', 'donut'].includes(ty))) continue; }
           if (mod.key === 'renderer' && ['lengthScale', 'velocityScale'].includes(key) && M().mode !== 'stretched') continue;
+          if (mod.key === 'renderer' && ['texture', 'blend', 'intensity'].includes(key) && M().material) continue; // materyalden gelir
           body.appendChild(type === 'gradient' ? field('gradient', label, { get: M, set: () => {} }) : field(type, label, R(M, key), o, `${mod.key}.${key}`));
         }
         d.appendChild(body); box.appendChild(d);
@@ -434,7 +463,8 @@ export function initVfx(ctx) {
     const size = Math.max(128, Math.min(1024, d.size || 320));
     const keep = { pos: camera.position.clone(), target: orbit.target.clone(), aspect: camera.aspect, time: dispTime, playing, bg: effect.preview.background, hero: effect.preview.showHero };
     playing = false;
-    await Promise.race([texturesLoaded(), new Promise((r) => setTimeout(r, 5000))]); // dokular yüklenmeden çizme
+    const loads = async () => { await Promise.all(matLoading.values()); await Promise.all([texturesLoaded(), materialTexturesLoaded()]); };
+    await Promise.race([loads(), new Promise((r) => setTimeout(r, 5000))]); // dokular ve emitter materyalleri yüklenmeden çizme
     if (d.bg) effect.preview.background = d.bg; if (typeof d.showHero === 'boolean') effect.preview.showHero = d.showHero; applyPreviewSettings();
     const f = frameBox(times);
     const U = (v) => new THREE.Vector3(-v[0], v[1], v[2]); // MCP kamerayı Unity ekseninde verir (three = X aynası)
@@ -465,7 +495,9 @@ export function initVfx(ctx) {
   // ── mod geçişi
   function activate() {
     active = true; player.setVisible(true); resize(); ctx.overlay.visible = false;
+    matRes.clear(); ctx.forgetLibMaterials?.(); // Materyal/Shader modunda kaydedilen son hâller
     loadTextures(); rebuildPlayer(true); refreshLeft(); buildRight(); applyPreviewSettings();
+    loadMatList().then(() => { if (active) buildRight(); });
   }
   function deactivate() {
     active = false; player.setVisible(false); ctx.overlay.visible = true; ctx.grid.visible = true; scene.background = new THREE.Color(ctx.BG); applyHeroVisibility(true);

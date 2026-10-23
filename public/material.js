@@ -37,6 +37,16 @@ export function initMaterials(ctx) {
     if (!matCache.has(name)) matCache.set(name, fetch('/api/materials/get?name=' + encodeURIComponent(name)).then((r) => r.json()).then((m) => (m.error ? null : m)).catch(() => null));
     return matCache.get(name);
   }
+  // VFX emitter'ları için: kütüphanedeki (kaydedilmiş) materyal + shader'ı; özel shader kayıtta yoksa sunucudan alınır
+  async function libMaterialResolved(name) {
+    const m = await libMaterial(name); if (!m) return null;
+    let sh = resolveShader(m.shader);
+    if (!sh) {
+      const s = await fetch('/api/shaders/get?name=' + encodeURIComponent(m.shader)).then((r) => r.json()).catch(() => null);
+      if (s && !s.error) { sh = normalizeShader(s).shader; shaders.set(sh.unityName, sh); }
+    }
+    return sh ? { shader: sh, values: normalizeMaterial(m, sh).material.values } : null;
+  }
 
   // ── durum
   const def = () => normalizeMaterial(defaultMaterial(), resolveShader(defaultMaterial().shader)).material;
@@ -615,7 +625,8 @@ export function initMaterials(ctx) {
       for (const [m, a] of [...applied]) if (!m.userData.upePreview && !inScene(m)) { a.outline?.removeFromParent(); a.inst.main.dispose(); a.inst.outline?.dispose(); applied.delete(m); }
       syncScene();
     },
-    onRemoteMaterial, onRemoteShader, onCompileRequest, onLighting, onOverrides, setFromState, renderSheet,
+    onRemoteMaterial, onRemoteShader, onCompileRequest, onLighting, onOverrides, setFromState, renderSheet, libMaterialResolved,
+    forgetLibMaterials: () => matCache.clear(), // VFX moduna geçerken: kütüphanedeki son kayıtlar okunsun
     reloadShaders: async () => { await loadCustomShaders(); },
   };
 }

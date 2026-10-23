@@ -3,6 +3,8 @@
 // normalizeEffect çıktısı, tüm alanlar dolu); bu script onu ParticleSystem prefab'ına çevirir:
 //   Assets/UnityPreview/VFX/<ad>.prefab
 //   Assets/UnityPreview/VFX/Materials/<ad>__<emitter>.mat   (dokular: Textures/<doku>.png, sunucu kopyalar)
+// renderer.material dolu emitter'lar kendi .mat'ını üretmez, kütüphane materyalini bağlar:
+//   Assets/UnityPreview/Materials/<materyal>.mat   (sunucu efektle birlikte yazar; UnityPreviewMaterialImporter üretir)
 // Kök: efekt adında GameObject + emisyonsuz, renderer'ı kapalı ParticleSystem (kökte Play() tüm çocukları oynatır).
 // Her emitter bir çocuk GameObject + ParticleSystem; modüller VFX_REFERENCE'taki alanlarla birebir.
 // Tekrar aktarımda prefab ve malzemeler yerinde güncellenir (GUID'ler korunur, oyundaki referanslar kopmaz).
@@ -31,6 +33,8 @@ public static class UnityPreviewVfxImporter
     const string Tag = "UnityPreview VFX: ";
     const string UrpShader = "Universal Render Pipeline/Particles/Unlit";
     const string BuiltinShader = "Particles/Standard Unlit";
+    const string LibMatDir = "Assets/UnityPreview/Materials"; // kütüphane materyalleri (UnityPreviewMaterialImporter)
+    const double MaterialWaitSeconds = 60; // materyal .mat'ı henüz üretilmediyse efekt en çok bu kadar bekletilir
 
     static double nextPoll;
     static bool busy;
@@ -69,12 +73,14 @@ public static class UnityPreviewVfxImporter
         {
             var pending = FindPending();
             if (pending.Count == 0) return;
+            ProcessMaterialsFirst(); // emitter'ların bağladığı kütüphane materyalleri önce üretilsin
             // Dosyalar dışarıdan (sunucu) yazıldı: dokular, klasörler AssetDatabase'e girsin
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var lines = new List<string>();
             foreach (var json in pending)
             {
                 string name = BaseName(json);
+                if (WaitingForMaterial(json)) continue; // materyal importer'ı henüz .mat üretmedi: sonraki poll'da tekrar
                 try
                 {
                     string prefab = Import(json);
@@ -89,9 +95,49 @@ public static class UnityPreviewVfxImporter
                     Debug.LogError(Tag + name + ": " + e.Message + "\n" + e.StackTrace);
                 }
             }
-            if (Directory.Exists(Dir)) File.WriteAllText(Dir + "/last_status.txt", string.Join("\n", lines));
+            if (lines.Count > 0 && Directory.Exists(Dir)) File.WriteAllText(Dir + "/last_status.txt", string.Join("\n", lines));
         }
         finally { busy = false; }
+    }
+
+    // UnityPreviewMaterialImporter kuruluysa bekleyen materyalleri işlet (yansıma: materyal script'i olmayan projede de derlenir)
+    static void ProcessMaterialsFirst()
+    {
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var t = asm.GetType("UnityPreviewMaterialImporter");
+            if (t == null) continue;
+            try { t.GetMethod("ProcessPending", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.Invoke(null, null); }
+            catch (Exception e) { Debug.LogWarning(Tag + "materyal importer'ı çalıştırılamadı: " + (e.InnerException ?? e).Message); }
+            return;
+        }
+    }
+
+    // efektin bağladığı bir materyalin .mat'ı yok ama .mat.json'u yeni yazılmışsa (materyal importer'ı sırada) bekle;
+    // batchmode'da ya da süre dolunca beklemez — Import eksik materyali anlaşılır hatayla bildirir
+    static bool WaitingForMaterial(string json)
+    {
+        if (Application.isBatchMode) return false;
+        Dictionary<string, object> fx;
+        try { fx = Json.Parse(File.ReadAllText(json, Encoding.UTF8)) as Dictionary<string, object>; } catch { return false; }
+        foreach (var o in Arr(fx, "emitters"))
+        {
+            string m = Str(Obj(o as Dictionary<string, object>, "renderer"), "material", "").Trim();
+            if (m.Length == 0 || File.Exists(LibMatDir + "/" + m + ".mat")) continue;
+            string mj = LibMatDir + "/" + m + ".mat.json";
+            if (File.Exists(mj) && (DateTime.UtcNow - File.GetLastWriteTimeUtc(mj)).TotalSeconds < MaterialWaitSeconds) return true;
+        }
+        return false;
+    }
+
+    static Material LoadLibraryMaterial(string matName, string emitter)
+    {
+        string path = LibMatDir + "/" + matName + ".mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+            throw new Exception(emitter + ".renderer.material: " + path + " yok — materyal Unity'de üretilemedi (" + LibMatDir
+                + "/last_status.txt'ye bak) ya da kütüphanede yok; editörde kaydedip efekti yeniden gönder");
+        return mat;
     }
 
     // prefab'ı olmayan ya da json'u prefab'dan yeni olanlar
@@ -415,11 +461,21 @@ public static class UnityPreviewVfxImporter
         pr.minParticleSize = 0f; pr.maxParticleSize = 10f; // önizleme ekran boyutunu kırpmaz; Unity varsayılanı (0.5) yakın planda büyük parlamaları keserdi
         pr.sortingOrder = Int(r, "sortingOrder", 0);
         bool additive = Lower(Str(r, "blend", "additive")) != "alpha";
-        pr.sortMode = additive ? ParticleSystemSortMode.None : ParticleSystemSortMode.Distance;
+        string libMat = Str(r, "material", "").Trim();
         pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         pr.receiveShadows = false;
         pr.enabled = true;
-        pr.sharedMaterial = BuildMaterial(fxFile, name, Str(r, "texture", "soft"), additive, Mathf.Max(0f, Num(r, "intensity", 1f)), matPaths);
+        if (libMat.Length > 0)
+        {
+            // kütüphane materyali: doku/karışım/parlaklık materyalden; karışımı bilinmediğinden uzaktan yakına sıralı (alfa için doğru, toplamalıda zararsız)
+            pr.sortMode = ParticleSystemSortMode.Distance;
+            pr.sharedMaterial = LoadLibraryMaterial(libMat, name);
+        }
+        else
+        {
+            pr.sortMode = additive ? ParticleSystemSortMode.None : ParticleSystemSortMode.Distance;
+            pr.sharedMaterial = BuildMaterial(fxFile, name, Str(r, "texture", "soft"), additive, Mathf.Max(0f, Num(r, "intensity", 1f)), matPaths);
+        }
 
         go.SetActive(Bool(em, "enabled", true));
     }

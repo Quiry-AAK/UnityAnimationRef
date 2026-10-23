@@ -290,4 +290,7 @@ export const MATERIAL_REFERENCE = `# UPE materyal formatı (${MATERIAL_FORMAT})
   _Cull (0 kapalı, 1 ön, 2 arka), _AlphaClip + _Cutoff.
 - Işık (tüm UPE shader'ları için ortak sahne ışığı): rotation (Unity yönlü ışık Euler'i), color, intensity, ambient, ambientIntensity.
 - Kahramana/eşyaya giydirme (assign_material) yalnız önizlemedir; tüm modlarda (animasyon/VFX) görünür. Unity'deki prefab'a bağlamak ayrı iş.
+- VFX parçacığı: kaydedilmiş materyal bir emitter'ın renderer.material alanına yazılır (update_vfx); parçacık o shader'la çizilir ve
+  send_vfx_to_unity materyali de gönderip prefab'daki ParticleSystemRenderer'a bağlar. Parçacıkta i.color = parçacık rengi (doğrusal),
+  i.uv = quad/flipbook UV'si; saydam için _Surface 1 (URP) ya da renderState.blend alpha/additive + zwrite false, iki yüz için cull off.
 `;

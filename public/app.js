@@ -825,6 +825,7 @@ const vfx = initVfx({
   getRig: () => rig, getProps: () => props, getAnim: () => anim,
   poseAt: (f) => refreshPose(f), restorePose: () => refreshPose(), onResize: () => onResize(),
   setMode: (m, o) => setEditorMode(m, o),
+  libMaterial: (n) => mats.libMaterialResolved(n), forgetLibMaterials: () => mats.forgetLibMaterials(), // emitter'ın renderer.material'ı
 });
 const mats = initMaterials({
   scene, camera, renderer, orbit, viewport, stage, grid, overlay, api, toast, $, BG, sun,

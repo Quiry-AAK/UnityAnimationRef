@@ -41,7 +41,10 @@ Statik: `/vfx-textures/` → `vfx/textures/`.
 2. `unity/UnityPreviewVfx*.cs` → `<proje>/Assets/Editor/UnityPreview/` (değiştiyse yaz).
 3. Efekt(ler): `all` → kütüphanedeki tüm `vfx/*.json`; `name` → kütüphaneden; ikisi de yoksa `state.vfx`.
 4. Her efekt normalize edilip `<proje>/Assets/UnityPreview/VFX/<ad>.vfx.json` olarak yazılır; kullandığı dokular
-   `<proje>/Assets/UnityPreview/VFX/Textures/<doku>.png` olarak kopyalanır (değiştiyse).
+   `<proje>/Assets/UnityPreview/VFX/Textures/<doku>.png` olarak kopyalanır (değiştiyse). `renderer.material` bağlı
+   emitter'ların kütüphane materyalleri (+ özel shader'ları, dokuları) önce `send-material` gibi
+   `Assets/UnityPreview/Materials/` altına yazılır (`writeMaterialPayloads`); kütüphanede olmayan ya da yazılamayan
+   materyal o efekti durdurur (`errors`). Yanıta `materials`, `materialErrors`, `shaderErrors` eklenir.
 5. ≤ 20 sn: `<proje>/Assets/UnityPreview/VFX/<ad>.prefab` mtime ≥ başlangıç olana dek beklenir;
    `Assets/UnityPreview/VFX/last_status.txt` (`ad|OK|yol` ya da `ad|ERROR|mesaj`) okunur.
 6. Yanıt: `{ ok, sent, imported, waiting, prefabs, note | error }`. Unity kapalıysa açılınca işlenir; batchmode için
@@ -58,7 +61,7 @@ Mevcut animasyon araçları aynen kalır. `get_status` ayrıca `mode` ve `vfx` �
 
 | Araç | Girdi | İş |
 |---|---|---|
-| `vfx_reference` | | `VFX_REFERENCE` + doku listesi + şablon adları |
+| `vfx_reference` | | `VFX_REFERENCE` + doku listesi + kütüphane materyalleri + şablon adları |
 | `get_vfx` | `emitters?: string[]` | editördeki efekt (normalize) |
 | `set_vfx` | `effect` (nesne) | normalize → `/api/claude/vfx`; uyarılar + özet |
 | `update_vfx` | `changes: [{ emitter?, path, value }]` | `applyChanges` → `/api/claude/vfx`; hatalar/uyarılar |
@@ -78,3 +81,11 @@ Her emitter bir çocuk GameObject + ParticleSystem; `enabled:false` olan pasif. 
 alanlarla birebir; Unity API'si radyan istediği yerde (startRotation, rotationOverLifetime) derece→radyan çevrilir.
 Malzeme: URP `Universal Render Pipeline/Particles/Unlit` (yoksa `Particles/Standard Unlit`), saydam, additive/alpha,
 `_BaseColor` = beyaz × intensity (doğrusal), `_BaseMap` = doku.
+
+### Emitter materyali (`renderer.material`)
+Doluysa emitter kendi `.mat`'ını üretmez; `Assets/UnityPreview/Materials/<materyal>.mat` bağlanır (sıralama: uzaklık).
+Importer önce (yansımayla) `UnityPreviewMaterialImporter.ProcessPending`'i çalıştırır; `.mat` henüz yoksa ama `.mat.json`
+≤ 60 sn önce yazıldıysa efekt bir sonraki poll'a bırakılır (batchmode'da beklemez). Yoksa anlaşılır hatayla durur.
+Önizleme (`shader-compile.js` `buildParticlePrograms`): UPE-SL shader'ı aynı instanced quad'la çizilir; `v.positionOS` köşenin
+dünya konumu (Unity'de parçacık köşeleri dünyada), `v.color` parçacık rengi (doğrusal), `v.uv` flipbook karesi. Unity şablonu
+POSITION/NORMAL/TEXCOORD0/COLOR okur — ParticleSystemRenderer'ın varsayılan akışları; ek ayar gerekmez.

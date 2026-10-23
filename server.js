@@ -137,21 +137,34 @@ async function unitySendVfx({ name, all }) {
   // 3) normalize → Assets/UnityPreview/VFX/<ad>.vfx.json, kullanılan dokular → Textures/<doku>.png
   const dir = path.join(u.project, 'Assets', 'UnityPreview', 'VFX'); const texDir = path.join(dir, 'Textures');
   fs.mkdirSync(texDir, { recursive: true });
-  const started = Date.now() - 1000; const names = []; const missing = new Set(); const textures = new Set(); const warnings = {};
+  const started = Date.now() - 1000; const names = []; const missing = new Set(); const textures = new Set(); const warnings = {}; const errors = {};
+  const usedMats = (effect) => [...new Set(effect.emitters.map((em) => em.renderer.material).filter(Boolean))];
   const effects = list.map((src) => {
     const { effect, warnings: w } = normalizeEffect(src);
     const base = safeName(effect.name || 'vfx').replace(/\s+/g, '_'); effect.name = base; // prefab adı = dosya adı = efekt adı
     if (w.length) warnings[base] = w;
     for (const em of effect.emitters) {
-      const t = em.renderer.texture; if (!t || textures.has(t)) continue; textures.add(t);
+      const t = em.renderer.texture; if (em.renderer.material || !t || textures.has(t)) continue; textures.add(t); // materyalli emitter'da doku materyalden
       const s = path.join(VFX_TEX_DIR, t + '.png');
       if (fs.existsSync(s)) copyIfChanged(s, path.join(texDir, t + '.png')); else missing.add(t);
     }
     return effect;
   });
-  for (const effect of effects) { fs.writeFileSync(path.join(dir, effect.name + '.vfx.json'), JSON.stringify(effect, null, 1)); names.push(effect.name); } // json en son: importer dokuları hazır bulur
+  // 3b) emitter materyalleri (renderer.material) + özel shader'ları → Assets/UnityPreview/Materials/ (VFX importer bunları bekler)
+  const matNames = [...new Set(effects.flatMap(usedMats))]; let matOut = null;
+  if (matNames.length) {
+    const raws = matNames.map((n) => readMatRaw(n));
+    const absent = matNames.filter((n, i) => !raws[i]);
+    installMaterialScripts(u.project);
+    matOut = await writeMaterialPayloads(u.project, raws.filter(Boolean));
+    for (const effect of effects) { // materyali yazılamayan efekt gönderilmez (Unity'de eksik materyalle prefab üretilmesin)
+      const bad = usedMats(effect).map((n) => (absent.includes(n) ? `${n}: kütüphanede yok (list_materials)` : matOut.errors[n] ? `${n}: ${matOut.errors[n]}` : null)).filter(Boolean);
+      if (bad.length) errors[effect.name] = 'materyal gönderilemedi — ' + bad.join('; ');
+    }
+  }
+  for (const effect of effects) { if (errors[effect.name]) continue; fs.writeFileSync(path.join(dir, effect.name + '.vfx.json'), JSON.stringify(effect, null, 1)); names.push(effect.name); } // json en son: importer dokuları hazır bulur
   // 4) Unity açıksa importer prefab'ı üretir: ≤ 20 sn bekle, last_status.txt (ad|OK|yol | ad|ERROR|mesaj) oku
-  const pending = new Set(names); const done = []; const errors = {}; const statusFile = path.join(dir, 'last_status.txt');
+  const pending = new Set(names); const done = []; const statusFile = path.join(dir, 'last_status.txt');
   for (let i = 0; i < 40 && pending.size; i++) {
     await new Promise((r) => setTimeout(r, 500));
     for (const n of [...pending]) { const pf = path.join(dir, n + '.prefab'); if (fs.existsSync(pf) && fs.statSync(pf).mtimeMs >= started) { pending.delete(n); done.push(n); } }
@@ -163,9 +176,21 @@ async function unitySendVfx({ name, all }) {
   }
   const out = { ok: !pending.size && !Object.keys(errors).length, sent: names, imported: done, waiting: [...pending], prefabs: done.map((n) => 'Assets/UnityPreview/VFX/' + n + '.prefab'),
     textures: [...textures], missingTextures: [...missing] };
-  if (Object.keys(warnings).length) out.warnings = warnings;
+  if (matOut) { // Unity'nin materyal/shader durum satırları (özel shader derleme hatası prefab'ı bozmaz ama parçacık pembe çizilir)
+    const lines = readStatus(path.join(matOut.dir, 'last_status.txt'), started);
+    out.materials = matOut.names.map((n) => `Assets/UnityPreview/Materials/${n}.mat`);
+    if (matOut.shaders.size) out.shaders = [...matOut.shaders.values()].filter((x) => x.path).map((x) => x.path);
+    const matErr = Object.fromEntries(lines.filter((l) => matOut.names.includes(l.key) && l.status === 'ERROR').map((l) => [l.key, l.msg || 'hata']));
+    const shErr = shaderErrsOf(lines).filter((e) => [...matOut.shaders.keys()].includes(e.shader));
+    if (Object.keys(matErr).length) out.materialErrors = matErr;
+    if (shErr.length) { out.shaderErrors = shErr; out.ok = false; }
+    for (const [n, w] of Object.entries(matOut.warnings)) (out.warnings ??= {})['material:' + n] = w;
+    if (matOut.missing.size) out.missingMaterialTextures = [...matOut.missing];
+  }
+  if (Object.keys(warnings).length) out.warnings = { ...warnings, ...out.warnings };
   if (!scripts.length) out.scriptsMissing = 'unity/UnityPreviewVfx*.cs bulunamadı; Unity tarafında importer kurulu değilse prefab üretilmez.';
   if (Object.keys(errors).length) { out.errors = errors; out.error = Object.entries(errors).map(([n, m]) => n + ': ' + m).join('; '); }
+  else if (out.shaderErrors) out.error = out.shaderErrors.map((e) => `shader ${e.shader}${e.line != null ? ' satır ' + e.line : ''}: ${e.message}`).join('; ');
   else out.note = pending.size ? 'Unity açık değil ya da odakta değil; Unity\'ye geçince / açılınca prefab otomatik üretilir (batchmode: -executeMethod UnityPreviewVfxImporter.ProcessPending).' : 'Unity\'ye aktarıldı.';
   return out;
 }
@@ -243,8 +268,33 @@ async function unitySendMaterial({ name, all }) {
   if (all) { for (const it of listMaterials()) { try { const m = readMatRaw(it.name); if (m) list.push(m); } catch { /* bozuk json atlanır */ } } if (!list.length) throw new Error('Materyal kütüphanesi boş (materials/*.json yok)'); }
   else if (name) { const m = readMatRaw(name); if (!m) throw new Error('Materyal kütüphanesinde yok: ' + name); list.push(m); }
   else { if (!state.material) throw new Error('Gönderilecek materyal yok (editörde materyal boş)'); list.push(state.material); }
+  const started = Date.now() - 1000;
+  const { dir, names, errors, warnings, missing, textures, shaders } = await writeMaterialPayloads(project, list);
+  // 6) ≤25 sn: <ad>.mat mtime ≥ başlangıç ya da durum satırı
+  const pending = new Set(names); const done = []; const statusFile = path.join(dir, 'last_status.txt'); let shaderErrors = [];
+  const poll = () => {
+    const lines = readStatus(statusFile, started); shaderErrors = shaderErrsOf(lines);
+    for (const l of lines) if (pending.has(l.key) && (l.status === 'OK' || l.status === 'ERROR')) { pending.delete(l.key); if (l.status === 'ERROR') errors[l.key] = l.msg || 'hata'; else done.push(l.key); }
+    for (const n of [...pending]) { const mf = path.join(dir, n + '.mat'); if (fs.existsSync(mf) && fs.statSync(mf).mtimeMs >= started) { pending.delete(n); done.push(n); } }
+  };
+  for (let i = 0; i < 50 && pending.size; i++) { await sleep(500); poll(); }
+  poll(); // son durum (shader satırları)
+  const out = { ok: names.length > 0 && !pending.size && !Object.keys(errors).length && !shaderErrors.length, sent: names, imported: done, waiting: [...pending],
+    materials: done.map((n) => `Assets/UnityPreview/Materials/${n}.mat`), shaders: [...shaders.values()].filter((x) => x.path).map((x) => x.path), shaderErrors,
+    textures: [...textures], missingTextures: [...missing], shaderDetails: [...shaders.values()] };
+  if (Object.keys(warnings).length) out.warnings = warnings;
+  if (!scripts.length) out.scriptsMissing = SCRIPTS_MISSING;
+  const errText = [...Object.entries(errors).map(([n, msg]) => n + ': ' + msg), ...shaderErrors.map((e) => `shader ${e.shader}${e.line != null ? ' satır ' + e.line : ''}: ${e.message}`)];
+  if (Object.keys(errors).length) out.errors = errors;
+  if (errText.length) out.error = errText.join('; ');
+  else out.note = pending.size ? UNITY_WAIT_NOTE : 'Unity\'ye aktarıldı.';
+  return out;
+}
+
+// materyalleri (+ özel shader'ları, dokuları) Assets/UnityPreview/Materials/ altına yazar; beklemez. VFX gönderimi de kullanır
+async function writeMaterialPayloads(project, list) {
   const dir = path.join(project, 'Assets', 'UnityPreview', 'Materials'); const texDir = path.join(dir, 'Textures'); fs.mkdirSync(texDir, { recursive: true });
-  const started = Date.now() - 1000; const sentAt = new Date().toISOString(); // sentAt: aynı materyali yeniden göndermek de içerik değiştirir → Unity yeniden içe alır
+  const sentAt = new Date().toISOString(); // sentAt: aynı materyali yeniden göndermek de içerik değiştirir → Unity yeniden içe alır
   const errors = {}, warnings = {}, missing = new Set(), textures = new Set(), shaders = new Map(), payloads = [];
   for (const raw of list) {
     const { material: m, warnings: w, shader } = normMat(raw); const n = m.name; const warn = [...w];
@@ -266,25 +316,7 @@ async function unitySendMaterial({ name, all }) {
   }
   const names = []; // 5) yük en son: importer shader/dokuları hazır bulur
   for (const pl of payloads) { fs.writeFileSync(path.join(dir, pl.name + '.mat.json'), JSON.stringify(pl, null, 1)); names.push(pl.name); }
-  // 6) ≤25 sn: <ad>.mat mtime ≥ başlangıç ya da durum satırı
-  const pending = new Set(names); const done = []; const statusFile = path.join(dir, 'last_status.txt'); let shaderErrors = [];
-  const poll = () => {
-    const lines = readStatus(statusFile, started); shaderErrors = shaderErrsOf(lines);
-    for (const l of lines) if (pending.has(l.key) && (l.status === 'OK' || l.status === 'ERROR')) { pending.delete(l.key); if (l.status === 'ERROR') errors[l.key] = l.msg || 'hata'; else done.push(l.key); }
-    for (const n of [...pending]) { const mf = path.join(dir, n + '.mat'); if (fs.existsSync(mf) && fs.statSync(mf).mtimeMs >= started) { pending.delete(n); done.push(n); } }
-  };
-  for (let i = 0; i < 50 && pending.size; i++) { await sleep(500); poll(); }
-  poll(); // son durum (shader satırları)
-  const out = { ok: names.length > 0 && !pending.size && !Object.keys(errors).length && !shaderErrors.length, sent: names, imported: done, waiting: [...pending],
-    materials: done.map((n) => `Assets/UnityPreview/Materials/${n}.mat`), shaders: [...shaders.values()].filter((x) => x.path).map((x) => x.path), shaderErrors,
-    textures: [...textures], missingTextures: [...missing], shaderDetails: [...shaders.values()] };
-  if (Object.keys(warnings).length) out.warnings = warnings;
-  if (!scripts.length) out.scriptsMissing = SCRIPTS_MISSING;
-  const errText = [...Object.entries(errors).map(([n, msg]) => n + ': ' + msg), ...shaderErrors.map((e) => `shader ${e.shader}${e.line != null ? ' satır ' + e.line : ''}: ${e.message}`)];
-  if (Object.keys(errors).length) out.errors = errors;
-  if (errText.length) out.error = errText.join('; ');
-  else out.note = pending.size ? UNITY_WAIT_NOTE : 'Unity\'ye aktarıldı.';
-  return out;
+  return { dir, names, errors, warnings, missing, textures, shaders };
 }
 
 async function unitySendShader({ name }) { // yalnız özel shader: .shader yaz, Unity derleme sonucunu (durum dosyası) bekle

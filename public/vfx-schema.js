@@ -45,7 +45,7 @@ export function defaultEmitter() {
     sizeOverLifetime: { enabled: false, curve: [[0, 1], [1, 1]] },
     rotationOverLifetime: { enabled: false, angularVelocity: [0, 0] },
     textureSheet: { enabled: false, tilesX: 1, tilesY: 1, cycles: 1, randomStart: false },
-    renderer: { mode: 'billboard', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
+    renderer: { mode: 'billboard', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
   };
 }
 
@@ -128,6 +128,7 @@ export const MODULES = [
   ] },
   { key: 'renderer', label: 'Görünüm', always: true, fields: [
     ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)']] }],
+    ['material', 'material', 'Materyal (kütüphaneden)'],
     ['texture', 'texture', 'Doku'],
     ['blend', 'enum', 'Karışım', { options: [['additive', 'Toplamalı (ışık)'], ['alpha', 'Alfa (duman)']] }],
     ['intensity', 'num', 'Parlaklık (HDR, bloom)', { min: 0, max: 20, step: 0.05 }],
@@ -187,6 +188,7 @@ function normField(type, v, d, o = {}, warn, where) {
     case 'vec3': return normVec3(v, d, o);
     case 'enum': { const ok = o.options.map((x) => x[0]); if (v !== undefined && !ok.includes(v)) warn(`${where}: "${v}" geçersiz (${ok.join('|')})`); return ok.includes(v) ? v : d; }
     case 'texture': return typeof v === 'string' && v ? v : d; // yerleşik ya da vfx/textures içindeki özel png adı
+    case 'material': return typeof v === 'string' ? v.trim().replace(/\.json$/i, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') : d; // materials/<ad>.json; '' = yok
     case 'color2': { const a = Array.isArray(v) ? v : typeof v === 'string' ? [v, v] : d; return [normColor(a[0], d[0]), normColor(a[1] ?? a[0], d[1])]; }
     case 'gradient': return v; // modül düzeyinde işlenir
     case 'curve': {
@@ -410,6 +412,11 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - textureSheet: tilesX, tilesY, cycles, randomStart (flipbook dokular için)
 - renderer: mode billboard|stretched|horizontal|vertical, texture (${Object.keys(TEXTURES).join(', ')} ya da vfx/textures/<ad>.png için <ad>),
   blend additive|alpha, intensity (HDR çarpanı, >1 bloom verir), lengthScale + velocityScale (stretched uzunluğu = boyut·lengthScale + hız·velocityScale), sortingOrder
+- renderer.material: kütüphaneden materyal adı (materials/<ad>.json, list_materials; '' = yok). Doluysa parçacık o materyalin
+  shader'ı ve değerleriyle çizilir; texture/blend/intensity YOK SAYILIR (doku, karışım, parlaklık materyalden gelir). Shader'da
+  i.color = parçacık rengi (startColor × colorOverLifetime, doğrusal), i.uv = quad UV'si (flipbook açıksa o anki kare),
+  vert()'teki v.positionOS = köşenin DÜNYA konumu (Unity'de parçacık köşeleri dünyada, nesne matrisi birim), v.normalOS = quad normali.
+  Hazır URP Particles/Unlit (urp_particles_unlit) ya da özel UPE-SL shader olabilir; send_vfx_to_unity materyali (ve özel shader'ını) da gönderir.
 
 ## İpuçları
 - Tek atımlık efekt: main.looping=false, emission.rateOverTime=0, bursts=[{time:0,count:[n,n]}], efekt duration ≈ en uzun ömür.
