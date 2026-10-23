@@ -78,9 +78,10 @@ async function unitySend({ animation, all }) {
   const dir = path.join(u.project, 'Assets', 'AnimRef'); fs.mkdirSync(path.join(dir, 'Clips'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ character: u.character, mode: u.mode || 'Auto' }));
   const started = Date.now() - 1000; const names = [];
+  const sentAt = new Date().toISOString(); // Unity içerik özetine bakar: her gönderim farklı içerik = aynı animasyonu yeniden göndermek de aktarır
   for (const anim of list) {
     const name = safeName(anim.name || 'anim').replace(/\s+/g, '_');
-    const payload = { format: 'animref-1', name, fps: anim.fps, length: anim.length, loop: anim.loop, unitScale: state.rig.unitScale, bones: state.rig.bones, props: state.props || [], trackList: flatTracks(anim) };
+    const payload = { format: 'animref-1', name, sentAt, fps: anim.fps, length: anim.length, loop: anim.loop, unitScale: state.rig.unitScale, bones: state.rig.bones, props: state.props || [], trackList: flatTracks(anim) };
     fs.writeFileSync(path.join(dir, name + '.animref.json'), JSON.stringify(payload)); names.push(name);
   }
   // Unity açıksa birkaç saniye içinde .anim oluşur; bekle ve sonucu bildir
