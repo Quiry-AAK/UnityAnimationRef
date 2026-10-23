@@ -16,11 +16,11 @@
 <body>
 <header>
   <b class="brand" title="Unity Preview Editor">UPE</b>
-  <div class="seg modes"><button id="modeAnim" class="on" title="Animasyon modu">Animasyon</button><button id="modeVfx" title="VFX modu">VFX</button></div>
+  <div class="seg modes"><button id="modeAnim" class="on" title="Animasyon modu">Animasyon</button><button id="modeVfx" title="VFX modu">VFX</button><button id="modeMaterial" title="Materyal modu">Materyal</button><button id="modeShader" title="Shader modu">Shader</button></div>
   <button id="togLeft" class="tog" title="Sol panel (B)">☰ Kemikler</button>
   <select id="modelSelect" title="Karakter"></select>
 
-  <details class="menu anim-only">
+  <details class="menu" data-modes="anim">
     <summary>Dosya ▾</summary>
     <div class="menu-list">
       <label class="item">Karakter yükle (FBX/GLB)…<input type="file" id="fileModel" accept=".fbx,.glb,.gltf" hidden></label>
@@ -37,8 +37,8 @@
   <button id="btnUndo" title="Geri al (Ctrl+Z)">↶</button>
   <button id="btnRedo" title="Yinele (Ctrl+Y)">↷</button>
 
-  <button id="btnVfxUnity" class="primary vfx-only" title="Efekti Unity'ye prefab olarak gönder">Unity'ye gönder</button>
-  <details class="menu right anim-only">
+  <button id="btnVfxUnity" class="primary" data-modes="vfx" title="Efekti Unity'ye prefab olarak gönder">Unity'ye gönder</button>
+  <details class="menu right" data-modes="anim">
     <summary class="primary">Dışa aktar ▾</summary>
     <div class="menu-list">
       <button class="item" id="btnUnitySend"><b>Unity'ye gönder</b> (otomatik .anim)</button>
@@ -52,9 +52,20 @@
 
 <main>
   <aside id="left">
-    <input id="boneSearch" class="anim-only" placeholder="Kemik ara…">
-    <div id="boneList" class="anim-only"></div>
-    <div id="vfxLeft" class="vfx-only">
+    <input id="boneSearch" data-modes="anim" placeholder="Kemik ara…">
+    <div id="boneList" data-modes="anim"></div>
+    <div id="matLeft" data-modes="material">
+      <label class="fl">Materyal adı<input id="matName"></label>
+      <details class="menu" id="matAddMenu"><summary class="primary">+ Materyal ▾</summary><div class="menu-list" id="matAddList"></div></details>
+      <div class="vl">Kütüphane</div>
+      <div id="matLib" class="list"></div>
+    </div>
+    <div id="shLeft" data-modes="shader">
+      <label class="fl">Shader adı (UnityPreview/…)<input id="shName"></label>
+      <details class="menu" id="shAddMenu"><summary class="primary">+ Shader ▾</summary><div class="menu-list" id="shAddList"></div></details>
+      <div id="shList" class="list"></div>
+    </div>
+    <div id="vfxLeft" data-modes="vfx">
       <label class="fl">Efekt adı<input id="vfxName"></label>
       <details class="menu" id="vfxAddMenu"><summary class="primary">+ Emitter ▾</summary><div class="menu-list" id="vfxAddList"></div></details>
       <div id="vfxEmitters" class="list"></div>
@@ -62,8 +73,12 @@
   </aside>
 
   <section id="center">
-    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip" class="anim-only">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
-    <div id="vfxTransport" class="vfx-only">
+    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip" data-modes="anim">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
+    <div id="shCode" data-modes="shader">
+      <div class="shbar"><div class="seg" id="shTabs"></div><span class="sp"></span><span class="hint-s">UPE-SL (Unity HLSL alt kümesi) · Tab: girinti</span></div>
+      <div class="shbody"><textarea id="shCodeText" spellcheck="false" wrap="off"></textarea><div id="shLog"></div></div>
+    </div>
+    <div id="vfxTransport" data-modes="vfx">
       <button id="vfxRestart" title="Baştan (Home)">⏮</button>
       <button id="vfxPlay" class="big" title="Oynat / Durdur (Space)">⏸</button>
       <input type="range" id="vfxTime" min="0" max="1000" value="0" title="Zaman">
@@ -72,7 +87,7 @@
       <button id="vfxFocus" title="Kamerayı efekte odakla">◎</button>
       <span id="vfxStats"></span>
     </div>
-    <div id="transport" class="anim-only">
+    <div id="transport" data-modes="anim">
       <button id="btnPrev" title="Önceki kare (←)">⏮</button>
       <button id="btnPlay" class="big" title="Oynat / Durdur (Space)">▶</button>
       <button id="btnNext" title="Sonraki kare (→)">⏭</button>
@@ -92,12 +107,14 @@
         </div>
       </details>
     </div>
-    <canvas id="timeline" class="anim-only"></canvas>
+    <canvas id="timeline" data-modes="anim"></canvas>
   </section>
 
   <aside id="right">
-    <div id="vfxRight" class="vfx-only"></div>
-    <div id="animRight" class="anim-only">
+    <div id="vfxRight" data-modes="vfx"></div>
+    <div id="matRight" data-modes="material"></div>
+    <div id="shRight" data-modes="shader"></div>
+    <div id="animRight" data-modes="anim">
     <details open>
       <summary>Seçili kemik</summary>
       <div id="boneName">—</div>

@@ -93,7 +93,8 @@ button.big { min-width:40px; background:var(--acc); color:#04121f; border-color:
 .fl input, .fl select { width:100%; }
 
 /* ── modlar (Animasyon / VFX) */
-body.mode-vfx .anim-only, body:not(.mode-vfx) .vfx-only { display:none !important; }
+body[data-mode="anim"] [data-modes]:not([data-modes~="anim"]), body[data-mode="vfx"] [data-modes]:not([data-modes~="vfx"]),
+body[data-mode="material"] [data-modes]:not([data-modes~="material"]), body[data-mode="shader"] [data-modes]:not([data-modes~="shader"]) { display:none !important; }
 .brand { color:var(--acc); letter-spacing:.04em; }
 .seg.modes { margin:0 4px 0 0; }
 .seg.modes button { padding:4px 12px; }
@@ -131,3 +132,24 @@ body.mode-vfx .anim-only, body:not(.mode-vfx) .vfx-only { display:none !importan
 .grad .vrow button, .bursts .vrow button { padding:0 5px; }
 .bursts .vrow input[type=number] { width:100%; }
 .curve canvas { width:100%; height:90px; border-radius:4px; display:block; cursor:crosshair; }
+
+/* ── Materyal / Shader modları */
+#matLeft, #shLeft { display:flex; flex-direction:column; gap:6px; }
+#matLeft .menu-list, #shLeft .menu-list { min-width:240px; max-height:60vh; overflow:auto; }
+.vl small { color:#5c6577; font-size:10px; }
+.seg.targets { flex-wrap:wrap; gap:2px; }
+.seg.targets button { flex:0 0 auto; border-radius:4px !important; padding:2px 8px; font-size:12px; }
+#shCode { height:38%; min-height:150px; display:flex; flex-direction:column; background:var(--panel); border-top:1px solid var(--line); }
+.shbar { display:flex; align-items:center; gap:6px; padding:4px 8px; border-bottom:1px solid var(--line); }
+.shbar .seg { margin:0; }
+.shbar .seg button { padding:2px 10px; font-size:12px; }
+.shbody { flex:1; display:flex; min-height:0; }
+#shCodeText { flex:1; min-width:0; resize:none; border:0; border-radius:0; background:#16191f; color:#d9dde5; font:12px/1.45 Consolas, 'Cascadia Mono', monospace; padding:8px; tab-size:4; white-space:pre; }
+#shCodeText:read-only { color:#9aa3b5; }
+#shLog { width:34%; min-width:180px; overflow:auto; padding:6px 8px; font:11px/1.4 Consolas, monospace; border-left:1px solid var(--line); }
+#shLog .ok { color:#5ee08a; } #shLog .err { color:#ff6b6b; margin:2px 0; } #shLog .warn { color:#f5b942; margin:2px 0; }
+#shLog .link { cursor:pointer; text-decoration:underline dotted; }
+.propdef { display:flex; flex-wrap:wrap; gap:3px; margin-top:8px; }
+.propdef input:not([type=checkbox]) { flex:1; min-width:60px; padding:2px 4px; }
+.propdef select { padding:2px; }
+.propdef input[type=number] { flex:0 0 52px; }

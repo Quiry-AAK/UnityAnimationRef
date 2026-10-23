@@ -5,6 +5,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { initVfx } from './vfx.js';
+import { initMaterials } from './material.js';
 
 const $ = (s) => document.querySelector(s);
 const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2500); };
@@ -368,7 +369,7 @@ async function buildProps() {
     obj.position.set(...a.pos); obj.rotation.set(...a.rot.map(THREE.MathUtils.degToRad)); obj.scale.setScalar(a.scale);
     pivot.add(obj); bone.obj.add(pivot); a.pivot = pivot; a.obj = obj;
   }
-  refreshPropList();
+  refreshPropList(); mats.onSceneChanged(); // giydirilmiş materyaller yeni eşya mesh'lerine
 }
 function readPropTransform(a) {
   a.pos = a.obj.position.toArray().map((v) => +v.toFixed(4));
@@ -559,7 +560,9 @@ function tick(now) {
   }
   const dt = (now - last) / 1000; last = now;
   orbit.update();
-  if (vfx?.active) { vfx.tick(dt); vfx.render(); return; }
+  mats?.tick(dt); // giydirilmiş UPE materyallerinin ışık/zaman uniform'ları (tüm modlarda)
+  const mod = modeModule(mode);
+  if (mod?.active) { mod.tick(dt); mod.render(); return; }
   updateOverlay(); renderer.render(scene, camera);
 }
 
@@ -621,7 +624,7 @@ $('#modelSelect').onchange = () => { const n = $('#modelSelect').value; if (n) l
 document.addEventListener('click', (e) => { for (const m of document.querySelectorAll('details.menu[open]')) if (!m.contains(e.target) || e.target.closest('button.item')) m.open = false; });
 document.querySelectorAll('label.item input[type=file]').forEach((i) => i.addEventListener('change', () => document.querySelectorAll('details.menu[open]').forEach((m) => (m.open = false))));
 $('#btnDemo').onclick = () => { buildDemo(); anim = newAnim(); afterAnimReplaced(); };
-$('#btnUndo').onclick = () => (mode === 'vfx' ? vfx.undo() : undo()); $('#btnRedo').onclick = () => (mode === 'vfx' ? vfx.redo() : redo());
+$('#btnUndo').onclick = () => { const m = modeModule(mode); m ? m.undo() : undo(); }; $('#btnRedo').onclick = () => { const m = modeModule(mode); m ? m.redo() : redo(); };
 $('#fileModel').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const n = await upload(f); loadModel(n).catch((er) => toast(er.message)); e.target.value = ''; };
 $('#fileAnim').onchange = async (e) => { const f = e.target.files[0]; if (f) await importAnimFile(f).catch((er) => toast(er.message)); e.target.value = ''; };
 $('#fileJson').onchange = async (e) => {
@@ -778,6 +781,15 @@ window.addEventListener('keydown', (e) => {
     else if (e.key.toLowerCase() === 'p') $('#togRight').click();
     return;
   }
+  if (mode === 'material' || mode === 'shader') {
+    const m = modeModule(mode);
+    if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? m.redo() : m.undo(); }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); m.redo(); }
+    else if (e.key.toLowerCase() === 'f') m.frame();
+    else if (e.key.toLowerCase() === 'b') $('#togLeft').click();
+    else if (e.key.toLowerCase() === 'p') $('#togRight').click();
+    return;
+  }
   if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   else if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   else if (e.code === 'Space') { e.preventDefault(); $('#btnPlay').click(); }
@@ -792,25 +804,35 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('resize', drawTimeline);
 
-// ───────────────────────── modlar: Animasyon / VFX (ileride Shader)
+// ───────────────────────── modlar: Animasyon / VFX / Materyal / Shader
 const vfx = initVfx({
   scene, camera, renderer, orbit, viewport, stage, grid, overlay, api, toast, $, BG,
   getRig: () => rig, getProps: () => props, getAnim: () => anim,
   poseAt: (f) => refreshPose(f), restorePose: () => refreshPose(), onResize: () => onResize(),
   setMode: (m, o) => setEditorMode(m, o),
 });
+const mats = initMaterials({
+  scene, camera, renderer, orbit, viewport, stage, grid, overlay, api, toast, $, BG, sun,
+  getRig: () => rig, getProps: () => props, onResize: () => onResize(),
+  setMode: (m, o) => setEditorMode(m, o), setHeroVisible: (v) => { stage.visible = v; },
+});
+const MODES = ['anim', 'vfx', 'material', 'shader'];
+const modeModule = (m) => ({ vfx, material: mats.material, shader: mats.shader })[m] || null;
+const camByMode = {}; // her modun kamerası ayrı hatırlanır
 function setEditorMode(m, { notify = true } = {}) {
-  m = m === 'vfx' ? 'vfx' : 'anim';
-  const changed = m !== mode; mode = m;
-  document.body.classList.toggle('mode-vfx', mode === 'vfx');
-  $('#modeAnim').classList.toggle('on', mode === 'anim'); $('#modeVfx').classList.toggle('on', mode === 'vfx');
-  $('#togLeft').textContent = mode === 'vfx' ? "☰ Emitter'lar" : '☰ Kemikler';
-  if (mode === 'vfx') { playing = false; tc.detach(); if (!vfx.active) vfx.activate(); }
-  else { if (vfx.active) vfx.deactivate(); if (sel) tc.attach(sel.obj); refreshPose(); uiUpdate(); }
-  if (changed || !notify) { setPanel('left', savedPanel('left', mode === 'vfx')); setPanel('right', savedPanel('right', mode === 'vfx')); }
+  m = MODES.includes(m) ? m : 'anim';
+  const prev = mode, changed = m !== prev;
+  if (changed) { camByMode[prev] = { pos: camera.position.clone(), target: orbit.target.clone() }; const pm = modeModule(prev); if (pm?.active) pm.deactivate(); }
+  mode = m; document.body.dataset.mode = m;
+  for (const k of MODES) $('#mode' + k[0].toUpperCase() + k.slice(1))?.classList.toggle('on', k === m);
+  $('#togLeft').textContent = { anim: '☰ Kemikler', vfx: "☰ Emitter'lar", material: '☰ Materyaller', shader: "☰ Shader'lar" }[m];
+  if (m === 'anim') { if (sel) tc.attach(sel.obj); refreshPose(); uiUpdate(); } else { playing = false; tc.detach(); }
+  const mod = modeModule(m); if (mod && !mod.active) mod.activate();
+  if (changed) { const c = camByMode[m]; if (c) { camera.position.copy(c.pos); orbit.target.copy(c.target); orbit.update(); } else mod?.frame?.(); }
+  if (changed || !notify) { setPanel('left', savedPanel('left', m !== 'anim')); setPanel('right', savedPanel('right', m !== 'anim')); }
   if (notify) api('/api/mode', { mode }).catch(() => {});
 }
-$('#modeAnim').onclick = () => setEditorMode('anim'); $('#modeVfx').onclick = () => setEditorMode('vfx');
+for (const k of MODES) { const b = $('#mode' + k[0].toUpperCase() + k.slice(1)); if (b) b.onclick = () => setEditorMode(k); }
 $('#btnVfxUnity').onclick = () => vfx.sendUnity();
 
 // ───────────────────────── sunucu bağlantısı (Claude köprüsü)
@@ -831,11 +853,17 @@ es.addEventListener('gif', async (e) => {
   await fetch('/api/gif-result?id=' + d.id + '&name=' + encodeURIComponent(name), { method: 'POST', body: bytes });
 });
 es.addEventListener('load-model', (e) => { const d = JSON.parse(e.data); (d.name === 'demo' ? Promise.resolve(buildDemo()) : loadModel(d.name)).catch((er) => toast(er.message)); });
+es.addEventListener('material', (e) => { const d = JSON.parse(e.data); if (mode !== 'material') setEditorMode('material', { notify: false }); mats.onRemoteMaterial(d.material); });
+es.addEventListener('shader', (e) => { const d = JSON.parse(e.data); if (mode !== 'shader') setEditorMode('shader', { notify: false }); mats.onRemoteShader(d.shader); });
+es.addEventListener('shader-compile', async (e) => { const d = JSON.parse(e.data); await ready; let r; try { r = mats.onCompileRequest(d); } catch (er) { r = { ok: false, errors: [{ section: 'şablon', line: 0, message: String(er.message || er) }] }; } api('/api/shader-compile-result', { id: d.id, ...r }); });
+es.addEventListener('lighting', (e) => mats.onLighting(JSON.parse(e.data).lighting));
+es.addEventListener('overrides', (e) => mats.onOverrides(JSON.parse(e.data).overrides));
 es.addEventListener('vfx', (e) => { const d = JSON.parse(e.data); if (mode !== 'vfx') setEditorMode('vfx', { notify: false }); vfx.onRemoteEffect(d.vfx); });
 es.addEventListener('mode', (e) => setEditorMode(JSON.parse(e.data).mode, { notify: false }));
 es.addEventListener('render', async (e) => {
   const d = JSON.parse(e.data); await ready;
   if (d.kind === 'vfx') { let png = ''; try { png = await vfx.renderSheet(d); } catch (er) { toast('VFX render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
+  if (d.kind === 'material') { let png = ''; try { png = await mats.renderSheet(d); } catch (er) { toast('Materyal render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   const size = d.size || 512; let png = '';
   const camBackup = [camera.position.clone(), orbit.target.clone()];
   if (d.camera) { const [px, py, pz] = d.camera.position || []; if (px !== undefined) camera.position.set(px, py, pz); if (d.camera.target) orbit.target.set(...d.camera.target); orbit.update(); }
@@ -854,7 +882,8 @@ es.addEventListener('render', async (e) => {
   } catch { buildDemo(); }
   anim = normalizeAnim(st.anim); afterAnimReplaced();
   vfx.setFromState(st.vfx);
-  setEditorMode(st.mode === 'vfx' ? 'vfx' : 'anim', { notify: false });
+  await mats.setFromState(st);
+  setEditorMode(MODES.includes(st.mode) ? st.mode : 'anim', { notify: false });
   requestAnimationFrame(tick); markReady();
 })();
-window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone };
+window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; } }; // hata ayıklama

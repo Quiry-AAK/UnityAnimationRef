@@ -36,9 +36,12 @@ export function initVfx(ctx) {
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.45, 1.0); composer.addPass(bloom);
   composer.addPass(new OutputPass());
-  const resize = () => { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(viewport.clientWidth, viewport.clientHeight); };
-  new ResizeObserver(() => active && resize()).observe(viewport);
-  function render() { bloom.enabled = effect.preview.bloom > 0; bloom.strength = effect.preview.bloom; composer.render(); }
+  let csz = '', fixedSize = false; // kontak sayfası çizilirken boyut denetimi kapalı
+  const resize = () => { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(viewport.clientWidth, viewport.clientHeight); csz = viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio(); };
+  function render() { // boyut her karede denetlenir (açılışta düzen oturmadan etkinleşince sıfır boyut kalmasın)
+    if (!fixedSize && csz !== viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio()) resize();
+    bloom.enabled = effect.preview.bloom > 0; bloom.strength = effect.preview.bloom; composer.render();
+  }
 
   // ── bağlama (kemik / eşya), kahraman görünürlüğü, animasyonla eşleme
   const pivots = new Map();
@@ -450,7 +453,7 @@ export function initVfx(ctx) {
     else camera.position.copy(target).addScaledVector(new THREE.Vector3(...(PRESET_DIR[d.camera?.preset] || PRESET_DIR.threequarter)).normalize(), f.dist);
     camera.lookAt(target); orbit.target.copy(target);
     const sheet = el('canvas'); sheet.width = cols * size; sheet.height = rows * size; const sx = sheet.getContext('2d');
-    renderer.setPixelRatio(1); renderer.setSize(size, size, false); composer.setPixelRatio(1); composer.setSize(size, size); camera.aspect = 1; camera.updateProjectionMatrix();
+    fixedSize = true; renderer.setPixelRatio(1); renderer.setSize(size, size, false); composer.setPixelRatio(1); composer.setSize(size, size); camera.aspect = 1; camera.updateProjectionMatrix();
     try {
       times.forEach((t, i) => {
         player.seek(t); player.onBeforeStep?.(t); player.upload(camera); render();
@@ -462,7 +465,7 @@ export function initVfx(ctx) {
     } finally {
       effect.preview.background = keep.bg; effect.preview.showHero = keep.hero;
       camera.position.copy(keep.pos); orbit.target.copy(keep.target); camera.aspect = keep.aspect; orbit.update();
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); ctx.onResize(); resize();
+      fixedSize = false; renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); ctx.onResize(); resize();
       seekTo(keep.time); playing = keep.playing; applyPreviewSettings();
       if (!was) ctx.setMode('anim', { notify: false });
     }
