@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.ANIMREF_PORT || 5177);
-const STATE_FILE = path.join(ROOT, 'project.json');
+// 5177 ana editör project.json'u kullanır; diğer portlar (chat başına editör) kendi durum dosyasını tutar, ilk açılışta ana durumdan başlar
+const MAIN_STATE = path.join(ROOT, 'project.json');
+const STATE_FILE = PORT === 5177 ? MAIN_STATE : path.join(ROOT, '.ports', `project-${PORT}.json`);
 const MODELS_DIR = path.join(ROOT, 'models');
 const EXPORTS_DIR = path.join(ROOT, 'exports');
 const ANIMS_DIR = path.join(ROOT, 'animations');
@@ -22,7 +24,8 @@ const MIME = {
 };
 
 let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0 };
-try { state = { ...state, ...JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
+fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+try { state = { ...state, ...JSON.parse(fs.readFileSync(fs.existsSync(STATE_FILE) ? STATE_FILE : MAIN_STATE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
 
 let saveTimer = null;
 const save = () => {
