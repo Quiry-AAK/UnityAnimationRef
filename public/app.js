@@ -471,18 +471,6 @@ function refreshBoneList() {
   }
 }
 $('#boneSearch').oninput = refreshBoneList;
-// sol paneldeki her modun bölümü başlığından katlanır; varsayılan kapalı, mod başına hatırlanır
-function setLeftFold(m, open) {
-  document.querySelector(`[data-fold="${m}"]`).setAttribute('aria-expanded', open);
-  for (const el of document.querySelectorAll(`[data-fold-body="${m}"]`)) el.classList.toggle('fold-shut', !open);
-  try { localStorage.setItem(`upe-left-open-${m}`, open ? '1' : '0'); } catch { /* yok say */ }
-}
-for (const h of document.querySelectorAll('#left [data-fold]')) {
-  const m = h.dataset.fold;
-  h.onclick = () => setLeftFold(m, h.getAttribute('aria-expanded') !== 'true');
-  let open = false; try { open = localStorage.getItem(`upe-left-open-${m}`) === '1'; } catch { /* yok */ }
-  setLeftFold(m, open);
-}
 
 // ───────────────────────── timeline
 const tl = $('#timeline'); const tctx = tl.getContext('2d');
@@ -734,16 +722,24 @@ $('#btnGif').onclick = async () => {
 };
 
 // ───────────────────────── açılır/kapanır paneller
+const LEFT_NAMES = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar" };
+// sol panel her modda varsayılan kapalı; eski panel2-*-left kayıtları sayılmasın diye ayrı anahtar
+const panelKey = (side) => side === 'left' ? `upe-left-${mode}` : `panel2-${mode}-${side}`;
 function setPanel(side, open) {
   document.body.classList.toggle(side + '-open', open);
   $(side === 'left' ? '#togLeft' : '#togRight').classList.toggle('on', open);
-  try { localStorage.setItem(`panel2-${mode}-${side}`, open ? '1' : '0'); } catch { /* yok say */ }
+  if (side === 'left') {
+    const h = $('#leftEdge');
+    h.querySelector('.chev').textContent = open ? '‹' : '›'; h.querySelector('.lbl').textContent = LEFT_NAMES[mode];
+    h.title = `${LEFT_NAMES[mode]} paneli (B)`;
+  }
+  try { localStorage.setItem(panelKey(side), open ? '1' : '0'); } catch { /* yok say */ }
   setTimeout(() => { onResize(); drawTimeline(); }, 220);
 }
 const panelOpen = (side) => document.body.classList.contains(side + '-open');
-$('#togLeft').onclick = () => setPanel('left', !panelOpen('left'));
+$('#togLeft').onclick = $('#leftEdge').onclick = () => setPanel('left', !panelOpen('left'));
 $('#togRight').onclick = () => setPanel('right', !panelOpen('right'));
-const savedPanel = (s, d = true) => { try { const v = localStorage.getItem(`panel2-${mode}-${s}`); return v === null ? d : v === '1'; } catch { return d; } };
+const savedPanel = (s, d = s === 'right') => { try { const v = localStorage.getItem(panelKey(s)); return v === null ? d : v === '1'; } catch { return d; } };
 setPanel('left', savedPanel('left')); setPanel('right', savedPanel('right'));
 
 
@@ -845,7 +841,7 @@ function setEditorMode(m, { notify = true } = {}) {
   if (changed) { camByMode[prev] = { pos: camera.position.clone(), target: orbit.target.clone() }; const pm = modeModule(prev); if (pm?.active) pm.deactivate(); }
   mode = m; document.body.dataset.mode = m;
   for (const k of MODES) $('#mode' + k[0].toUpperCase() + k.slice(1))?.classList.toggle('on', k === m);
-  $('#togLeft').title = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar" }[m] + ' paneli (B)';
+  $('#togLeft').title = LEFT_NAMES[m] + ' paneli (B)';
   $('#sendLabel').textContent = SEND_LABEL[m]; $('#stHint').textContent = HINTS[m]; $('#panelFilter').value = ''; applyFilter();
   if (m === 'anim') { if (sel) tc.attach(sel.obj); refreshPose(); uiUpdate(); } else { playing = false; tc.detach(); }
   const mod = modeModule(m); if (mod && !mod.active) mod.activate();
