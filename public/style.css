@@ -224,7 +224,7 @@ body[data-mode="material"] [data-modes]:not([data-modes~="material"]), body[data
 dialog.dlg { background:var(--panel); color:var(--txt); border:1px solid var(--line2); border-radius:12px; padding:18px 20px; width:min(460px, 92vw); box-shadow:0 20px 60px #000c; }
 dialog.dlg.wide { width:min(760px, 94vw); max-height:86vh; overflow:auto; }
 dialog.dlg::backdrop { background:#0009; backdrop-filter:blur(2px); }
-dialog.dlg h3 { margin:0 0 10px; font-size:16px; }
+dialog.dlg h3 { margin:0 0 10px; font-size:16px; outline:none; }
 dialog.dlg textarea { min-height:110px; margin:6px 0; }
 .dlg-row { display:flex; gap:8px; align-items:center; margin-top:12px; }
 #helpBody { display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; }
