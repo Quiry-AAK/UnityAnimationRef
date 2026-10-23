@@ -1,5 +1,6 @@
 // Unity Preview Editor MCP sunucusu (stdio; eski adı Anim Ref). Editör sunucusuna (server.js) HTTP ile bağlanır; çalışmıyorsa başlatır.
-// Araçlar: animasyon (anahtar kare, eşya, Unity .anim) + VFX (parçacık efekti, kontak sayfası render, Unity prefab). Sözleşme: docs/VFX.md
+// Araçlar: animasyon (anahtar kare, eşya, Unity .anim) + VFX (parçacık efekti, kontak sayfası render, Unity prefab; docs/VFX.md)
+// + materyal/shader (UPE-SL shader, materyal, ışık, giydirme, Unity .mat/.shader; docs/MATERIAL.md).
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -10,6 +11,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import * as THREE from 'three';
 import { normalizeEffect, applyChanges, diffEffects, presetEmitter, defaultEffect, findEmitter, getPath, PRESETS, TEXTURES, VFX_REFERENCE } from './public/vfx-schema.js';
+import { normalizeShader, normalizeMaterial, applyShaderChanges, applyMaterialChanges, diffShaders, diffObjects, normalizeLighting, defaultLighting, shaderUnityName, defaultShader, clone, SHADER_REFERENCE, MATERIAL_REFERENCE, BUILTIN_TEXTURES, PREVIEW_TARGETS } from './public/shader-schema.js';
+import { BUILTIN_SHADERS, TEMPLATES } from './public/shader-builtins.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 // Her MCP süreci (= her chat) kendi editör portunu alır; UPE_PORT (yoksa ANIMREF_PORT) verilirse o sabit kullanılır (ör. 5177 elle açılan editör).
@@ -38,6 +41,7 @@ process.stdin.on('end', () => { stopChild(); process.exit(0); });
 const EXPORTS = path.join(ROOT, 'exports');
 
 const get = (p) => fetch(BASE + p).then((r) => r.json());
+const getOk = async (p) => { const r = await fetch(BASE + p); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
 const post = async (p, body) => {
   const r = await fetch(BASE + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
@@ -85,19 +89,46 @@ const expandPresets = (effect) => (Array.isArray(effect?.emitters)
   ? { ...effect, emitters: effect.emitters.map((em) => (em && typeof em === 'object' && em.preset ? (({ preset, ...rest }) => presetEmitter(preset, rest))(em) : em)) } : effect);
 const pushVfx = async (effect, setBaseline = true) => (await post('/api/claude/vfx', { vfx: effect, setBaseline })).clients > 0;
 
+// ── Materyal/Shader yardımcıları (mantık public/shader-schema.js'de)
+const enc = encodeURIComponent;
+const pathGet = (o, p) => String(p).split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+// shader çözümü (ad ya da unityName): builtin → editördeki kaydedilmemiş özel çalışma kopyası → shaders/
+const shaderByName = async (n) => (n ? fetch(BASE + '/api/shaders/get?working=1&name=' + enc(n)).then((r) => (r.ok ? r.json() : null), () => null) : null);
+const shaderNames = async () => (await get('/api/shaders/list').catch(() => [])).map((s) => s.unityName).join(', ');
+const requireShaderOf = async (n) => { const s = await shaderByName(n); if (!s) throw new Error(`Shader bulunamadı: ${n}. Var olanlar: ${await shaderNames()}`); return s; };
+const curShader = (st) => (st.shader ? normalizeShader(st.shader).shader : null);
+const curMaterial = async (st) => { if (!st.material) return null; const shader = await shaderByName(st.material.shader); return { ...normalizeMaterial(st.material, shader), shader }; };
+const shaderSummary = (s) => (s ? { name: s.name, unityName: s.unityName, builtin: s.builtin, properties: s.properties.map((p) => `${p.name}:${p.type}`), renderState: s.renderState, outline: s.outline.enabled ? s.outline : undefined, urpSurface: s.urpSurface || undefined } : null);
+const materialSummary = (m) => (m ? { name: m.name, shader: m.shader, target: m.preview.target, renderQueue: m.renderQueue, values: m.values } : null);
+const pushMaterial = async (m, setBaseline = true) => (await post('/api/claude/material', { material: m, setBaseline })).clients > 0;
+const pushShader = async (s, setBaseline = true) => (await post('/api/claude/shader', { shader: s, setBaseline })).clients > 0;
+async function compileCheck(shader) { // editör (tarayıcı) UPE-SL → GLSL çevirip derler; tarayıcı yoksa denetlenemez
+  const ping = await get('/api/ping').catch(() => ({ clients: 0 }));
+  if (!ping.clients) return { checked: false, note: `Shader editör durumuna kaydedildi ama editör tarayıcıda açık değil (${BASE}); GLSL derlemesi denetlenemedi. Editörü açınca kendisi derler; sonra update_shader/set_shader ile yeniden denetleyebilirsin.` };
+  try { const r = await post('/api/claude/shader-compile', { shader }); return { checked: true, ok: !!r.ok, errors: r.errors || [], ...(r.warnings?.length ? { warnings: r.warnings } : {}), ...(r.log ? { log: r.log } : {}) }; }
+  catch (e) { return { checked: false, note: 'Derleme denetlenemedi: ' + e.message }; }
+}
+const shaderPathGet = (s, p) => { const m = /^properties\.([^.]+)(?:\.(.+))?$/.exec(p); if (!m) return pathGet(s, p); const pr = s.properties.find((x) => x.name === m[1]); return m[2] ? pathGet(pr, m[2]) : (pr ?? null); };
+const BUILTIN_EDIT_WARN = `Bu hazır (builtin) bir shader: değişiklikler yalnız önizlemede, Unity'ye .shader yazılmaz. Kalıcı/Unity'ye gidecek sürüm için save_shader { name:"<yeni_ad>" } ile özel kopya oluştur (UnityPreview/<yeni_ad>).`;
+const shownValue = (p, v) => (typeof v === 'string' && /^code\./.test(p) ? `(${v.length} karakter)` : v);
+
 server.registerTool('get_status', {
-  description: 'Editörün durumu: açık mod (anim|vfx), model, kemik listesi, animasyon özeti, VFX özeti (ad, süre, emitter başına ad/enabled/rateOverTime/burst sayısı/doku), kullanıcı notu sayısı. Önce bunu çağır.',
+  description: 'Editörün durumu: açık mod (anim|vfx|material|shader), model, kemik listesi, animasyon özeti, VFX özeti (ad, süre, emitter başına ad/enabled/rateOverTime/burst sayısı/doku), materyal özeti (ad, shader, önizleme hedefi, değerler), shader özeti (ad, unityName, builtin, özellikler, renderState), giydirmeler (materialOverrides), sahne ışığı, mod başına kullanıcı notu sayısı. Önce bunu çağır.',
   inputSchema: {},
 }, async () => {
   await ensureServer(); const st = await get('/api/state'); const ping = await get('/api/ping');
-  const a = st.anim;
+  const a = st.anim; const mat = await curMaterial(st);
   return text({
     editorUrl: BASE, browserConnected: ping.clients > 0, mode: st.mode || 'anim', model: st.modelName,
     bones: st.rig?.bones.map((b) => b.name + (b.parent ? ` (<- ${b.parent})` : '')) ?? [],
     unitScale: st.rig?.unitScale,
     anim: a ? { name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: Object.fromEntries(Object.entries(a.tracks).map(([k, t]) => [k, { rotKeys: t.rot?.length ?? 0, posKeys: t.pos?.length ?? 0 }])) } : null,
     vfx: vfxSummary(curVfx(st)),
+    material: mat ? { ...materialSummary(mat.material), shaderFound: !!mat.shader } : null,
+    shader: shaderSummary(curShader(st)),
+    overrides: st.materialOverrides || {}, lighting: normalizeLighting(st.lighting),
     pendingNotes: notesOf(st, 'anim').length, pendingVfxNotes: notesOf(st, 'vfx').length,
+    pendingMaterialNotes: notesOf(st, 'material').length, pendingShaderNotes: notesOf(st, 'shader').length,
   });
 });
 
@@ -516,8 +547,8 @@ server.registerTool('list_vfx_textures', {
 });
 
 server.registerTool('set_editor_mode', {
-  description: 'Kullanıcının ekranındaki editör modunu değiştirir: anim (animasyon) | vfx (parçacık efekti). set_vfx/update_vfx/load_vfx zaten VFX moduna geçirir; bunu yalnız kullanıcıya başka modu göstermek için kullan.',
-  inputSchema: { mode: z.enum(['anim', 'vfx']) },
+  description: 'Kullanıcının ekranındaki editör modunu değiştirir: anim (animasyon) | vfx (parçacık efekti) | material (materyal) | shader (shader kodu). set_vfx/update_vfx/load_vfx VFX moduna, new_material/set_material/update_material/load_material Materyal moduna, new_shader/set_shader/update_shader/load_shader Shader moduna zaten geçirir; bunu yalnız kullanıcıya başka modu göstermek için kullan.',
+  inputSchema: { mode: z.enum(['anim', 'vfx', 'material', 'shader']) },
 }, async ({ mode }) => { await ensureServer(); const r = await post('/api/claude/mode', { mode }); return text({ mode: r.mode, browserConnected: r.clients > 0 }); });
 
 server.registerTool('send_vfx_to_unity', {
@@ -525,6 +556,301 @@ server.registerTool('send_vfx_to_unity', {
     + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. ≤20 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Karakter gerekmez; önce set_unity_project ile proje ayarlı olmalı. Yanıt: { ok, sent, imported, waiting, prefabs, missingTextures, note | error }.',
   inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
 }, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-vfx', { name, all })); });
+
+// ── Materyal + Shader modu (docs/MATERIAL.md). Shader = UPE-SL kodu (Unity HLSL alt kümesi), materyal = shader + değerler. Format: material_reference
+const changeSchema = z.object({ path: z.string().describe('Nokta ile yol'), value: z.any() });
+const templateList = () => Object.entries(TEMPLATES).map(([k, t]) => `- ${k}: ${t.label}`).join('\n');
+const builtinList = () => BUILTIN_SHADERS.map((s) => `- ${s.unityName} (ad: ${s.name}) — ${s.description}\n  özellikler: ${s.properties.map((p) => p.name).join(', ')}`).join('\n');
+const SPECIAL_TEX = { white: 'düz beyaz (önizlemede üretilir; Unity\'de shader varsayılanı)', black: 'düz siyah', gray: 'düz gri', bump: 'düz normal haritası (0.5,0.5,1)', '@mesh': 'önizleme nesnesinin kendi dokusu (ör. kahramanın base color\'ı); Unity\'de unityPath:"Assets/..." gerekir' };
+const isBuiltinShaderName = (n) => BUILTIN_SHADERS.some((b) => [b.name, b.unityName].some((x) => x.toLowerCase() === String(n).trim().toLowerCase()));
+
+server.registerTool('material_reference', {
+  description: 'Shader (UPE-SL kod kuralları, UPEInput girdileri, özellik tipleri, renderState) ve materyal formatının tam başvurusu + hazır (builtin) shader\'lar ve özellikleri + yeni shader şablonları + doku listesi + araç akışı. Materyal ya da shader işine başlamadan ÖNCE bunu oku.',
+  inputSchema: {},
+}, async () => {
+  await ensureServer(); const files = await get('/api/material-textures').catch(() => []);
+  const custom = (await get('/api/shaders/list').catch(() => [])).filter((s) => !s.builtin);
+  return text(`${SHADER_REFERENCE}
+${MATERIAL_REFERENCE}
+## Hazır shader'lar (builtin; ezilemez/silinemez — değiştirmek için load_shader/get_shader → set_shader ile BAŞKA adla özel kopya)
+${builtinList()}
+${custom.length ? `\n## Kütüphanedeki özel shader'lar\n${custom.map((s) => `- ${s.unityName}${s.description ? ' — ' + s.description : ''}`).join('\n')}\n` : ''}
+## Yeni shader şablonları (new_shader template)
+${templateList()}
+
+## Dokular (texture değerinde tex: uzantısız ad)
+- Dosyalar (materials/textures/): ${files.join(', ') || '—'}
+- Özel adlar: ${Object.keys(SPECIAL_TEX).join(', ')} (list_material_textures)
+
+## Araç akışı
+- Materyal: new_material { name, shader:'Elarion/ToonCharacter', values? } (shader varsayılanlarıyla başlar) → update_material changes=[{ path:'values._RimPower', value:3 }, { path:'values._BaseMap', value:{ tex:'checker', tiling:[2,2] } }, { path:'preview.target', value:'hero' }] → render_material ile bak.
+- Shader: new_shader { name, template:'toon' } → update_shader changes=[{ path:'code.fragment', value:'float4 frag(UPEInput i)\\n{ ... }' }, { path:'properties._RimPower.max', value:10 }, { path:'properties._Glow', value:{ type:'range', min:0, max:4, default:1 } }, { path:'renderState.blend', value:'additive' }]. Yanıttaki compile = editörün GLSL derleme sonucu (errors: bölüm+satır+mesaj); hata varsa düzelt. Sonra bu shader'la materyal: new_material { shader:'UnityPreview/<ad>' }.
+- Claude'un her new_/set_/update_/load_ çağrısı yeni referanstır; kullanıcı editörde düzeltince get_material_user_edits / get_shader_user_edits (fark + notlar) → farkı öğren; acknowledge:true referansı yeniler.
+- Önizlemede giydirme: assign_material { target:'hero' | 'hero:<mesh>' | 'prop:<id>', material } (tüm modlarda görünür). Işık: get_lighting / set_lighting.
+- Bitince: save_shader (özelse) → save_material → send_material_to_unity { name } (özel shader'ın .shader'ı da gider; Unity: Assets/UnityPreview/Materials/<ad>.mat). Yalnız shader: send_shader_to_unity { name } (Unity derleme hatalarını döndürür).
+`);
+});
+
+// shader
+server.registerTool('list_shaders', {
+  description: 'Shader listesi: hazır (builtin: Elarion/ToonCharacter, URP Lit/Unlit/Particles Unlit — Unity\'de zaten var, .shader yazılmaz) + kütüphanedeki özel shader\'lar (shaders/<ad>.json; Unity\'de UnityPreview/<ad>). Her biri: name, unityName, builtin, description, properties ("_Ad:tip"), modified.',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text((await get('/api/shaders/list')).map((s) => ({ ...s, properties: s.properties.map((p) => `${p.name}:${p.type}`) }))); });
+
+server.registerTool('get_shader', {
+  description: 'Shader\'ın tam JSON\'u (normalize: properties, renderState, lighting, outline, urpSurface, code.common/vertex/fragment/outlineFragment). name: ad ("elarion_toon", "kalkan") ya da unityName ("Elarion/ToonCharacter", "UnityPreview/kalkan"); verilmezse editördeki shader. Editörde aynı adlı kaydedilmemiş çalışma kopyası varsa o döner. Yalnız bazı alanlar için parts.',
+  inputSchema: { name: z.string().optional(), parts: z.array(z.enum(['description', 'properties', 'renderState', 'lighting', 'outline', 'urpSurface', 'code'])).optional().describe('Yalnız bu alanlar (+ name/unityName/builtin)') },
+}, async ({ name, parts }) => {
+  await ensureServer();
+  const s = name ? await requireShaderOf(name) : curShader(await get('/api/state'));
+  if (!s) return text({ shader: null, info: 'Editörde shader yok. new_shader / load_shader / set_shader ile başla.' });
+  return text(parts ? Object.fromEntries(Object.entries(s).filter(([k]) => ['name', 'unityName', 'builtin', ...parts].includes(k))) : s);
+});
+
+server.registerTool('new_shader', {
+  description: `Yeni ÖZEL shader oluşturur ve editöre yükler (Shader moduna geçer, yeni referans; KAYDETMEZ — kalıcı olması için save_shader). template: ${Object.keys(TEMPLATES).join(' | ')} (ayrıntı material_reference). Unity adı UnityPreview/<name> olur; hazır shader adları kullanılamaz. Yanıt editörün GLSL derleme sonucunu içerir (tarayıcı yoksa "kaydedildi, derleme denetlenemedi" notu). Önce material_reference oku.`,
+  inputSchema: { name: z.string().describe('Shader adı (harf/rakam/_/-), ör. "kalkan_fresnel"'), template: z.enum(Object.keys(TEMPLATES)).default('unlit'), description: z.string().optional() },
+}, async ({ name, template, description }) => {
+  await ensureServer();
+  const tpl = clone(TEMPLATES[template].shader);
+  const { shader, warnings } = normalizeShader({ ...defaultShader(), ...tpl, name, description: description ?? TEMPLATES[template].label, builtin: false });
+  if (isBuiltinShaderName(shader.name) || isBuiltinShaderName(name)) throw new Error(`"${name}" hazır (builtin) bir shader adı; başka ad ver.`);
+  if ((await get('/api/shaders/list')).some((s) => !s.builtin && s.name === shader.name)) warnings.push(`Kütüphanede aynı adlı shader var (shaders/${shader.name}.json); save_shader üzerine yazar.`);
+  const browserConnected = await pushShader(shader); const compile = await compileCheck(shader);
+  return text({ ok: compile.ok !== false, shader: shaderSummary(shader), template, warnings, compile, browserConnected });
+});
+
+server.registerTool('set_shader', {
+  description: 'Editördeki shader\'ın TAMAMINI değiştirir (Shader moduna geçer; bu hâl kullanıcı düzeltmeleri için referans olur). Önce material_reference oku. '
+    + 'shader = { name, description, properties:[{ name:"_RimPower", type:"range", label, min, max, default }], renderState:{ blend, cull, zwrite, ztest, queue, queueOffset }, lighting:{ receiveShadows, castShadows }, outline:{ enabled, width:"_OutlineWidth", color:"_OutlineColor" }, code:{ common, vertex:"void vert(inout UPEVertex v) {...}", fragment:"float4 frag(UPEInput i) {...}", outlineFragment } }. '
+    + 'Eksikler varsayılanla dolar, geçersizler atılıp warnings\'te döner. Yanıt editörün GLSL derleme sonucunu içerir (compile: { checked, ok, errors:[{ section, line, message }] }); tarayıcı yoksa "kaydedildi, derleme denetlenemedi". KAYDETMEZ (save_shader).',
+  inputSchema: { shader: z.record(z.string(), z.any()).describe('Shader nesnesi (format: material_reference)') },
+}, async ({ shader: input }) => {
+  await ensureServer(); const { shader, warnings } = normalizeShader(input); if (shader.builtin) warnings.push(BUILTIN_EDIT_WARN);
+  const browserConnected = await pushShader(shader); const compile = await compileCheck(shader);
+  return text({ ok: compile.ok !== false, shader: shaderSummary(shader), warnings, compile, browserConnected });
+});
+
+server.registerTool('update_shader', {
+  description: 'Editördeki shader\'da yol bazlı değişiklikler: changes=[{ path, value }]. Yollar: "code.fragment" | "code.common" | "code.vertex" | "code.outlineFragment" (kodun TAMAMI, string), "properties._RimPower.max" / "properties._RimPower.default" (özellik alanı), "properties._Glow" (nesne → ekle/birleştir, null → sil), "properties" (tüm dizi), "renderState.blend" (opaque|alpha|additive|premultiply|multiply), "renderState.cull" (back|front|off), "renderState.queue", "lighting.castShadows", "outline.enabled", "urpSurface", "name", "description". '
+    + 'Geçerliler uygulanır ve editöre gider (yeni referans), geçersiz yollar errors\'ta döner. Yanıt editörün GLSL derleme sonucunu içerir (compile.errors: bölüm+satır+mesaj); tarayıcı yoksa "kaydedildi, derleme denetlenemedi". KAYDETMEZ (save_shader).',
+  inputSchema: { changes: z.array(changeSchema).min(1) },
+}, async ({ changes }) => {
+  await ensureServer(); const base = curShader(await get('/api/state'));
+  if (!base) throw new Error('Editörde shader yok. Önce new_shader / set_shader / load_shader.');
+  const { shader, errors, warnings } = applyShaderChanges(base, changes); if (shader.builtin) warnings.push(BUILTIN_EDIT_WARN);
+  const out = { ok: false, applied: [], errors, warnings };
+  if (changes.length > errors.length) { out.browserConnected = await pushShader(shader); out.compile = await compileCheck(shader); }
+  else out.info = 'Geçerli değişiklik yok; editöre gönderilmedi.';
+  out.ok = !errors.length && out.compile?.ok !== false;
+  out.applied = changes.map((c) => { const v = shaderPathGet(shader, c.path); return v === undefined ? null : { path: c.path, value: shownValue(c.path, v) }; }).filter(Boolean);
+  out.shader = shaderSummary(shader);
+  return text(out);
+});
+
+server.registerTool('save_shader', {
+  description: 'Özel shader\'ı kütüphaneye kaydeder (shaders/<name>.json; aynı ad varsa üzerine yazar). shader verilmezse editördeki; name verilmezse shader\'ın adı. Hazır (builtin) adlar ezilemez (hata); builtin bir shader\'ı başka adla kaydetmek özel kopya (UnityPreview/<name>) oluşturur.',
+  inputSchema: { name: z.string().optional(), shader: z.record(z.string(), z.any()).optional() },
+}, async ({ name, shader: input }) => {
+  await ensureServer();
+  const src = input ? normalizeShader(input).shader : curShader(await get('/api/state'));
+  if (!src) throw new Error('Kaydedilecek shader yok (editörde shader boş; shader ver ya da new_shader kullan).');
+  const r = await post('/api/shaders/save?name=' + enc(name || src.name), src);
+  return text({ saved: r.name, unityName: r.unityName, warnings: r.warnings });
+});
+
+server.registerTool('load_shader', {
+  description: 'Kütüphaneden (hazır ya da özel) shader\'ı editöre yükler (Shader moduna geçer; yüklenen hâl yeni referans olur). Hazır shader\'ı incelemek/çatallamak için de kullan (değiştir → save_shader ile başka adla).',
+  inputSchema: { name: z.string().describe('Ad ya da unityName') },
+}, async ({ name }) => {
+  await ensureServer(); const r = await post('/api/claude/shader-load', { name }); const st = await get('/api/state');
+  return text({ loaded: r.name, unityName: r.unityName, builtin: r.builtin, shader: shaderSummary(curShader(st)), browserConnected: r.clients > 0 });
+});
+
+server.registerTool('delete_shader', {
+  description: 'Kütüphaneden özel shader\'ı siler (geri alınamaz; kullanıcı istemeden çağırma). Hazır (builtin) shader\'lar silinemez.',
+  inputSchema: { name: z.string() },
+}, async ({ name }) => { await ensureServer(); const r = await post('/api/shaders/delete?name=' + enc(name)); return text(r.deleted ? 'Silindi: ' + name : 'Kütüphanede yoktu: ' + name); });
+
+server.registerTool('get_shader_user_edits', {
+  description: 'Kullanıcının editörde shader\'a yaptığı düzeltmeler: referansa (Claude\'un son new_/set_/update_/load_shader hâli) göre değişen alanlar [{ path:"properties._RimPower.default", from, to }], eklenen/silinen özellikler, kod değişiklikleri ({ path:"code.fragment", changed:true, to:<yeni kodun tamamı> }) + Shader modunda yazılan notlar. Kullanıcı "düzelttim" dediğinde çağır. acknowledge:true notları temizler ve mevcut hâli yeni referans yapar.',
+  inputSchema: { acknowledge: z.boolean().default(false).describe('true: Shader notlarını temizle ve mevcut hâli yeni referans yap') },
+}, async ({ acknowledge }) => {
+  await ensureServer(); const st = await get('/api/state'); const cur = curShader(st);
+  const result = { notes: notesOf(st, 'shader').map(({ mode, ...n }) => n), changes: [] };
+  if (cur && st.shaderBaseline) result.changes = diffShaders(normalizeShader(st.shaderBaseline).shader, cur);
+  else result.info = cur ? 'Referans yok (henüz new_shader / set_shader / load_shader yapılmamış).' : 'Editörde shader yok.';
+  if (acknowledge) { await post('/api/notes/clear?mode=shader'); await post('/api/shader/baseline'); }
+  return text(result);
+});
+
+// materyal
+server.registerTool('list_materials', {
+  description: 'Materyal kütüphanesi (materials/<ad>.json): [{ name, file, modified, shader, target }].',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(await get('/api/materials/list')); });
+
+server.registerTool('get_material', {
+  description: 'Materyalin tam JSON\'u (normalize: shader, values — shader\'ın tüm özellikleri, verilmeyenler varsayılan —, renderQueue, preview) + shader özeti. name verilmezse editördeki materyal, verilirse kütüphaneden.',
+  inputSchema: { name: z.string().optional() },
+}, async ({ name }) => {
+  await ensureServer();
+  const raw = name ? await getOk('/api/materials/get?name=' + enc(name)) : (await get('/api/state')).material;
+  if (!raw) return text({ material: null, info: 'Editörde materyal yok. new_material / load_material ile başla.' });
+  const shader = await shaderByName(raw.shader); const { material, warnings } = normalizeMaterial(raw, shader);
+  return text({ material, warnings, shader: shaderSummary(shader) });
+});
+
+server.registerTool('new_material', {
+  description: 'Yeni materyal oluşturur ve editöre yükler (Materyal moduna geçer, yeni referans; KAYDETMEZ — save_material). shader: Unity adı ya da ad ("Elarion/ToonCharacter", "Universal Render Pipeline/Lit", "UnityPreview/kalkan", "kalkan"). '
+    + 'Değerler shader\'ın varsayılanlarıyla başlar; values verilenleri üzerine yazar (ör. { _BaseColor:"#c03030", _RimPower:3, _EmissionColor:{ color:"#ff6a1a", intensity:4 }, _BaseMap:{ tex:"checker", tiling:[2,2] } }). Önce material_reference oku.',
+  inputSchema: {
+    name: z.string().describe('Materyal adı (Unity .mat adı), ör. "kahraman_toon"'), shader: z.string(),
+    values: z.record(z.string(), z.any()).optional(), renderQueue: z.number().int().optional().describe('-1 = shader\'ınki'),
+    preview: z.record(z.string(), z.any()).optional().describe(`{ target: ${PREVIEW_TARGETS.join('|')}|prop:<id>, background, bloom, rotate, showGrid }`),
+  },
+}, async ({ name, shader: sn, values, renderQueue, preview }) => {
+  await ensureServer(); const shader = await requireShaderOf(sn);
+  const { material, warnings } = normalizeMaterial({ name, shader: shaderUnityName(shader), values: values || {}, renderQueue, preview }, shader);
+  const browserConnected = await pushMaterial(material);
+  return text({ ok: true, material: materialSummary(material), warnings, shader: shaderSummary(shader), browserConnected });
+});
+
+server.registerTool('set_material', {
+  description: 'Editördeki materyalin TAMAMINI değiştirir (Materyal moduna geçer, yeni referans; KAYDETMEZ). material = { name, shader (Unity adı ya da ad), values:{ _Ad: değer }, renderQueue?, preview? }. '
+    + 'Değer biçimleri: color "#rrggbb[aa]" (sRGB) · hdrColor { color, intensity } · float/range sayı · toggle bool · vector [x,y,z,w] · texture { tex, tiling:[x,y], offset:[x,y], unityPath? }. Shader\'da olmayan değerler atılır, eksikler varsayılan (warnings).',
+  inputSchema: { material: z.record(z.string(), z.any()) },
+}, async ({ material: input }) => {
+  await ensureServer(); const shader = await requireShaderOf(input.shader || 'Universal Render Pipeline/Lit');
+  const { material, warnings } = normalizeMaterial({ ...input, shader: shaderUnityName(shader) }, shader);
+  const browserConnected = await pushMaterial(material);
+  return text({ ok: true, material: materialSummary(material), warnings, shader: shaderSummary(shader), browserConnected });
+});
+
+server.registerTool('update_material', {
+  description: 'Editördeki materyalde yol bazlı değişiklikler: changes=[{ path, value }]. Yollar: "values._RimPower" → 3, "values._BaseColor" → "#ff8040", "values._EmissionColor" → { color:"#ff6a1a", intensity:4 }, "values._BaseMap" → { tex:"checker", tiling:[2,2] }, "values._BaseMap.tiling" → [4,4], "preview.target" → "hero", "preview.bloom" → 1.2, "renderQueue" → 3000, "name", "shader" (değişince aynı adlı değerler korunur, diğerleri varsayılan). '
+    + 'Değerler sınırlara kırpılır (applied\'da son hâli gör); shader\'da olmayan özellik / geçersiz yol errors\'ta döner, geçerliler uygulanır. Sonuç editöre gider ve yeni referans olur. KAYDETMEZ.',
+  inputSchema: { changes: z.array(changeSchema).min(1) },
+}, async ({ changes }) => {
+  await ensureServer(); const cur = await curMaterial(await get('/api/state'));
+  if (!cur) throw new Error('Editörde materyal yok. Önce new_material / set_material / load_material.');
+  const list = changes.map((c) => ({ ...c })); let shader = cur.shader;
+  const sc = list.filter((c) => c.path === 'shader').at(-1);
+  if (sc) { shader = await requireShaderOf(String(sc.value)); for (const c of list) if (c.path === 'shader') c.value = shaderUnityName(shader); }
+  if (!shader) throw new Error(`Materyalin shader'ı bulunamadı: ${cur.material.shader}. Önce "shader" yolunu geçerli bir shader'a ayarla (list_shaders).`);
+  const { material, errors, warnings } = applyMaterialChanges(cur.material, list, shader);
+  const out = { ok: !errors.length, applied: [], errors, warnings };
+  if (list.length > errors.length) out.browserConnected = await pushMaterial(material); else out.info = 'Geçerli değişiklik yok; editöre gönderilmedi.';
+  out.applied = list.map((c) => { const v = pathGet(material, c.path); return v === undefined ? null : { path: c.path, value: v }; }).filter(Boolean);
+  out.material = materialSummary(material);
+  return text(out);
+});
+
+server.registerTool('save_material', {
+  description: 'Materyali kütüphaneye kaydeder (materials/<name>.json; aynı ad varsa üzerine yazar). material verilmezse editördeki; name verilmezse materyalin adı. Kayıtlı ad = Unity .mat adı. Özel shader kullanıyorsa shader\'ı da save_shader ile kaydet.',
+  inputSchema: { name: z.string().optional(), material: z.record(z.string(), z.any()).optional() },
+}, async ({ name, material: input }) => {
+  await ensureServer(); const src = input || (await get('/api/state')).material;
+  if (!src) throw new Error('Kaydedilecek materyal yok (editörde materyal boş; material ver ya da new_material kullan).');
+  const shader = await shaderByName(src.shader);
+  const { material, warnings } = normalizeMaterial({ ...src, ...(name ? { name } : {}), ...(shader ? { shader: shaderUnityName(shader) } : {}) }, shader);
+  if (shader && !shader.builtin && !(await get('/api/shaders/list')).some((s) => s.unityName === shader.unityName)) warnings.push(`Özel shader ${shader.unityName} kütüphanede kayıtlı değil (yalnız editörde); kalıcı olması için save_shader.`);
+  const r = await post('/api/materials/save?name=' + enc(material.name), material);
+  return text({ saved: r.name, shader: material.shader, warnings: [...new Set([...warnings, ...(r.warnings || [])])] });
+});
+
+server.registerTool('load_material', {
+  description: 'Kütüphaneden materyali editöre yükler (Materyal moduna geçer; yüklenen hâl yeni referans olur).',
+  inputSchema: { name: z.string() },
+}, async ({ name }) => {
+  await ensureServer(); const r = await post('/api/claude/material-load', { name }); const cur = await curMaterial(await get('/api/state'));
+  return text({ loaded: r.name, warnings: r.warnings, material: materialSummary(cur?.material), browserConnected: r.clients > 0 });
+});
+
+server.registerTool('delete_material', {
+  description: 'Kütüphaneden materyali siler (geri alınamaz; kullanıcı istemeden çağırma).',
+  inputSchema: { name: z.string() },
+}, async ({ name }) => { await ensureServer(); const r = await post('/api/materials/delete?name=' + enc(name)); return text(r.deleted ? 'Silindi: ' + name : 'Kütüphanede yoktu: ' + name); });
+
+server.registerTool('get_material_user_edits', {
+  description: 'Kullanıcının editörde materyale yaptığı düzeltmeler: referansa (Claude\'un son new_/set_/update_/load_material hâli) göre değişen alanlar [{ path:"values._RimPower", from, to }] + Materyal modunda yazılan notlar. Kullanıcı "düzelttim/şöyle olsun" dediğinde çağır; farkı öğren. acknowledge:true notları temizler ve mevcut hâli yeni referans yapar.',
+  inputSchema: { acknowledge: z.boolean().default(false).describe('true: Materyal notlarını temizle ve mevcut hâli yeni referans yap') },
+}, async ({ acknowledge }) => {
+  await ensureServer(); const st = await get('/api/state'); const cur = await curMaterial(st);
+  const result = { notes: notesOf(st, 'material').map(({ mode, ...n }) => n), changes: [] };
+  if (cur && st.materialBaseline) result.changes = diffObjects(normalizeMaterial(st.materialBaseline, await shaderByName(st.materialBaseline.shader)).material, cur.material);
+  else result.info = cur ? 'Referans yok (henüz new_material / set_material / load_material yapılmamış).' : 'Editörde materyal yok.';
+  if (acknowledge) { await post('/api/notes/clear?mode=material'); await post('/api/material/baseline'); }
+  return text(result);
+});
+
+server.registerTool('assign_material', {
+  description: 'Önizlemede kahramana/eşyaya materyal giydirir (YALNIZ önizleme; animasyon/VFX dahil tüm modlarda görünür, Unity prefab\'ına bağlamaz). target: "hero" (tüm kahraman), "hero:<mesh adı>" (tek mesh), "prop:<id>" (takılı eşya; id list_props → attached). material: kütüphanedeki materyal adı (önce save_material) ya da null (giydirmeyi kaldır).',
+  inputSchema: { target: z.string().regex(/^(hero(:.+)?|prop:.+)$/, 'target: hero | hero:<mesh> | prop:<id>'), material: z.string().nullable() },
+}, async ({ target, material }) => {
+  await ensureServer(); const st = await get('/api/state'); const next = { ...(st.materialOverrides || {}) }; const warnings = [];
+  if (material === null) delete next[target];
+  else {
+    const lib = await get('/api/materials/list');
+    if (!lib.some((m) => m.name === material)) {
+      if (st.material?.name !== material) throw new Error(`Materyal yok: ${material}. Kütüphane: ${lib.map((m) => m.name).join(', ') || '—'} (önce save_material).`);
+      warnings.push('Materyal kütüphanede yok, yalnız editörde; kalıcı olması için save_material ile kaydet.');
+    }
+    next[target] = material;
+  }
+  if (target.startsWith('prop:') && !(st.props || []).some((p) => p.id === target.slice(5))) warnings.push(`Takılı eşya yok: ${target.slice(5)} (list_props → attached)`);
+  const r = await post('/api/claude/overrides', { overrides: next });
+  return text({ overrides: r.overrides, warnings, browserConnected: r.clients > 0 });
+});
+
+server.registerTool('get_lighting', {
+  description: 'Önizlemenin ortak sahne ışığı (tüm UPE shader\'ları; Unity ekseninde): rotation (yönlü ışık Euler\'i, derece), color, intensity, ambient, ambientIntensity.',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(normalizeLighting((await get('/api/state')).lighting)); });
+
+server.registerTool('set_lighting', {
+  description: `Önizleme sahne ışığını değiştirir (verilen alanlar birleştirilir, diğerleri korunur). lighting = { rotation:[x,y,z] (Unity yönlü ışık Euler'i, derece), color:"#rrggbb", intensity, ambient:"#rrggbb", ambientIntensity }; varsayılan ${JSON.stringify(defaultLighting())}. Yalnız önizleme; Unity sahnesine dokunmaz.`,
+  inputSchema: { lighting: z.object({ rotation: vec3.optional(), color: z.string().optional(), intensity: z.number().min(0).optional(), ambient: z.string().optional(), ambientIntensity: z.number().min(0).optional() }) },
+}, async ({ lighting }) => {
+  await ensureServer(); const st = await get('/api/state');
+  const r = await post('/api/claude/lighting', { lighting: normalizeLighting({ ...normalizeLighting(st.lighting), ...lighting }) });
+  return text({ lighting: r.lighting, browserConnected: r.clients > 0 });
+});
+
+server.registerTool('render_material', {
+  description: 'Editördeki materyali kontak sayfası PNG\'si olarak çizer (bakış açıları/anlar yan yana). Editör tarayıcıda (uygulama içi tarayıcı) açık olmalı. Her önemli değişiklikten sonra görsel kontrol için kullan. '
+    + 'views: bakış açıları (front | side | back | top | threequarter; varsayılan ["threequarter","front","side"]; uzaklık otomatik), ya da camera { position, target } (metre, Unity eksenleri) tek kare. target: önizleme nesnesi (sphere|cube|plane|capsule|torus|hero|prop:<id>; verilmezse materyalin preview.target), time: zaman kullanan shader için an (sn), size: hücre boyu (px), bg: arka plan rengi.',
+  inputSchema: {
+    views: z.array(z.enum(['front', 'side', 'back', 'top', 'threequarter'])).min(1).max(8).optional(), size: z.number().int().min(128).max(1024).default(320).describe('Hücre boyu (px)'),
+    target: z.string().optional(), time: z.number().min(0).optional(), bg: z.string().optional(),
+    camera: z.object({ position: vec3, target: vec3.optional() }).optional(),
+  },
+}, async (args) => {
+  await ensureServer(); const ping = await get('/api/ping');
+  if (!ping.clients) throw new Error(`Editör tarayıcıda açık değil (${BASE}). render_material görüntüyü tarayıcıdaki editör çizer: editörü uygulama içi tarayıcıda aç, sonra tekrar dene.`);
+  if (!(await get('/api/state')).material) throw new Error('Editörde materyal yok. Önce new_material / load_material.');
+  const r = await post('/api/claude/render', { kind: 'material', ...args });
+  if (!r.png) throw new Error('Editör görüntü döndürmedi (Materyal modunu destekleyen editör sürümü açık mı?).');
+  return { content: [{ type: 'image', data: r.png.replace(/^data:image\/png;base64,/, ''), mimeType: 'image/png' }] };
+});
+
+server.registerTool('list_material_textures', {
+  description: 'Materyal dokuları: materials/textures/*.png (texture değerinde tex: uzantısız ad, ör. "checker") + özel adlar (white/black/gray/bump: önizlemede üretilir, Unity\'de shader varsayılanı; @mesh: önizleme nesnesinin kendi dokusu, Unity\'de unityPath gerekir). Veri dokuları (gürültü, maske) için shader özelliğinde linear:true.',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text({ files: await get('/api/material-textures'), special: SPECIAL_TEX }); });
+
+server.registerTool('send_material_to_unity', {
+  description: 'Materyali TEK ADIMDA Unity projesine gönderir: importer script\'leri Assets/Editor/UnityPreview/\'a kurulur, özel shader\'ın .shader\'ı Assets/UnityPreview/Shaders/ (UnityPreview/<ad>), kullandığı dokular Assets/UnityPreview/Materials/Textures/, yük Assets/UnityPreview/Materials/<ad>.mat.json yazılır; Unity açıksa birkaç saniyede <ad>.mat üretir. '
+    + 'name: kütüphaneden ad (verilmezse editördeki materyal), all: tüm kütüphane. Editörde aynı adlı kaydedilmemiş özel shader çalışma kopyası varsa o gider. ≤25 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Önce set_unity_project. '
+    + 'Yanıt: { ok, sent, imported, waiting, materials (.mat yolları), shaders (.shader yolları), shaderDetails, shaderErrors:[{ shader, line, message }] (Unity derleme hataları), textures, missingTextures, warnings?, note | error }.',
+  inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
+}, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-material', { name, all })); });
+
+server.registerTool('send_shader_to_unity', {
+  description: 'Yalnız ÖZEL shader\'ı Unity\'ye yazar (Assets/UnityPreview/Shaders/<ad>.shader, Unity adı UnityPreview/<ad>) ve Unity derleme sonucunu bekler (≤25 sn): shaderErrors:[{ shader, line, message }]. Hazır (builtin) shader\'lar gönderilemez (Unity\'de zaten var). '
+    + 'name: ad ya da unityName (verilmezse editördeki shader; editörde aynı adlı kaydedilmemiş çalışma kopyası varsa o gider). İçerik değişmediyse Unity yeniden derlemez: unchanged:true + son bilinen durum döner. Önce set_unity_project.',
+  inputSchema: { name: z.string().optional() },
+}, async ({ name }) => { await ensureServer(); return text(await post('/api/unity/send-shader', { name })); });
 
 await ensureServer().catch(() => {});
 await server.connect(new StdioServerTransport());

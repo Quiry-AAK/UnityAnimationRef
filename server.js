@@ -1,10 +1,12 @@
 // Unity Preview Editor sunucusu (eski adı Anim Ref): statik dosyalar + state API + SSE (editör <-> MCP köprüsü).
-// Modlar: animasyon + VFX (sözleşme: docs/VFX.md). Unity'ye animasyon (.anim) ve VFX (prefab) gönderimi.
+// Modlar: animasyon + VFX (docs/VFX.md) + materyal/shader (docs/MATERIAL.md). Unity'ye .anim, VFX prefab, .mat/.shader gönderimi.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { normalizeEffect } from './public/vfx-schema.js';
+import { normalizeShader, normalizeMaterial, normalizeLighting, shaderUnityName, safeAssetName, BUILTIN_TEXTURES, CUSTOM_PREFIX } from './public/shader-schema.js';
+import { BUILTIN_SHADERS } from './public/shader-builtins.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.UPE_PORT || process.env.ANIMREF_PORT || 5177);
@@ -17,7 +19,10 @@ const ANIMS_DIR = path.join(ROOT, 'animations');
 const PROPS_DIR = path.join(ROOT, 'props');
 const VFX_DIR = path.join(ROOT, 'vfx'); // efekt kütüphanesi: vfx/<ad>.json
 const VFX_TEX_DIR = path.join(VFX_DIR, 'textures'); // parçacık dokuları: vfx/textures/<ad>.png
-for (const d of [ANIMS_DIR, PROPS_DIR, VFX_DIR, VFX_TEX_DIR]) fs.mkdirSync(d, { recursive: true });
+const SHADERS_DIR = path.join(ROOT, 'shaders'); // özel shader'lar: shaders/<ad>.json (builtin'ler kodda: public/shader-builtins.js)
+const MAT_DIR = path.join(ROOT, 'materials'); // materyaller: materials/<ad>.json
+const MAT_TEX_DIR = path.join(MAT_DIR, 'textures'); // materyal dokuları: materials/textures/<ad>.png
+for (const d of [ANIMS_DIR, PROPS_DIR, VFX_DIR, VFX_TEX_DIR, SHADERS_DIR, MAT_DIR, MAT_TEX_DIR]) fs.mkdirSync(d, { recursive: true });
 const safeName = (n) => path.basename(String(n || '')).replace(/[^\w .-]+/g, '_');
 fs.mkdirSync(MODELS_DIR, { recursive: true });
 
@@ -28,11 +33,15 @@ const MIME = {
 };
 
 // mode: editörün açık modu; vfx: editördeki efekt; vfxBaseline: Claude'un son verdiği hâl (kullanıcı farkı buna göre)
-let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0, mode: 'anim', vfx: null, vfxBaseline: null };
+// material/shader: editördeki materyal/shader (+ *Baseline aynı mantık); lighting: ortak sahne ışığı; materialOverrides: { 'hero'|'hero:<mesh>'|'prop:<id>': materyal }
+let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0, mode: 'anim', vfx: null, vfxBaseline: null,
+  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {} };
 fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
 try { state = { ...state, ...JSON.parse(fs.readFileSync(fs.existsSync(STATE_FILE) ? STATE_FILE : MAIN_STATE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
-const MODES = ['anim', 'vfx']; // ileride 'shader'
+const MODES = ['anim', 'vfx', 'material', 'shader'];
 if (!MODES.includes(state.mode)) state.mode = 'anim';
+const normOverrides = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' && !Array.isArray(o) ? o : {}).filter(([k, v]) => k && typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()]));
+state.lighting = normalizeLighting(state.lighting); state.materialOverrides = normOverrides(state.materialOverrides);
 const noteMode = (n) => n.mode || 'anim';
 
 let saveTimer = null;
@@ -161,6 +170,149 @@ async function unitySendVfx({ name, all }) {
   return out;
 }
 
+// ── Materyal + Shader kütüphanesi (docs/MATERIAL.md; format/mantık public/shader-schema.js)
+const BUILTINS = BUILTIN_SHADERS.map((s) => normalizeShader(s).shader);
+const lc = (s) => String(s ?? '').trim().toLowerCase();
+const builtinOf = (n) => { const k = lc(n); return (k && BUILTINS.find((s) => lc(s.name) === k || lc(s.unityName) === k)) || null; };
+const customBase = (n) => { const s = String(n ?? '').trim().replace(/\.json$/i, ''); return safeAssetName(lc(s).startsWith(lc(CUSTOM_PREFIX)) ? s.slice(CUSTOM_PREFIX.length) : s); }; // 'UnityPreview/x' | 'x' → 'x'
+const isBuiltinName = (n) => !!(builtinOf(n) || builtinOf(customBase(n)));
+function readCustomShader(n) {
+  const b = customBase(n); if (!b) return null; const f = path.join(SHADERS_DIR, b + '.json'); if (!fs.existsSync(f)) return null;
+  return normalizeShader({ ...JSON.parse(fs.readFileSync(f, 'utf8')), name: b, builtin: false }).shader;
+}
+const findShader = (n) => builtinOf(n) || readCustomShader(n); // kütüphane: builtin + shaders/
+// materyal çözümlemesi: builtin → editördeki kaydedilmemiş özel çalışma kopyası (ad eşleşirse) → shaders/
+const workingShader = (n) => { const s = state.shader; if (!s || s.builtin) return null; const b = customBase(n); return b && lc(safeAssetName(s.name)) === lc(b) ? normalizeShader(s).shader : null; };
+const resolveShader = (n) => builtinOf(n) || workingShader(n) || readCustomShader(n);
+const listShaders = () => [
+  ...BUILTINS.map((s) => ({ name: s.name, unityName: s.unityName, builtin: true, description: s.description, properties: s.properties, modified: null })),
+  ...fs.readdirSync(SHADERS_DIR).filter((f) => f.endsWith('.json')).map((f) => {
+    const name = f.slice(0, -5); const o = { name, unityName: CUSTOM_PREFIX + name, builtin: false, description: '', properties: [], modified: fs.statSync(path.join(SHADERS_DIR, f)).mtimeMs };
+    try { const s = readCustomShader(name); o.description = s.description; o.properties = s.properties; } catch { o.error = 'bozuk json'; }
+    return o;
+  }),
+];
+const matFile = (n) => path.join(MAT_DIR, safeAssetName(String(n ?? '').replace(/\.json$/i, '')) + '.json');
+const readMatRaw = (n) => { const b = safeAssetName(String(n ?? '').replace(/\.json$/i, '')); const f = path.join(MAT_DIR, b + '.json'); if (!b || !fs.existsSync(f)) return null; return { ...JSON.parse(fs.readFileSync(f, 'utf8')), name: b }; };
+const normMat = (raw) => { const shader = resolveShader(raw?.shader); return { ...normalizeMaterial(raw, shader), shader }; };
+const listMaterials = () => fs.readdirSync(MAT_DIR).filter((f) => f.endsWith('.json')).map((f) => {
+  const full = path.join(MAT_DIR, f); const o = { name: f.slice(0, -5), file: f, modified: fs.statSync(full).mtimeMs, shader: null, target: null };
+  try { const m = JSON.parse(fs.readFileSync(full, 'utf8')); o.shader = m.shader ?? null; o.target = m.preview?.target ?? null; } catch { o.error = 'bozuk json'; }
+  return o;
+});
+const listMatTextures = () => fs.readdirSync(MAT_TEX_DIR).filter((f) => /\.png$/i.test(f)).map((f) => f.replace(/\.png$/i, '')).sort();
+
+// ── Unity'ye materyal/shader gönderimi
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const requireUnityProject = () => { const u = state.unity; if (!u.project || !isUnityProject(u.project)) throw new Error('Unity proje klasörü ayarlı değil. Sağ panel → Unity bölümünden seç (ya da MCP set_unity_project).'); return u.project; };
+function installMaterialScripts(project) { // unity/UnityPreviewMaterial*.cs → Assets/Editor/UnityPreview/ (değiştiyse)
+  const scripts = fs.readdirSync(path.join(ROOT, 'unity')).filter((f) => /^UnityPreviewMaterial.*\.cs$/.test(f));
+  const edDir = path.join(project, 'Assets', 'Editor', 'UnityPreview'); fs.mkdirSync(edDir, { recursive: true });
+  for (const f of scripts) copyIfChanged(path.join(ROOT, 'unity', f), path.join(edDir, f));
+  return scripts;
+}
+const SCRIPTS_MISSING = 'unity/UnityPreviewMaterial*.cs bulunamadı; Unity tarafında importer kurulu değilse .mat üretilmez.';
+async function loadShaderGen() { // lib/shader-hlsl.js dinamik (yoksa/bozuksa anlaşılır hata); mtime sorgusu: dosya güncellenince yeniden yüklenir
+  const f = path.join(ROOT, 'lib', 'shader-hlsl.js');
+  if (!fs.existsSync(f)) throw new Error('lib/shader-hlsl.js yok — Unity HLSL üretici kurulu değil, özel shader Unity\'ye yazılamıyor.');
+  let mod; try { mod = await import(pathToFileURL(f).href + '?v=' + fs.statSync(f).mtimeMs); } catch (e) { throw new Error('lib/shader-hlsl.js yüklenemedi: ' + (e?.message || e)); }
+  if (typeof mod.generateUnityShader !== 'function') throw new Error('lib/shader-hlsl.js generateUnityShader dışa aktarmıyor.');
+  return mod.generateUnityShader;
+}
+async function writeUnityShader(project, shader) { // özel shader → Assets/UnityPreview/Shaders/<ad>.shader (değiştiyse)
+  if (shader.builtin) throw new Error(`${shader.unityName} hazır (builtin) bir Unity shader'ı; .shader yazılmaz.`);
+  const gen = await loadShaderGen(); let out;
+  try { out = gen(shader); } catch (e) { throw new Error(`${shader.name}: HLSL üretilemedi — ${e?.message || e}`); }
+  if (!out || typeof out.source !== 'string' || !out.source.trim()) throw new Error(`${shader.name}: generateUnityShader boş kaynak döndürdü.`);
+  const rel = `Assets/UnityPreview/Shaders/${shader.name}.shader`; const dst = path.join(project, ...rel.split('/'));
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  const buf = Buffer.from(out.source, 'utf8'); const changed = !(fs.existsSync(dst) && fs.readFileSync(dst).equals(buf));
+  if (changed) fs.writeFileSync(dst, buf);
+  return { name: shader.name, unityName: shader.unityName, path: rel, changed, warnings: Array.isArray(out.warnings) ? out.warnings : [] };
+}
+// Assets/UnityPreview/Materials/last_status.txt: '<ad>|OK|<yol>' · '<ad>|ERROR|<mesaj>' · 'shader:<ad>|OK|<yol>' · 'shader:<ad>|ERROR|<satır>: <mesaj>'
+const readStatus = (file, since) => { try { if (fs.statSync(file).mtimeMs < since) return []; return fs.readFileSync(file, 'utf8').split(/\r?\n/).filter((l) => l.trim()).map((l) => { const [key, status, ...rest] = l.split('|'); return { key: key.trim(), status: (status || '').trim(), msg: rest.join('|').trim() }; }); } catch { return []; } };
+const shaderErr = (l) => { const m = /^(\d+)\s*:\s*([\s\S]*)$/.exec(l.msg); return { shader: l.key.slice(7), line: m ? +m[1] : null, message: m ? m[2] : l.msg }; };
+const shaderErrsOf = (lines, only) => lines.filter((l) => l.key.startsWith('shader:') && l.status === 'ERROR' && (!only || l.key === 'shader:' + only)).map(shaderErr);
+const UNITY_WAIT_NOTE = 'Unity açık değil ya da odakta değil; Unity\'ye geçince / açılınca otomatik işlenir (batchmode: -executeMethod UnityPreviewMaterialImporter.ProcessPending).';
+
+async function unitySendMaterial({ name, all }) {
+  const project = requireUnityProject();
+  const scripts = installMaterialScripts(project); // 1) importer
+  const list = []; // 2) materyaller: all → kütüphane, name → kütüphaneden, yoksa editördeki
+  if (all) { for (const it of listMaterials()) { try { const m = readMatRaw(it.name); if (m) list.push(m); } catch { /* bozuk json atlanır */ } } if (!list.length) throw new Error('Materyal kütüphanesi boş (materials/*.json yok)'); }
+  else if (name) { const m = readMatRaw(name); if (!m) throw new Error('Materyal kütüphanesinde yok: ' + name); list.push(m); }
+  else { if (!state.material) throw new Error('Gönderilecek materyal yok (editörde materyal boş)'); list.push(state.material); }
+  const dir = path.join(project, 'Assets', 'UnityPreview', 'Materials'); const texDir = path.join(dir, 'Textures'); fs.mkdirSync(texDir, { recursive: true });
+  const started = Date.now() - 1000; const sentAt = new Date().toISOString(); // sentAt: aynı materyali yeniden göndermek de içerik değiştirir → Unity yeniden içe alır
+  const errors = {}, warnings = {}, missing = new Set(), textures = new Set(), shaders = new Map(), payloads = [];
+  for (const raw of list) {
+    const { material: m, warnings: w, shader } = normMat(raw); const n = m.name; const warn = [...w];
+    if (!shader) { errors[n] = `shader bulunamadı: ${m.shader} (list_shaders ile bak)`; continue; }
+    if (!shader.builtin) { // 3) özel shader → .shader (her shader bir kez)
+      if (!shaders.has(shader.name)) { try { shaders.set(shader.name, await writeUnityShader(project, shader)); } catch (e) { shaders.set(shader.name, { name: shader.name, unityName: shader.unityName, error: String(e?.message || e) }); } }
+      const sh = shaders.get(shader.name); if (sh.error) { errors[n] = 'özel shader Unity\'ye yazılamadı: ' + sh.error; continue; }
+    }
+    const texMap = {}; // 4) kullanılan dokular (white/black/gray/bump/@mesh ve unityPath'liler hariç)
+    for (const p of shader.properties) {
+      const v = p.type === 'texture' ? m.values[p.name] : null; if (!v || v.unityPath || BUILTIN_TEXTURES.includes(v.tex)) continue;
+      if (v.tex === '@mesh') { warn.push(`${p.name}: '@mesh' için unityPath yok; Unity'de shader varsayılanı kalır`); continue; }
+      const src = path.join(MAT_TEX_DIR, v.tex + '.png');
+      if (fs.existsSync(src)) { copyIfChanged(src, path.join(texDir, v.tex + '.png')); texMap[v.tex] = `Assets/UnityPreview/Materials/Textures/${v.tex}.png`; textures.add(v.tex); } else missing.add(v.tex);
+    }
+    if (warn.length) warnings[n] = warn;
+    payloads.push({ format: 'upe-material-export-1', name: n, sentAt, shaderName: shaderUnityName(shader), urpSurface: !!shader.urpSurface, renderQueue: m.renderQueue,
+      properties: shader.properties.map((p) => ({ name: p.name, type: p.type, linear: !!p.linear })), values: m.values, textures: texMap });
+  }
+  const names = []; // 5) yük en son: importer shader/dokuları hazır bulur
+  for (const pl of payloads) { fs.writeFileSync(path.join(dir, pl.name + '.mat.json'), JSON.stringify(pl, null, 1)); names.push(pl.name); }
+  // 6) ≤25 sn: <ad>.mat mtime ≥ başlangıç ya da durum satırı
+  const pending = new Set(names); const done = []; const statusFile = path.join(dir, 'last_status.txt'); let shaderErrors = [];
+  const poll = () => {
+    const lines = readStatus(statusFile, started); shaderErrors = shaderErrsOf(lines);
+    for (const l of lines) if (pending.has(l.key) && (l.status === 'OK' || l.status === 'ERROR')) { pending.delete(l.key); if (l.status === 'ERROR') errors[l.key] = l.msg || 'hata'; else done.push(l.key); }
+    for (const n of [...pending]) { const mf = path.join(dir, n + '.mat'); if (fs.existsSync(mf) && fs.statSync(mf).mtimeMs >= started) { pending.delete(n); done.push(n); } }
+  };
+  for (let i = 0; i < 50 && pending.size; i++) { await sleep(500); poll(); }
+  poll(); // son durum (shader satırları)
+  const out = { ok: names.length > 0 && !pending.size && !Object.keys(errors).length && !shaderErrors.length, sent: names, imported: done, waiting: [...pending],
+    materials: done.map((n) => `Assets/UnityPreview/Materials/${n}.mat`), shaders: [...shaders.values()].filter((x) => x.path).map((x) => x.path), shaderErrors,
+    textures: [...textures], missingTextures: [...missing], shaderDetails: [...shaders.values()] };
+  if (Object.keys(warnings).length) out.warnings = warnings;
+  if (!scripts.length) out.scriptsMissing = SCRIPTS_MISSING;
+  const errText = [...Object.entries(errors).map(([n, msg]) => n + ': ' + msg), ...shaderErrors.map((e) => `shader ${e.shader}${e.line != null ? ' satır ' + e.line : ''}: ${e.message}`)];
+  if (Object.keys(errors).length) out.errors = errors;
+  if (errText.length) out.error = errText.join('; ');
+  else out.note = pending.size ? UNITY_WAIT_NOTE : 'Unity\'ye aktarıldı.';
+  return out;
+}
+
+async function unitySendShader({ name }) { // yalnız özel shader: .shader yaz, Unity derleme sonucunu (durum dosyası) bekle
+  const project = requireUnityProject();
+  const scripts = installMaterialScripts(project); // derleme sonucunu importer yazar
+  let shader;
+  if (name) { shader = resolveShader(name); if (!shader) throw new Error('Shader bulunamadı: ' + name + ' (list_shaders)'); }
+  else { if (!state.shader) throw new Error('Gönderilecek shader yok (editörde shader boş)'); shader = normalizeShader(state.shader).shader; }
+  if (shader.builtin) throw new Error(`${shader.unityName} hazır (builtin) bir Unity shader'ı; Unity'de zaten var, .shader yazılmaz. Materyali send-material ile gönder.`);
+  const started = Date.now() - 1000;
+  const sh = await writeUnityShader(project, shader);
+  const statusFile = path.join(project, 'Assets', 'UnityPreview', 'Materials', 'last_status.txt'); const key = 'shader:' + shader.name;
+  const base = { sent: [shader.name], shaders: [sh.path], shaderDetails: [sh], warnings: sh.warnings };
+  if (!scripts.length) base.scriptsMissing = SCRIPTS_MISSING;
+  if (!sh.changed) { // içerik aynı: Unity yeniden derlemez → son bilinen durum
+    const last = readStatus(statusFile, 0).filter((l) => l.key === key); const shaderErrors = shaderErrsOf(last, shader.name);
+    return { ok: !shaderErrors.length, ...base, unchanged: true, waiting: [], shaderErrors,
+      note: 'Shader Unity\'de zaten güncel (değişiklik yok), yeniden derlenmedi.' + (last.length ? ` Son bilinen durum: ${last.at(-1).status}.` : '') };
+  }
+  let lines = [];
+  for (let i = 0; i < 50 && !lines.length; i++) { await sleep(500); lines = readStatus(statusFile, started).filter((l) => l.key === key); }
+  const shaderErrors = shaderErrsOf(lines, shader.name);
+  const out = { ok: lines.length > 0 && !shaderErrors.length, ...base, compiled: lines.length > 0, waiting: lines.length ? [] : [shader.name], shaderErrors };
+  if (shaderErrors.length) out.error = shaderErrors.map((e) => (e.line != null ? `satır ${e.line}: ` : '') + e.message).join('; ');
+  else out.note = lines.length ? `Unity'de derlendi: ${sh.path}` : UNITY_WAIT_NOTE;
+  return out;
+}
+
 const clients = new Set();
 const emit = (event, data) => {
   const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -169,6 +321,7 @@ const emit = (event, data) => {
 
 const pendingRenders = new Map();
 const pendingGifs = new Map();
+const pendingCompiles = new Map(); // shader-compile id → çözücü (editör GLSL derleme sonucu)
 
 const listAnims = () => fs.readdirSync(ANIMS_DIR).filter((f) => /\.(json|fbx)$/i.test(f)).map((f) => {
   const full = path.join(ANIMS_DIR, f); const st = fs.statSync(full); const o = { file: f, name: f.replace(/\.(json|fbx)$/i, ''), kind: /\.fbx$/i.test(f) ? 'fbx' : 'json', modified: st.mtimeMs };
@@ -195,6 +348,7 @@ const staticMaps = [
   ['/props/', PROPS_DIR + path.sep],
   ['/animations/', ANIMS_DIR + path.sep],
   ['/vfx-textures/', VFX_TEX_DIR + path.sep],
+  ['/material-textures/', MAT_TEX_DIR + path.sep],
   ['/', path.join(ROOT, 'public') + path.sep],
 ];
 
@@ -365,6 +519,119 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true, name: effect.name, warnings, clients: clients.size });
     }
     if (p === '/api/unity/send-vfx' && req.method === 'POST') return send(res, 200, await unitySendVfx(await readJson(req)));
+    // ── Shader modu: kütüphane (builtin + shaders/)
+    if (p === '/api/shaders/list' && req.method === 'GET') return send(res, 200, listShaders());
+    if (p === '/api/shaders/get' && req.method === 'GET') { // ad ya da unityName; working=1 → editördeki kaydedilmemiş özel kopya kütüphaneden önce
+      const n = url.searchParams.get('name'); const s = url.searchParams.get('working') ? resolveShader(n) : findShader(n);
+      return s ? send(res, 200, s) : send(res, 404, { error: 'Shader bulunamadı: ' + n });
+    }
+    if (p === '/api/shaders/save' && req.method === 'POST') { // builtin adları/unityName'leri ezilemez; builtin kopyası özel shader olur
+      const body = await readJson(req); const raw = url.searchParams.get('name') || body.name; const name = customBase(raw);
+      if (!name) return send(res, 400, { error: 'İsim gerekli' });
+      if (isBuiltinName(raw) || isBuiltinName(name)) return send(res, 400, { error: `"${raw}" hazır (builtin) bir shader adı; ezilemez. Başka ad ver (ör. ${name}_ozel).` });
+      const { shader, warnings } = normalizeShader({ ...body, name, builtin: false });
+      if (body.builtin) warnings.push('builtin shader kopyası özel shader olarak kaydedildi: ' + shader.unityName);
+      fs.writeFileSync(path.join(SHADERS_DIR, name + '.json'), JSON.stringify(shader, null, 1));
+      return send(res, 200, { name, unityName: shader.unityName, warnings });
+    }
+    if (p === '/api/shaders/delete' && req.method === 'POST') {
+      const raw = url.searchParams.get('name');
+      if (isBuiltinName(raw)) return send(res, 400, { error: `"${raw}" hazır (builtin) bir shader; silinemez.` });
+      const f = path.join(SHADERS_DIR, customBase(raw) + '.json'); const existed = !!customBase(raw) && fs.existsSync(f);
+      if (existed) fs.rmSync(f, { force: true });
+      return send(res, 200, { ok: true, deleted: existed });
+    }
+    // ── Materyal modu: kütüphane (materials/) + dokular (materials/textures/)
+    if (p === '/api/materials/list' && req.method === 'GET') return send(res, 200, listMaterials());
+    if (p === '/api/materials/get' && req.method === 'GET') {
+      const m = readMatRaw(url.searchParams.get('name'));
+      return m ? send(res, 200, m) : send(res, 404, { error: 'Materyal bulunamadı' });
+    }
+    if (p === '/api/materials/save' && req.method === 'POST') {
+      const body = await readJson(req); const name = safeAssetName(String(url.searchParams.get('name') || body.name || '').replace(/\.json$/i, ''));
+      if (!name) return send(res, 400, { error: 'İsim gerekli' });
+      const { material, warnings } = normMat({ ...body, name });
+      fs.writeFileSync(path.join(MAT_DIR, name + '.json'), JSON.stringify(material, null, 1));
+      return send(res, 200, { name, warnings });
+    }
+    if (p === '/api/materials/delete' && req.method === 'POST') {
+      const f = matFile(url.searchParams.get('name')); const existed = fs.existsSync(f); fs.rmSync(f, { force: true });
+      return send(res, 200, { ok: true, deleted: existed });
+    }
+    if (p === '/api/material-textures' && req.method === 'GET') return send(res, 200, listMatTextures());
+    if (p === '/api/upload-material-texture' && req.method === 'POST') { // ham PNG baytı; materyal dokuyu uzantısız adla anar
+      const base = safeName(url.searchParams.get('name') || 'texture.png').replace(/\.png$/i, '').trim();
+      if (!base) return send(res, 400, { error: 'İsim gerekli' });
+      fs.writeFileSync(path.join(MAT_TEX_DIR, base + '.png'), await readBody(req));
+      return send(res, 200, { name: base, file: base + '.png' });
+    }
+    // editörden gelen güncellemeler (olay yok)
+    if (p === '/api/material' && req.method === 'POST') { state.material = await readJson(req); state.version++; save(); return send(res, 200, { version: state.version }); }
+    if (p === '/api/material/baseline' && req.method === 'POST') { state.materialBaseline = state.material ? JSON.parse(JSON.stringify(state.material)) : null; save(); return send(res, 200, { ok: true }); }
+    if (p === '/api/shader' && req.method === 'POST') { state.shader = await readJson(req); state.version++; save(); return send(res, 200, { version: state.version }); }
+    if (p === '/api/shader/baseline' && req.method === 'POST') { state.shaderBaseline = state.shader ? JSON.parse(JSON.stringify(state.shader)) : null; save(); return send(res, 200, { ok: true }); }
+    if ((p === '/api/lighting' || p === '/api/claude/lighting') && req.method === 'POST') { // gövde { lighting } (editör ham nesne de gönderebilir)
+      const b = await readJson(req); state.lighting = normalizeLighting(b.lighting ?? b); save();
+      if (p === '/api/claude/lighting') emit('lighting', { lighting: state.lighting });
+      return send(res, 200, { ok: true, lighting: state.lighting, clients: clients.size });
+    }
+    if ((p === '/api/overrides' || p === '/api/claude/overrides') && req.method === 'POST') { // { 'hero'|'hero:<mesh>'|'prop:<id>': materyal }
+      const b = await readJson(req); state.materialOverrides = normOverrides(b.overrides && typeof b.overrides === 'object' ? b.overrides : b); save();
+      if (p === '/api/claude/overrides') emit('overrides', { overrides: state.materialOverrides });
+      return send(res, 200, { ok: true, overrides: state.materialOverrides, clients: clients.size });
+    }
+    // MCP'den gelenler (olay + mod geçişi; setBaseline:false değilse kullanıcı farkı için referans olur)
+    if (p === '/api/claude/material' && req.method === 'POST') {
+      const b = await readJson(req);
+      if (!b.material || typeof b.material !== 'object') return send(res, 400, { error: 'material gerekli' });
+      state.material = b.material; state.mode = 'material'; state.version++;
+      if (b.setBaseline !== false) state.materialBaseline = JSON.parse(JSON.stringify(b.material));
+      save(); emit('material', { material: state.material });
+      return send(res, 200, { clients: clients.size, version: state.version });
+    }
+    if (p === '/api/claude/shader' && req.method === 'POST') {
+      const b = await readJson(req);
+      if (!b.shader || typeof b.shader !== 'object') return send(res, 400, { error: 'shader gerekli' });
+      state.shader = b.shader; state.mode = 'shader'; state.version++;
+      if (b.setBaseline !== false) state.shaderBaseline = JSON.parse(JSON.stringify(b.shader));
+      save(); emit('shader', { shader: state.shader });
+      return send(res, 200, { clients: clients.size, version: state.version });
+    }
+    if (p === '/api/claude/material-load' && req.method === 'POST') {
+      const b = await readJson(req); const raw = readMatRaw(b.name);
+      if (!raw) return send(res, 404, { error: 'Materyal kütüphanesinde yok: ' + b.name });
+      const { material, warnings } = normMat(raw);
+      state.material = material; state.materialBaseline = JSON.parse(JSON.stringify(material)); state.mode = 'material'; state.version++; save();
+      emit('material', { material });
+      return send(res, 200, { ok: true, name: material.name, warnings, clients: clients.size });
+    }
+    if (p === '/api/claude/shader-load' && req.method === 'POST') {
+      const b = await readJson(req); const shader = findShader(b.name);
+      if (!shader) return send(res, 404, { error: 'Shader kütüphanesinde yok: ' + b.name });
+      state.shader = shader; state.shaderBaseline = JSON.parse(JSON.stringify(shader)); state.mode = 'shader'; state.version++; save();
+      emit('shader', { shader });
+      return send(res, 200, { ok: true, name: shader.name, unityName: shader.unityName, builtin: shader.builtin, clients: clients.size });
+    }
+    if (p === '/api/claude/shader-compile' && req.method === 'POST') { // editör GLSL'e çevirip derler; ≤10 sn
+      if (!clients.size) return send(res, 409, { error: 'Editör tarayıcıda açık değil (http://localhost:' + PORT + '); shader derlemesi denetlenemedi.' });
+      const b = await readJson(req);
+      if (!b.shader || typeof b.shader !== 'object') return send(res, 400, { error: 'shader gerekli' });
+      const id = Math.random().toString(36).slice(2);
+      const result = await new Promise((resolve) => {
+        const t = setTimeout(() => { pendingCompiles.delete(id); resolve(null); }, 10000);
+        pendingCompiles.set(id, (r) => { clearTimeout(t); resolve(r); });
+        emit('shader-compile', { id, shader: b.shader });
+      });
+      if (!result) return send(res, 504, { error: 'Editör 10 sn içinde derleme sonucu döndürmedi (Shader modunu destekleyen editör sürümü açık mı?).' });
+      return send(res, 200, result);
+    }
+    if (p === '/api/shader-compile-result' && req.method === 'POST') {
+      const b = await readJson(req);
+      pendingCompiles.get(b.id)?.({ ok: !!b.ok, errors: Array.isArray(b.errors) ? b.errors : [], warnings: Array.isArray(b.warnings) ? b.warnings : [], log: typeof b.log === 'string' ? b.log : '' }); pendingCompiles.delete(b.id);
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/unity/send-material' && req.method === 'POST') return send(res, 200, await unitySendMaterial(await readJson(req)));
+    if (p === '/api/unity/send-shader' && req.method === 'POST') return send(res, 200, await unitySendShader(await readJson(req)));
     if (p === '/api/rig' && req.method === 'POST') {
       const b = await readJson(req);
       state.rig = b.rig; state.modelName = b.modelName; save();
@@ -403,7 +670,7 @@ const server = http.createServer(async (req, res) => {
       if (!clients.size) return send(res, 409, { error: 'Editör tarayıcıda açık değil (http://localhost:' + PORT + ')' });
       const b = await readJson(req);
       const id = Math.random().toString(36).slice(2);
-      const result = await new Promise((resolve) => { // gövde olduğu gibi olaya geçer (kind:'vfx' → kontak sayfası)
+      const result = await new Promise((resolve) => { // gövde olduğu gibi olaya geçer (kind:'vfx' / 'material' → kontak sayfası)
         const t = setTimeout(() => { pendingRenders.delete(id); resolve(null); }, 30000);
         pendingRenders.set(id, (png) => { clearTimeout(t); resolve(png); });
         emit('render', { id, ...b });
