@@ -30,6 +30,21 @@ public static class AnimRefImporter
 
     static Quaternion Mirror(Quaternion q) => new Quaternion(q.x, -q.y, -q.z, q.w); // sağ-el -> sol-el (X ayna)
 
+    // Klip eğri adı: gövde kaslarında HumanTrait.MuscleName ile aynı, parmaklarda farklı
+    // ("Left Index 1 Stretched" -> "LeftHand.Index.1 Stretched", "Left Thumb Spread" -> "LeftHand.Thumb.Spread")
+    static string MuscleAttribute(string muscle)
+    {
+        foreach (var side in new[] { "Left", "Right" })
+        {
+            if (!muscle.StartsWith(side + " ")) continue;
+            var p = muscle.Substring(side.Length + 1).Split(' ');
+            if (Array.IndexOf(new[] { "Thumb", "Index", "Middle", "Ring", "Little" }, p[0]) < 0) continue;
+            if (p.Length == 3) return side + "Hand." + p[0] + "." + p[1] + " " + p[2];
+            if (p.Length == 2) return side + "Hand." + p[0] + "." + p[1];
+        }
+        return muscle;
+    }
+
     static Quaternion EvalRot(float[] a, float f)
     {
         int n = a.Length / 5;
@@ -180,11 +195,17 @@ public static class AnimRefImporter
                 for (int i = 0; i < 7; i++)
                     AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), rn[i]), LinearCurve(times, rt[i]));
                 for (int i = 0; i < mc; i++)
-                    AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), HumanTrait.MuscleName[i]), LinearCurve(times, muscle[i]));
+                    AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), MuscleAttribute(HumanTrait.MuscleName[i])), LinearCurve(times, muscle[i]));
             }
 
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
             settings.loopTime = data.loop;
+            if (humanoid)
+            {
+                // Editörde kök hiç hareket etmez, gövde (Hips) yerel olarak oynar: kök hareketi poza gömülü, orijinal konum/yönelim korunur
+                settings.loopBlendOrientation = settings.loopBlendPositionY = settings.loopBlendPositionXZ = true;
+                settings.keepOriginalOrientation = settings.keepOriginalPositionY = settings.keepOriginalPositionXZ = true;
+            }
             AnimationUtility.SetAnimationClipSettings(clip, settings);
 
             Directory.CreateDirectory(Path.GetDirectoryName(outAssetPath) ?? "Assets");
