@@ -154,6 +154,7 @@ export function initMaterials(ctx) {
     if (!mode) { previewRoot.visible = false; ctx.setHeroVisible?.(true); return; }
     const tgt = currentTarget(); const primitive = !!GEOS[tgt];
     previewRoot.visible = primitive; ctx.setHeroVisible?.(!primitive); // küre vb. kahramanın yerinde durur
+    scene.background = new THREE.Color(previewOf().background); ctx.grid.visible = previewOf().showGrid;
     if (mode === 'shader' && !compileState.ok) return; // derlenemeyen shader uygulanmaz; son çalışan görüntü kalır
     const prev = currentPreview();
     if (primitive && prev) applyMat(ensurePreviewMesh(tgt), prev.shader, prev.values, 'preview');
@@ -268,6 +269,11 @@ export function initMaterials(ctx) {
       }
       case 'toggle': { lab.classList.add('chk'); lab.textContent = ''; const c = el('input'); c.type = 'checkbox'; c.checked = !!get(); c.onchange = () => { pushUndo(); ch(c.checked); }; lab.append(c, ' ' + p.label); break; }
       case 'color': {
+        if (Array.isArray(get())) { // [r,g,b,a] (1'i aşabilir): sayılarla düzenlenir
+          const row = el('div', 'vrow multi');
+          ['r', 'g', 'b', 'a'].forEach((n, k) => { const cell = el('label', 'vsub'); const sp = el('span', '', n); const ni = numInput(get()[k], 0.01, (x) => { const a = [...get()]; a[k] = Math.max(0, x); ch(a); }); cell.append(sp, ni); row.appendChild(cell); scrubLabel(sp, ni, 0.01, (x) => { const a = [...get()]; a[k] = Math.max(0, x); ch(a); }); });
+          wrap.appendChild(row); break;
+        }
         const row = el('div', 'vrow'); const c = el('input'); c.type = 'color'; c.value = get().slice(0, 7); c.onfocus = () => pushUndo();
         c.oninput = () => ch(c.value + (get().length > 7 ? get().slice(7) : '')); row.appendChild(c);
         if (get().length > 7 || p.name === '_BaseColor') { const a = numInput(get().length > 7 ? parseInt(get().slice(7), 16) / 255 : 1, 0.05, (x) => { const v = Math.round(Math.min(1, Math.max(0, x)) * 255).toString(16).padStart(2, '0'); ch(get().slice(0, 7) + v); }); a.title = 'Alfa'; row.appendChild(a); }

@@ -125,14 +125,14 @@ export function defaultMaterial() {
   };
 }
 
-// değer biçimleri: color '#hex' · hdrColor { color, intensity } · float/range sayı · toggle bool · vector [4]
+// değer biçimleri: color '#hex' ya da [r,g,b,a] (Unity gibi gamma, 1'i aşabilir) · hdrColor { color, intensity } · float/range sayı · toggle bool · vector [4]
 // texture { tex: ad | '@mesh' | white/black/gray/bump, tiling:[x,y], offset:[x,y], unityPath?: 'Assets/...' }
 export function normValue(p, v) {
   switch (p.type) {
     case 'float': return num(v, p.default);
     case 'range': return Math.min(p.max, Math.max(p.min, num(v, p.default)));
     case 'toggle': return typeof v === 'boolean' ? v : typeof v === 'number' ? v !== 0 : p.default;
-    case 'color': return normHex(v, p.default);
+    case 'color': return Array.isArray(v) && v.length >= 3 ? [0, 1, 2, 3].map((k) => Math.max(0, num(v[k], k === 3 ? 1 : 0))) : normHex(v, p.default); // hex ya da [r,g,b,a] (gamma, 1'i aşabilir)
     case 'hdrColor': { const o = isObj(v) ? v : typeof v === 'string' ? { color: v } : {}; return { color: normHex(o.color, p.default.color), intensity: Math.max(0, num(o.intensity, p.default.intensity)) }; }
     case 'vector': { const a = Array.isArray(v) ? v : []; return [0, 1, 2, 3].map((k) => num(a[k], p.default[k])); }
     case 'texture': {
@@ -282,7 +282,7 @@ Elarion/ToonCharacter (oyunun kahraman shader'ı), Universal Render Pipeline/Lit
 
 export const MATERIAL_REFERENCE = `# UPE materyal formatı (${MATERIAL_FORMAT})
 - name (Unity: Assets/UnityPreview/Materials/<name>.mat), shader (Unity shader adı: builtin ya da UnityPreview/<özel>), renderQueue (-1 = shader'ınki)
-- values: özellik adı → değer. color '#rrggbb[aa]' (sRGB) · hdrColor {color, intensity} · float/range sayı · toggle bool · vector [x,y,z,w]
+- values: özellik adı → değer. color '#rrggbb[aa]' (sRGB) ya da [r,g,b,a] (Unity materyalindeki gamma değerleri, 1'i aşabilir) · hdrColor {color, intensity} · float/range sayı · toggle bool · vector [x,y,z,w]
   · texture { tex: ad (materials/textures/<ad>.png) | white|black|gray|bump | '@mesh' (önizleme nesnesinin kendi dokusu),
     tiling:[x,y], offset:[x,y], unityPath?: 'Assets/...' (Unity'de bu doku kullanılır; '@mesh' için gerekli) }
 - preview: { target: sphere|cube|plane|capsule|torus|hero|prop:<id>, background, bloom, rotate (döner tabla), showGrid }

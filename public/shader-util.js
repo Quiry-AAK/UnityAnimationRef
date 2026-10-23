@@ -3,6 +3,7 @@ const s2l = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4
 
 // '#rrggbb[aa]' → [r,g,b,a] doğrusal (alfa olduğu gibi) — Unity Linear projede SetColor(sRGB) ile aynı sonuç
 export function parseColorLinear(hex) {
+  if (Array.isArray(hex)) return [0, 1, 2].map((k) => { const v = +hex[k] || 0; return v > 1 ? Math.pow(v, 2.2) : s2l(Math.max(0, v)); }).concat([hex[3] ?? 1]);
   let s = String(hex || '#ffffff').replace(/^#/, '');
   if (s.length === 3) s = s.split('').map((x) => x + x).join('');
   const n = (i) => parseInt(s.slice(i, i + 2), 16) / 255;
