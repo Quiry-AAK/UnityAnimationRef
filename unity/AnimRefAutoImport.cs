@@ -3,9 +3,15 @@
 //   Assets/AnimRef/Clips/<ad>.anim
 // Karakter ve mod Assets/AnimRef/settings.json'dan okunur (editör yazar). Mod "Auto": karakter Humanoid ise
 // Humanoid, değilse Generic. Unity kapalıyken gönderilenler Unity açılınca işlenir.
+// Yeniden aktarım kararı dosya tarihine değil içeriğe bakar (git checkout/pull tarihleri gelişigüzel yazar): klip,
+// üretildiği json'un SHA1 özetini kendi .meta'sında (importer userData "animref-sha1=<özet>") taşır; klip yoksa ya da
+// özet farklıysa aktarılır. Editör her gönderime sentAt yazar, yani aynı animasyonu yeniden göndermek de aktarır.
+// Özetsiz eski klip (bu sürümden önce üretilmiş): json'da sentAt yoksa aktarılmaz, yalnız özet kaydedilir.
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,9 +19,12 @@ using UnityEngine;
 public class AnimRefAutoImport : AssetPostprocessor
 {
     const string Dir = "Assets/AnimRef";
+    const string ShaTag = "animref-sha1=";
     [Serializable] class Settings { public string character; public string mode; }
+    [Serializable] class Stamp { public string sentAt; }
 
     static double nextPoll; static bool busy;
+    static readonly Dictionary<string, (DateTime time, long size, string sha)> shaCache = new Dictionary<string, (DateTime, long, string)>();
 
     static AnimRefAutoImport()
     {
@@ -49,7 +58,13 @@ public class AnimRefAutoImport : AssetPostprocessor
         {
             string name = Path.GetFileName(json).Replace(".animref.json", "");
             string clipPath = Dir + "/Clips/" + name + ".anim";
-            if (File.Exists(clipPath) && File.GetLastWriteTimeUtc(clipPath) >= File.GetLastWriteTimeUtc(json)) continue;
+            string sha = Sha1(json);
+            if (File.Exists(clipPath))
+            {
+                string stored = StoredSha(clipPath);
+                if (stored == sha) continue;
+                if (stored == null && !Sent(json)) { RecordSha(clipPath, sha); continue; } // geçiş: eski klibe dokunma
+            }
             string status;
             try
             {
@@ -57,12 +72,50 @@ public class AnimRefAutoImport : AssetPostprocessor
                 if (ch == null) throw new Exception("Karakter bulunamadı: '" + settings.character + "' (Anim Ref > Unity bölümünden karakteri seç)");
                 var mode = (AnimRefImporter.Mode)Enum.Parse(typeof(AnimRefImporter.Mode), string.IsNullOrEmpty(settings.mode) ? "Auto" : settings.mode, true);
                 AnimRefImporter.Import(json, ch, clipPath, mode);
-                File.SetLastWriteTimeUtc(clipPath, DateTime.UtcNow);
+                RecordSha(clipPath, sha);
+                File.SetLastWriteTimeUtc(clipPath, DateTime.UtcNow); // editör bekler: klip tarihi ≥ gönderim zamanı = aktarıldı
                 status = name + "|OK|" + clipPath;
             }
             catch (Exception e) { status = name + "|ERROR|" + e.Message.Replace('\n', ' '); Debug.LogError("AnimRef: " + e.Message); }
             File.WriteAllText(Dir + "/last_status.txt", status);
         }
+    }
+
+    // json'un içerik özeti; git autocrlf satır sonlarını değiştirse de aynı kalsın diye \r sayılmaz
+    static string Sha1(string path)
+    {
+        var fi = new FileInfo(path);
+        if (shaCache.TryGetValue(path, out var c) && c.time == fi.LastWriteTimeUtc && c.size == fi.Length) return c.sha;
+        var bytes = File.ReadAllBytes(path);
+        int n = 0; foreach (var b in bytes) if (b != '\r') bytes[n++] = b;
+        string sha;
+        using (var s = SHA1.Create()) sha = BitConverter.ToString(s.ComputeHash(bytes, 0, n)).Replace("-", "").ToLowerInvariant();
+        shaCache[path] = (fi.LastWriteTimeUtc, fi.Length, sha);
+        return sha;
+    }
+
+    // Diskteki .meta'dan okunur: git pull sonrası AssetDatabase henüz yenilenmemişken de klibin gerçek özeti görülsün
+    static string StoredSha(string clipPath)
+    {
+        string meta = clipPath + ".meta";
+        if (!File.Exists(meta)) return null;
+        string text = File.ReadAllText(meta);
+        int i = text.IndexOf(ShaTag, StringComparison.Ordinal);
+        return i < 0 || i + ShaTag.Length + 40 > text.Length ? null : text.Substring(i + ShaTag.Length, 40);
+    }
+
+    static void RecordSha(string clipPath, string sha)
+    {
+        var importer = AssetImporter.GetAtPath(clipPath);
+        if (importer == null) return; // AssetDatabase klibi henüz tanımıyor; sonraki turda
+        importer.userData = ShaTag + sha;
+        importer.SaveAndReimport();
+    }
+
+    static bool Sent(string json)
+    {
+        try { return !string.IsNullOrEmpty(JsonUtility.FromJson<Stamp>(File.ReadAllText(json))?.sentAt); }
+        catch { return false; }
     }
 }
 #endif
