@@ -9,15 +9,15 @@
 
 ## Unity'ye tek tıkla gönderme (önerilen)
 1. Sağ panel → **Unity**: Unity proje klasörünü yaz (içinde `Assets` ve `ProjectSettings` olan klasör), karakteri seç (Unity'deki Y Bot FBX/prefab'ı; adı eşleşiyorsa otomatik seçilir), **Kaydet**. Importer scriptleri projeye `Assets/Editor/AnimRef/` altına kendiliğinden kurulur ve her gönderimde güncellenir.
-2. **Dışa aktar → Unity'ye gönder** (ya da sağ paneldeki buton / MCP `send_to_unity`). Animasyon `Assets/AnimRef/` içine yazılır, Unity kendisi `Assets/AnimRef/Clips/<ad>.anim` üretir (Unity odakta olmasa da birkaç saniye içinde; kapalıysa açılınca).
+2. Üst bardaki **⇪ Unity'ye gönder** (Ctrl+Enter; ya da MCP `send_to_unity`). Animasyon `Assets/AnimRef/` içine yazılır, Unity kendisi `Assets/AnimRef/Clips/<ad>.anim` üretir (Unity odakta olmasa da birkaç saniye içinde; kapalıysa açılınca).
 3. Mod **Otomatik**: karakter Humanoid ise Humanoid, değilse Generic. Mod seçmen gerekmez.
 4. Eşyalar (silah) için Unity'de Tools > Anim Ref > Import penceresindeki "Eşyaları karaktere ekle" kullanılır.
 
 ## Tipik akış
 1. Mixamo'dan karakteri **FBX, T-pose** olarak indir → `models/` klasörüne at (ya da editöre sürükle). Mixamo'dan animasyon indirirsen (FBX) editöre sürükle: kareler düzenlenebilir key'lere çevrilir ve kütüphaneye kaydolur.
 2. Editörde kemiği seç (viewport'taki mavi nokta ya da ☰ Kemikler), döndür/taşı, **◆ Key** ile key koy. Küçük düzeltmeler için "Tüm kareleri etkile" işaretle.
-3. Claude'a söylemek zor olan şeyi editörde elle düzelt → "düzelttim" de → Claude `get_user_edits` ile farkı okur. Sağ panelde "Claude'a not" kutusu da var.
-4. Bitince: **Dışa aktar → GIF** ya da **Unity için kaydet** (`exports/*.animref.json`).
+3. Claude'a söylemek zor olan şeyi editörde elle düzelt → "düzelttim" de → Claude `get_user_edits` ile farkı okur. Üst bardaki **💬 Claude'a not** (N) penceresiyle not da bırakılır.
+4. Bitince: **Dosya → GIF** ya da **Unity JSON dosyası olarak kaydet** (`exports/*.animref.json`).
 5. Unity: `unity/AnimRefImporter.cs` → `Assets/Editor/` → Tools > Anim Ref > Import (JSON + T-pose'ta karakter seç).
 
 ## VFX modu
@@ -32,8 +32,8 @@
 - Simülasyon Unity ParticleSystem'i taklit eder, sabit adımlı ve tohumludur: aynı efekt aynı anda hep aynı görünür (Claude'un
   `render_vfx` kontak sayfası ile kullanıcının gördüğü aynıdır). Unity'de birebir değil ama yakındır (gürültü alanı, drag/dampen
   formülleri yaklaşık). Değerler Unity koordinatlarında (+Z ileri, +Y yukarı), metre/saniye/derece.
-- Kullanıcı değer değiştirince Claude `get_vfx_user_edits` ile farkı okur (yol bazında `from → to`); "Claude'a not" kutusu da var.
-- **Unity'ye gönder** (üst bar ya da sağ panel → Unity): efekt `Assets/UnityPreview/VFX/<ad>.vfx.json` + dokular `Textures/` olarak
+- Kullanıcı değer değiştirince Claude `get_vfx_user_edits` ile farkı okur (yol bazında `from → to`); not için üst bardaki **💬 Claude'a not**.
+- **Unity'ye gönder** (üst bar, Ctrl+Enter): efekt `Assets/UnityPreview/VFX/<ad>.vfx.json` + dokular `Textures/` olarak
   yazılır, Unity (açıksa birkaç saniyede) `Assets/UnityPreview/VFX/<ad>.prefab` ve `Materials/` üretir. Kök objede `Play()` tüm
   katmanları oynatır. Unity kapalıyken: `-executeMethod UnityPreviewVfxImporter.ProcessPending`. Aynı adla tekrar gönderim prefab'ı
   yerinde günceller (GUID korunur). Malzeme: URP Particles/Unlit, additive/alpha, `_BaseColor` = intensity (HDR, bloom).
@@ -46,7 +46,7 @@
 - **Materyal:** solda materyal adı, **+ Materyal** (shader seçerek yeni), kütüphane. Sağda shader seçimi, shader'ın özellikleri
   (renk, HDR renk × yoğunluk, kaydırıcılar, vektör, doku + tiling/offset + PNG yükleme), **Giydir** (kahramana/eşyaya; tüm modlarda,
   animasyon ve VFX önizlemesinde de görünür), **Işık** (tüm UPE shader'ları için ortak yönlü ışık + ortam), **Önizleme** (küre, küp,
-  düzlem, kapsül, simit, kahraman, eşyalar; bloom, döner tabla, arka plan), kütüphane, Unity, Claude'a not. F: kamerayı nesneye odakla.
+  düzlem, kapsül, simit, kahraman, eşyalar; bloom, döner tabla, arka plan), kütüphane. F: kamerayı nesneye odakla.
 - **Shader:** solda shader listesi (hazır portlar salt okunur, "Özel kopya oluştur" ile düzenlenebilir), **+ Shader** şablonları (unlit,
   toon, fresnel kalkan, dissolve, kayan doku). Altta kod paneli (Fragment / Vertex / Ortak / Outline sekmeleri) ve derleme günlüğü:
   hata satırına tıklayınca o satır seçilir. Sağda önizleme değerleri, özellik tanımları, render durumu (karışım, cull, ztest, kuyruk,
@@ -61,8 +61,19 @@
   '@mesh' dokusu yalnız önizlemedir; Unity'de kullanılacak dokuyu `unityPath` ile ver.
 - Dokular `materials/textures/*.png`; yerleşikleri yeniden üretmek: `node tools/gen-material-textures.mjs`.
 
+## Arayüz
+- Üst bar: mod sekmeleri (her modun rengi ayrı), karakter seçimi, geri al/yinele, **💬 Claude'a not** (her modda; bağlamı kendisi ekler,
+  "Bu hali referans al" Claude'un karşılaştırma noktasını günceller), **⇪ Unity'ye gönder** (hangi moddaysan onu gönderir;
+  Shader modunda "Unity'de derle"), **?** yardım, sol/sağ panel düğmeleri.
+- Görüntü alanı: sağ üstte kamera düğmeleri (Ön, Yan, Üst, 3/4, ◎ odakla), sol üstte açık işin özeti.
+- Sağ panel: en üstte **Ayar ara** kutusu (eşleşen alanlar kalır, bölümleri açılır); bölümlerin açık/kapalı durumu hatırlanır.
+- Alt durum çubuğu: sunucu bağlantısı, Claude'un son güncellemesi ve saati, açık iş, mod ipuçları, Unity projesi (tıkla: proje klasörü ayarı).
+- İlk açılışta yardım penceresi gelir (F1 ile her zaman açılır).
+
 ## Kısayollar
-Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı · B kemik paneli · P ayar paneli · Ctrl+Z / Ctrl+Y
+- Genel: F1 yardım · N Claude'a not · Ctrl+Enter Unity'ye gönder · Ctrl+F ayar ara · 1/2/3/4 mod · F odakla · B/P sol/sağ panel · Ctrl+Z / Ctrl+Y
+- Animasyon: Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı
+- VFX: Space oynat · Home baştan · ←/→ ±0.05 sn
 
 ## Önemli teknik notlar
 - **Animasyon kemik adlarına bağlı**, karaktere değil: aynı Mixamo kemik adlarına sahip her karakterde çalışır. Karakter değişince animasyon ve eşyalar korunur.
