@@ -48,7 +48,8 @@ export function initMaterials(ctx) {
   let mode = null; // 'material' | 'shader' | null (etkin değil)
   let compileState = { ok: true, errors: [], warnings: [] };
   const undoM = [], redoM = [], undoS = [], redoS = [];
-  const openSecs = new Set(['_mat', '_props', '_light', '_code']);
+  const openSecs = new Set((() => { try { return JSON.parse(localStorage.getItem('upe-mat-open')) || null; } catch { return null; } })() || ['_mat', '_props', '_prev', '_sh', '_pv']);
+  const saveOpen = () => { try { localStorage.setItem('upe-mat-open', JSON.stringify([...openSecs])); } catch { /* yok */ } };
 
   // ── çizim (bloom'lu)
   const composer = new EffectComposer(renderer);
@@ -311,7 +312,11 @@ export function initMaterials(ctx) {
     }
     return wrap;
   }
-  function section(title, key, open) { const d = el('details'); d.open = open ?? openSecs.has(key); d.appendChild(el('summary', '', title)); if (key) d.ontoggle = () => { if (d.open) openSecs.add(key); else openSecs.delete(key); }; return d; }
+  function section(title, key, open) {
+    const d = el('details'); d.open = open ?? openSecs.has(key); d.appendChild(el('summary', '', title));
+    if (key) d.ontoggle = () => { if (document.querySelector('#panelFilter')?.value) return; if (d.open) openSecs.add(key); else openSecs.delete(key); saveOpen(); };
+    return d;
+  }
   function shaderSelect(value, onChange) {
     const s = el('select'); const groups = { 'Hazır (oyun / URP)': [], 'Özel (UnityPreview)': [] };
     for (const sh of shaders.values()) groups[sh.builtin ? 'Hazır (oyun / URP)' : 'Özel (UnityPreview)'].push(sh);
@@ -389,9 +394,6 @@ export function initMaterials(ctx) {
     box.appendChild(lightingSection());
     box.appendChild(previewSection((structure) => { materialEdited({ structure }); }));
     box.appendChild(librarySection('Materyal kütüphanesi', '_lib', material.name, (n) => saveMatLib(n)));
-    box.appendChild(unitySection('Unity\'ye gönder (.mat)', () => sendUnity('material')));
-    box.appendChild(noteSection('material', () => api('/api/material', material).then(() => api('/api/material/baseline', {}))));
-    box.appendChild(el('div', 'hint', 'Etiketi sürükle: değeri değiştir · Ctrl+Z geri al'));
     $('#right').scrollTop = scroll;
   }
   function librarySection(title, key, name, onSave) {
@@ -399,24 +401,6 @@ export function initMaterials(ctx) {
     sl.innerHTML += '<div class="row"><input class="libname" placeholder="isim" style="flex:1;min-width:0"><button class="primary libsave">Kaydet</button></div>';
     sl.querySelector('.libname').value = name; sl.querySelector('.libsave').onclick = () => onSave(sl.querySelector('.libname').value || name);
     return sl;
-  }
-  function unitySection(label, onSend) {
-    const su = section('Unity', '_unity');
-    su.innerHTML += `<label class="fl">Unity proje klasörü<input class="uproj" placeholder="örn: C:/Projeler/Oyunum"></label><div class="row"><button class="primary usend">${label}</button></div><div class="hint-s ustat"></div>`;
-    fetch('/api/unity').then((r) => r.json()).then((u) => { su.querySelector('.uproj').value = u.project || ''; }).catch(() => {});
-    su.querySelector('.usend').onclick = async () => {
-      const st = (m) => { toast(m); su.querySelector('.ustat').textContent = m; };
-      const proj = su.querySelector('.uproj').value.trim(); if (proj) { const r = await api('/api/unity/config', { project: proj }); if (r.error) return st(r.error); }
-      st('Unity\'ye gönderiliyor…'); st(await onSend());
-    };
-    return su;
-  }
-  function noteSection(m, onBaseline) {
-    const sn = section("Claude'a not", '_note');
-    sn.innerHTML += '<textarea rows="3" class="note" placeholder="örn: rim daha ince olsun"></textarea><div class="row"><button class="primary notesend">Gönder</button><button class="base" title="Şu anki hali Claude\'un karşılaştırma noktası yap">Bu hali referans al</button></div>';
-    sn.querySelector('.notesend').onclick = async () => { const t = sn.querySelector('.note').value.trim(); if (!t) return; await api('/api/note', { text: t, mode: m, target: m === 'shader' ? editShader.unityName : material.name }); sn.querySelector('.note').value = ''; toast('Not Claude için kaydedildi'); };
-    sn.querySelector('.base').onclick = async () => { await onBaseline(); toast('Referans güncellendi'); };
-    return sn;
   }
   async function saveMatLib(name, { quiet = false } = {}) {
     name = String(name).trim().replace(/[^A-Za-z0-9_-]+/g, '_'); if (!name) return;
@@ -537,8 +521,6 @@ export function initMaterials(ctx) {
     box.appendChild(lightingSection());
     box.appendChild(previewSection(() => refreshPreview()));
     if (!ro) box.appendChild(librarySection('Shader kütüphanesi', '_shlib', S.name, (n) => saveShaderLib(n)));
-    if (!ro) box.appendChild(unitySection('Unity\'de derle (.shader)', () => sendUnity('shader')));
-    box.appendChild(noteSection('shader', () => api('/api/shader', editShader).then(() => api('/api/shader/baseline', {}))));
     $('#right').scrollTop = scroll;
   }
   function propEnum(label, get, set, opts) {
@@ -602,7 +584,13 @@ export function initMaterials(ctx) {
     refreshPreview(); if (m === 'material') buildMatUI(); else buildShaderUI();
   }
   function deactivate() { mode = null; previewRoot.visible = false; ctx.setHeroVisible?.(true); ctx.overlay.visible = true; ctx.grid.visible = true; scene.background = new THREE.Color(ctx.BG); syncScene(); }
-  const modeObj = (m) => ({ activate: () => activate(m), deactivate, get active() { return mode === m; }, tick: () => {}, render, undo, redo, frame }); // tick app.js'te her karede mats.tick ile
+  const modeObj = (m) => ({ // tick app.js'te her karede mats.tick ile
+    activate: () => activate(m), deactivate, get active() { return mode === m; }, tick: () => {}, render, undo, redo, frame,
+    noteContext: () => (m === 'shader' ? { label: `Shader · ${editShader.unityName}${compileState.ok ? '' : ' · derleme hatası var'}`, data: { mode: 'shader', target: editShader.unityName } }
+      : { label: `Materyal · ${material.name} · ${material.shader} · önizleme: ${material.preview.target}`, data: { mode: 'material', target: material.name } }),
+    baseline: () => (m === 'shader' ? api('/api/shader', editShader).then(() => api('/api/shader/baseline', {})) : api('/api/material', material).then(() => api('/api/material/baseline', {}))),
+    get itemName() { return m === 'shader' ? `Shader <b>${editShader.unityName}</b>${editShader.builtin ? ' · hazır (salt okunur)' : ''}${compileState.ok ? '' : ' · <span style="color:var(--err)">derleme hatası</span>'}` : `Materyal <b>${material.name}</b> · ${material.shader}`; },
+  });
 
   // ── Claude olayları
   function onRemoteMaterial(m) { setMaterial(m); toast('Claude materyali güncelledi (Ctrl+Z ile geri al)'); }
@@ -620,7 +608,7 @@ export function initMaterials(ctx) {
   }
 
   return {
-    material: modeObj('material'), shader: modeObj('shader'),
+    material: modeObj('material'), shader: modeObj('shader'), sendUnity: (m) => sendUnity(m === 'shader' ? 'shader' : 'material'),
     tick: (dt) => tick(dt),
     onSceneChanged: () => { // model/eşya yeniden kurulunca: sahneden düşen mesh'lerin kaydını at, sonra yeniden giydir
       const inScene = (o) => { while (o) { if (o === scene) return true; o = o.parent; } return false; };

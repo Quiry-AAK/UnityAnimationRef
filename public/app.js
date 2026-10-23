@@ -8,7 +8,11 @@ import { initVfx } from './vfx.js';
 import { initMaterials } from './material.js';
 
 const $ = (s) => document.querySelector(s);
-const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2500); };
+const toast = (msg, type) => { // type: 'ok' | 'err' (yoksa mesajdan tahmin)
+  const t = $('#toast'); msg = String(msg); type ||= /^hata|hatas|bulunamad|geçersiz|açık değil/i.test(msg) ? 'err' : '';
+  t.textContent = msg; t.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), type === 'err' ? 5000 : 2800);
+};
 const api = (path, body, method = 'POST') => fetch(path, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }).then((r) => r.json());
 
 // ───────────────────────── sahne
@@ -611,12 +615,6 @@ $('#animFps').onchange = (e) => { pushUndo(); anim.fps = Math.max(1, +e.target.v
 $('#animLen').onchange = (e) => { pushUndo(); anim.length = Math.max(2, +e.target.value || 60); curFrame = Math.min(curFrame, anim.length - 1); uiUpdate(); scheduleSync(); };
 $('#animLoop').onchange = (e) => { anim.loop = e.target.checked; scheduleSync(); };
 
-$('#btnNote').onclick = async () => {
-  const text = $('#noteText').value.trim(); if (!text) return;
-  await api('/api/note', { text, frame: frameNow(), bone: sel?.name || null });
-  $('#noteText').value = ''; toast('Not Claude için kaydedildi');
-};
-$('#btnBaseline').onclick = async () => { await api('/api/anim', anim); await api('/api/baseline', {}); toast('Referans güncellendi'); };
 
 // ───────────────────────── üst bar
 $('#modelSelect').onchange = () => { const n = $('#modelSelect').value; if (n) loadModel(n).catch((e) => toast(e.message)); };
@@ -727,14 +725,14 @@ $('#btnGif').onclick = async () => {
 function setPanel(side, open) {
   document.body.classList.toggle(side + '-open', open);
   $(side === 'left' ? '#togLeft' : '#togRight').classList.toggle('on', open);
-  try { localStorage.setItem(`panel-${mode}-${side}`, open ? '1' : '0'); } catch { /* yok say */ }
+  try { localStorage.setItem(`panel2-${mode}-${side}`, open ? '1' : '0'); } catch { /* yok say */ }
   setTimeout(() => { onResize(); drawTimeline(); }, 220);
 }
 const panelOpen = (side) => document.body.classList.contains(side + '-open');
 $('#togLeft').onclick = () => setPanel('left', !panelOpen('left'));
 $('#togRight').onclick = () => setPanel('right', !panelOpen('right'));
-const savedPanel = (s, d) => { try { const v = localStorage.getItem(`panel-${mode}-${s}`); return v === null ? d : v === '1'; } catch { return d; } };
-setPanel('left', savedPanel('left', false)); setPanel('right', savedPanel('right', false));
+const savedPanel = (s, d = true) => { try { const v = localStorage.getItem(`panel2-${mode}-${s}`); return v === null ? d : v === '1'; } catch { return d; } };
+setPanel('left', savedPanel('left')); setPanel('right', savedPanel('right'));
 
 
 // ───────────────────────── Unity'ye tek tık gönderim
@@ -756,20 +754,28 @@ async function saveUnityCfg() {
   await refreshUnity(); return true;
 }
 async function sendUnity() {
-  if (!$('#uProject').value.trim()) { setPanel('right', true); $('#secUnity').open = true; toast("Önce Unity proje klasörünü seç"); return; }
-  if (!(await saveUnityCfg())) return;
+  await refreshUnity();
+  if (!$('#uProject').value.trim()) { openUnityDialog('Önce Unity proje klasörünü ayarla.'); return 'Unity projesi ayarlı değil'; }
+  if (!(await saveUnityCfg())) return 'Hata: Unity ayarı kaydedilemedi';
   toast("Unity'ye gönderiliyor…"); $('#uStatus').textContent = 'Gönderiliyor…';
   await api('/api/anim', anim);
   const r = await api('/api/unity/send', { all: $('#uAll').checked });
   const msg = r.error ? 'Hata: ' + r.error : r.ok ? "Unity'ye aktarıldı: " + (r.clips || []).join(', ') : (r.note || 'Gönderildi');
-  toast(msg); $('#uStatus').textContent = msg;
+  $('#uStatus').textContent = msg; return msg;
 }
-$('#btnUSave').onclick = async () => { if (await saveUnityCfg()) toast('Unity ayarı kaydedildi'); };
-$('#btnUSend').onclick = sendUnity; $('#btnUnitySend').onclick = sendUnity;
+$('#btnUSave').onclick = async () => { if (await saveUnityCfg()) { toast('Unity ayarı kaydedildi', 'ok'); refreshStatusUnity(); } };
+$('#btnUSend').onclick = () => sendCurrent();
 
 // ───────────────────────── klavye
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'F1') { e.preventDefault(); return openHelp(); }
+  if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); if (!panelOpen('right')) setPanel('right', true); return $('#panelFilter').focus(); }
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); return sendCurrent(); }
+  if (document.querySelector('dialog[open]')) return;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['checkbox', 'range'].includes(document.activeElement.type)) return;
+  if (!e.ctrlKey && !e.altKey && ['1', '2', '3', '4'].includes(e.key)) return setEditorMode(MODES[+e.key - 1]);
+  if (!e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); return openNote(); }
+  if (e.key === '?') return openHelp();
   if (mode === 'vfx') {
     if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? vfx.redo() : vfx.undo(); }
     else if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); vfx.redo(); }
@@ -777,6 +783,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'Home') vfx.restart();
     else if (e.key === 'ArrowLeft') vfx.nudge(-0.05);
     else if (e.key === 'ArrowRight') vfx.nudge(0.05);
+    else if (e.key.toLowerCase() === 'f') vfx.frame();
     else if (e.key.toLowerCase() === 'b') $('#togLeft').click();
     else if (e.key.toLowerCase() === 'p') $('#togRight').click();
     return;
@@ -801,6 +808,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'Delete') delKey();
   else if (e.key.toLowerCase() === 'e') setMode('rotate');
   else if (e.key.toLowerCase() === 'w') setMode('translate');
+  else if (e.key.toLowerCase() === 'f') focusView();
 });
 window.addEventListener('resize', drawTimeline);
 
@@ -825,21 +833,138 @@ function setEditorMode(m, { notify = true } = {}) {
   if (changed) { camByMode[prev] = { pos: camera.position.clone(), target: orbit.target.clone() }; const pm = modeModule(prev); if (pm?.active) pm.deactivate(); }
   mode = m; document.body.dataset.mode = m;
   for (const k of MODES) $('#mode' + k[0].toUpperCase() + k.slice(1))?.classList.toggle('on', k === m);
-  $('#togLeft').textContent = { anim: '☰ Kemikler', vfx: "☰ Emitter'lar", material: '☰ Materyaller', shader: "☰ Shader'lar" }[m];
+  $('#togLeft').title = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar" }[m] + ' paneli (B)';
+  $('#sendLabel').textContent = SEND_LABEL[m]; $('#stHint').textContent = HINTS[m]; $('#panelFilter').value = ''; applyFilter();
   if (m === 'anim') { if (sel) tc.attach(sel.obj); refreshPose(); uiUpdate(); } else { playing = false; tc.detach(); }
   const mod = modeModule(m); if (mod && !mod.active) mod.activate();
   if (changed) { const c = camByMode[m]; if (c) { camera.position.copy(c.pos); orbit.target.copy(c.target); orbit.update(); } else mod?.frame?.(); }
-  if (changed || !notify) { setPanel('left', savedPanel('left', m !== 'anim')); setPanel('right', savedPanel('right', m !== 'anim')); }
+  if (changed || !notify) { setPanel('left', savedPanel('left')); setPanel('right', savedPanel('right')); }
+  updateStatusItem(); if (helpOpen()) fillHelp();
   if (notify) api('/api/mode', { mode }).catch(() => {});
 }
 for (const k of MODES) { const b = $('#mode' + k[0].toUpperCase() + k.slice(1)); if (b) b.onclick = () => setEditorMode(k); }
-$('#btnVfxUnity').onclick = () => vfx.sendUnity();
+
+// ───────────────────────── genel arayüz: Unity'ye gönder, Claude'a not, yardım, durum çubuğu, kamera, panel araması
+const SEND_LABEL = { anim: "Unity'ye gönder", vfx: "Unity'ye gönder", material: "Unity'ye gönder", shader: "Unity'de derle" };
+const HINTS = {
+  anim: 'Space oynat · ←/→ kare · K key · E döndür / W taşı · F odakla',
+  vfx: 'Space oynat · Home baştan · ←/→ zaman · etiketi sürükle: değer · F odakla',
+  material: 'Etiketi sürükle: değer · Giydir: kahramana tak · F odakla',
+  shader: 'Kod değişince kendisi derlenir · hataya tıkla: satıra git · F odakla',
+};
+const SEND_WHAT = { anim: 'animasyonu (.anim)', vfx: 'efekti (prefab)', material: 'materyali (.mat)', shader: "shader'ı (.shader derleme denetimi)" };
+async function sendCurrent() {
+  const u = await fetch('/api/unity').then((r) => r.json()).catch(() => null);
+  if (!u?.valid) { openUnityDialog(u?.project ? 'Kayıtlı klasör Unity projesi değil; düzelt.' : 'Önce Unity proje klasörünü ayarla.'); return; }
+  setUnityStatus('warn', 'Unity: gönderiliyor…');
+  let msg;
+  try { msg = mode === 'anim' ? await sendUnity() : mode === 'vfx' ? await vfx.sendUnity() : await mats.sendUnity(mode); } catch (e) { msg = 'Hata: ' + (e.message || e); }
+  toast(msg || 'Gönderildi', /^Hata/.test(msg || '') ? 'err' : 'ok'); refreshStatusUnity(msg);
+}
+$('#btnSendUnity').onclick = () => sendCurrent();
+$('#btnSendUnity').onmouseenter = () => { $('#btnSendUnity').title = `Bu moddaki ${SEND_WHAT[mode]} Unity projesine gönderir (Ctrl+Enter)`; };
+
+// Claude'a not (her modda): bağlam moddan gelir
+const shortBoneName = (n) => String(n || '').replace(/^mixamorig:?/, '');
+function noteContext() {
+  if (mode === 'anim') return { label: `Animasyon · ${anim.name} · kare ${frameNow()}${sel ? ' · kemik ' + shortBoneName(sel.name) : ''}`, data: { mode: 'anim', frame: frameNow(), bone: sel?.name || null } };
+  return modeModule(mode)?.noteContext?.() || { label: mode, data: { mode } };
+}
+function openNote() { $('#noteCtx').textContent = 'Bağlam: ' + noteContext().label; $('#dlgNote').showModal(); $('#noteText').focus(); }
+$('#btnNoteOpen').onclick = openNote;
+$('#btnNote').onclick = async () => {
+  const text = $('#noteText').value.trim(); if (!text) return $('#noteText').focus();
+  await api('/api/note', { text, ...noteContext().data }); $('#noteText').value = ''; $('#dlgNote').close(); toast('Not Claude için kaydedildi', 'ok');
+};
+$('#noteText').addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); $('#btnNote').click(); } e.stopPropagation(); });
+$('#btnBaseline').onclick = async () => {
+  if (mode === 'anim') { await api('/api/anim', anim); await api('/api/baseline', {}); } else await modeModule(mode)?.baseline?.();
+  toast('Referans alındı: Claude bundan sonraki değişikliklerini buna göre okur', 'ok');
+};
+
+// Unity projesi penceresi + durum çubuğu
+async function openUnityDialog(msg) {
+  const u = await fetch('/api/unity').then((r) => r.json()).catch(() => null);
+  $('#dlgUProject').value = u?.project || '';
+  $('#dlgUStatus').textContent = msg || (u?.valid ? '✓ Unity projesi bulundu' : u?.project ? '✗ Bu klasör Unity projesi değil (Assets ve ProjectSettings yok)' : 'Proje klasörü ayarlı değil');
+  $('#dlgUnity').showModal(); $('#dlgUProject').focus();
+}
+$('#dlgUSave').onclick = async () => {
+  const r = await api('/api/unity/config', { project: $('#dlgUProject').value });
+  if (r.error) { $('#dlgUStatus').textContent = '✗ ' + r.error; return; }
+  $('#dlgUStatus').textContent = '✓ Kaydedildi'; refreshUnity(); refreshStatusUnity(); setTimeout(() => $('#dlgUnity').close(), 450);
+};
+$('#dlgUProject').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#dlgUSave').click(); } e.stopPropagation(); });
+$('#stUnity').onclick = () => openUnityDialog();
+function setUnityStatus(cls, text, title) { const el = $('#stUnity'); el.className = 'st link ' + cls; el.lastElementChild.textContent = text; if (title) el.title = title; }
+async function refreshStatusUnity(lastMsg) {
+  const u = await fetch('/api/unity').then((r) => r.json()).catch(() => null);
+  if (!u) return setUnityStatus('bad', 'Unity: sunucuya ulaşılamadı');
+  const name = u.project ? u.project.split(/[\\/]/).filter(Boolean).slice(-2).join('/') : '';
+  setUnityStatus(u.valid ? 'ok' : 'warn', u.valid ? `Unity: ${name}` : 'Unity: proje ayarlı değil', (u.project || 'Tıkla: Unity proje klasörünü ayarla') + (lastMsg ? '\nSon gönderim: ' + lastMsg : ''));
+}
+function setConn(ok) { const el = $('#stConn'); el.className = 'st ' + (ok ? 'ok' : 'bad'); el.lastElementChild.textContent = ok ? 'Bağlı' : 'Bağlantı yok — sunucu kapalı mı?'; }
+function claudeTouched(what) { $('#stClaude').textContent = `Claude ${what} · ${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`; }
+function updateStatusItem() {
+  const it = mode === 'anim' ? `Animasyon <b>${anim.name}</b> · ${anim.length} kare · ${anim.fps} fps` : modeModule(mode)?.itemName || '';
+  if ($('#stItem').innerHTML !== it) $('#stItem').innerHTML = it;
+}
+
+// kamera: hazır açılar + odakla
+const VIEW_DIR = { front: [0, 0.1, 1], side: [1, 0.1, 0], top: [0, 1, 0.001], threequarter: [0.6, 0.35, 0.75] };
+for (const b of document.querySelectorAll('#viewbar [data-view]')) b.onclick = () => { const d = new THREE.Vector3(...VIEW_DIR[b.dataset.view]).normalize(); const dist = Math.max(0.5, camera.position.distanceTo(orbit.target)); camera.position.copy(orbit.target).addScaledVector(d, dist); orbit.update(); };
+function focusView() { const m = modeModule(mode); if (m?.frame) return m.frame(); orbit.target.set(0, 0.9, 0); camera.position.set(2.2, 1.4, 3.4); orbit.update(); }
+$('#vbFocus').onclick = focusView;
+
+// sağ panelde arama: eşleşen alanlar kalır, bölümleri açılır
+function applyFilter() {
+  const q = $('#panelFilter').value.trim().toLocaleLowerCase('tr');
+  const root = [...document.querySelectorAll('#right > div[data-modes]')].find((d) => d.offsetParent !== null);
+  for (const e of document.querySelectorAll('#right .f-hide')) e.classList.remove('f-hide');
+  for (const d of document.querySelectorAll('#right details[data-was-open]')) { if (!q) { d.open = d.dataset.wasOpen === '1'; delete d.dataset.wasOpen; } }
+  if (!q || !root) return;
+  const low = (el) => (el?.textContent || '').toLocaleLowerCase('tr');
+  for (const d of root.querySelectorAll(':scope > details')) {
+    if (d.dataset.wasOpen === undefined) d.dataset.wasOpen = d.open ? '1' : '0';
+    const head = low(d.querySelector('summary')).includes(q);
+    const rows = [...d.querySelectorAll('.vf, .fl, .grid2 > label, .eul, .li, :scope > label.chk, :scope > .row')].filter((r) => !r.parentElement.closest('.vf'));
+    let any = head;
+    for (const r of rows) { const hit = head || low(r.querySelector('.vl') || r).includes(q); r.classList.toggle('f-hide', !hit); any ||= hit; }
+    d.classList.toggle('f-hide', !any); if (any) d.open = true;
+  }
+}
+$('#panelFilter').addEventListener('input', applyFilter);
+$('#panelFilter').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; applyFilter(); e.target.blur(); } e.stopPropagation(); });
+{ let ft; new MutationObserver(() => { if (!$('#panelFilter').value) return; clearTimeout(ft); ft = setTimeout(applyFilter, 60); }).observe($('#right'), { childList: true, subtree: true }); }
+
+// yardım (ilk açılışta hoş geldin)
+const HELP = {
+  anim: ['Animasyon', ['Sol panelden ya da viewport\'taki mavi noktalardan kemik seç; <kbd>E</kbd> döndür, <kbd>W</kbd> taşı.', '<kbd>K</kbd> o karede key koyar/siler; zaman çizelgesinde key\'leri sürükleyebilirsin.', '<kbd>Space</kbd> oynat, <kbd>←</kbd>/<kbd>→</kbd> kare. Sağ panel: kütüphane, eşyalar (silah takma), ayarlar.', 'Mixamo FBX\'i pencereye sürükle-bırak: animasyon olarak eklenir.']],
+  vfx: ['VFX', ['Efekt = parçacık katmanları (emitter). Solda aç/kapat, çoğalt, sırala; <b>+ Emitter</b> hazır şablonlar (kıvılcım, alev, duman…).', 'Sağ panelde Unity\'nin parçacık modülleri; başlıktaki ●/○ modülü açar/kapatır.', 'Sayı etiketini basılı tutup sürükle → değer değişir (<kbd>Shift</kbd> hızlı, <kbd>Alt</kbd> ince).', '<kbd>Space</kbd> oynat, <kbd>Home</kbd> baştan, alt çubukta hız ve zaman.']],
+  material: ['Materyal', ['Shader seç (oyunun toon shader\'ı, URP ya da özel), özellikleri değiştir.', 'Önizleme nesnesi: küre, küp… ya da <b>Kahraman</b>; <b>Giydir</b> materyali kahramana/eşyaya takar (diğer modlarda da görünür).', '<b>Işık</b> bölümü tüm materyaller için ortak sahne ışığıdır.']],
+  shader: ['Shader', ['Kod Unity HLSL\'inin bir alt kümesi (UPE-SL); Unity\'de aynen çalışır, burada önizlenir.', 'Kod değişince kendisi derlenir; hatalar sağ altta, tıklayınca satır seçilir.', 'Hazır shader\'lar salt okunur: <b>Özel kopya oluştur</b> ile düzenlenebilir hâle getir.']],
+};
+const helpOpen = () => $('#dlgHelp').open;
+function fillHelp() {
+  const sec = (k) => { const [t, items] = HELP[k]; return `<section class="${k === mode ? 'cur' : ''}"><h4>${t}${k === mode ? ' <small style="color:var(--acc)">· şu anki mod</small>' : ''}</h4><ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul></section>`; };
+  $('#helpBody').innerHTML = `<section class="full"><h4>Nasıl çalışır?</h4><p>İşi Claude yapar; sen izlersin, istersen değerlerle oynarsın. Beğenmediğin bir şey için <b>💬 Claude'a not</b> yaz ya da elle düzeltip Claude'a "düzelttim" de; değişikliklerini kendisi okur. Beğendiğinde <b>⇪ Unity'ye gönder</b>.</p><p>Üstteki sekmeler modlar: <kbd>1</kbd> Animasyon · <kbd>2</kbd> VFX · <kbd>3</kbd> Materyal · <kbd>4</kbd> Shader. Alttaki çubukta bağlantı, Claude'un son güncellemesi ve Unity projesi görünür.</p></section>`
+    + ['anim', 'vfx', 'material', 'shader'].map(sec).join('')
+    + `<section class="full"><h4>Kısayollar</h4><p><kbd>F1</kbd> yardım · <kbd>N</kbd> Claude'a not · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Unity'ye gönder · <kbd>Ctrl</kbd>+<kbd>F</kbd> ayar ara · <kbd>F</kbd> odakla · <kbd>B</kbd>/<kbd>P</kbd> sol/sağ panel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> geri al · <kbd>Ctrl</kbd>+<kbd>Y</kbd> yinele · Fare: sol sürükle döndür, sağ sürükle kaydır, tekerlek yakınlaştır</p></section>`;
+}
+function openHelp(welcome = false) {
+  $('#helpTitle').textContent = welcome ? 'Unity Preview Editor\'e hoş geldin' : 'Yardım ve kısayollar';
+  let off = false; try { off = localStorage.getItem('upe-help-off') === '1'; } catch { /* yok */ }
+  $('#helpNoMore').checked = off; fillHelp(); $('#dlgHelp').showModal();
+}
+$('#helpNoMore').onchange = (e) => { try { localStorage.setItem('upe-help-off', e.target.checked ? '1' : '0'); } catch { /* yok */ } };
+$('#btnHelp').onclick = () => openHelp();
 
 // ───────────────────────── sunucu bağlantısı (Claude köprüsü)
 let markReady; const ready = new Promise((r) => { markReady = r; }); // açılış (model + durum) bitti
 const es = new EventSource('/api/events');
+es.onopen = () => setConn(true); es.onerror = () => setConn(false);
 es.addEventListener('anim', (e) => {
-  const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)');
+  const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)'); claudeTouched('animasyonu güncelledi');
 });
 es.addEventListener('props', (e) => { props = JSON.parse(e.data).props; selProp = null; buildProps(); });
 es.addEventListener('load-animation-fbx', async (e) => {
@@ -853,12 +978,12 @@ es.addEventListener('gif', async (e) => {
   await fetch('/api/gif-result?id=' + d.id + '&name=' + encodeURIComponent(name), { method: 'POST', body: bytes });
 });
 es.addEventListener('load-model', (e) => { const d = JSON.parse(e.data); (d.name === 'demo' ? Promise.resolve(buildDemo()) : loadModel(d.name)).catch((er) => toast(er.message)); });
-es.addEventListener('material', (e) => { const d = JSON.parse(e.data); if (mode !== 'material') setEditorMode('material', { notify: false }); mats.onRemoteMaterial(d.material); });
-es.addEventListener('shader', (e) => { const d = JSON.parse(e.data); if (mode !== 'shader') setEditorMode('shader', { notify: false }); mats.onRemoteShader(d.shader); });
+es.addEventListener('material', (e) => { const d = JSON.parse(e.data); claudeTouched('materyali güncelledi'); if (mode !== 'material') setEditorMode('material', { notify: false }); mats.onRemoteMaterial(d.material); });
+es.addEventListener('shader', (e) => { const d = JSON.parse(e.data); claudeTouched("shader'ı güncelledi"); if (mode !== 'shader') setEditorMode('shader', { notify: false }); mats.onRemoteShader(d.shader); });
 es.addEventListener('shader-compile', async (e) => { const d = JSON.parse(e.data); await ready; let r; try { r = mats.onCompileRequest(d); } catch (er) { r = { ok: false, errors: [{ section: 'şablon', line: 0, message: String(er.message || er) }] }; } api('/api/shader-compile-result', { id: d.id, ...r }); });
 es.addEventListener('lighting', (e) => mats.onLighting(JSON.parse(e.data).lighting));
 es.addEventListener('overrides', (e) => mats.onOverrides(JSON.parse(e.data).overrides));
-es.addEventListener('vfx', (e) => { const d = JSON.parse(e.data); if (mode !== 'vfx') setEditorMode('vfx', { notify: false }); vfx.onRemoteEffect(d.vfx); });
+es.addEventListener('vfx', (e) => { const d = JSON.parse(e.data); claudeTouched('efekti güncelledi'); if (mode !== 'vfx') setEditorMode('vfx', { notify: false }); vfx.onRemoteEffect(d.vfx); });
 es.addEventListener('mode', (e) => setEditorMode(JSON.parse(e.data).mode, { notify: false }));
 es.addEventListener('render', async (e) => {
   const d = JSON.parse(e.data); await ready;
@@ -885,5 +1010,8 @@ es.addEventListener('render', async (e) => {
   await mats.setFromState(st);
   setEditorMode(MODES.includes(st.mode) ? st.mode : 'anim', { notify: false });
   requestAnimationFrame(tick); markReady();
+  refreshStatusUnity(); setInterval(updateStatusItem, 1000);
+  let off = false; try { off = localStorage.getItem('upe-help-off') === '1' || localStorage.getItem('upe-welcomed') === '1'; localStorage.setItem('upe-welcomed', '1'); } catch { /* yok */ }
+  if (!off) openHelp(true);
 })();
 window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; } }; // hata ayıklama

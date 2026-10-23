@@ -15,11 +15,12 @@
 </head>
 <body>
 <header>
-  <b class="brand" title="Unity Preview Editor">UPE</b>
-  <div class="seg modes"><button id="modeAnim" class="on" title="Animasyon modu">Animasyon</button><button id="modeVfx" title="VFX modu">VFX</button><button id="modeMaterial" title="Materyal modu">Materyal</button><button id="modeShader" title="Shader modu">Shader</button></div>
-  <button id="togLeft" class="tog" title="Sol panel (B)">☰ Kemikler</button>
-  <select id="modelSelect" title="Karakter"></select>
-
+  <div class="brand" title="Unity Preview Editor"><span class="logo">UPE</span><span class="bname">Unity Preview<br>Editor</span></div>
+  <nav class="modes" aria-label="Mod">
+    <button id="modeAnim" title="Animasyon (1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6m0 0-3.5 7M12 13l3.5 7M7 9.5l5 1.5 5-1.5"/></svg><span>Animasyon</span></button><button id="modeVfx" title="VFX (2)"><svg viewBox="0 0 24 24"><path d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 16.5l-1.8-5.2L5 9.5l5.2-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>VFX</span></button><button id="modeMaterial" title="Materyal (3)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6.5 9.5c2.5-3 8-3.5 11 .5"/><circle cx="9.3" cy="8.4" r="1.2"/></svg><span>Materyal</span></button><button id="modeShader" title="Shader (4)"><svg viewBox="0 0 24 24"><path d="M8.5 7 4 12l4.5 5M15.5 7 20 12l-4.5 5M13.5 5l-3 14"/></svg><span>Shader</span></button>
+  </nav>
+  <span class="vsep"></span>
+  <label class="hsel" title="Önizlemedeki karakter"><span>Karakter</span><select id="modelSelect"></select></label>
   <details class="menu" data-modes="anim">
     <summary>Dosya ▾</summary>
     <div class="menu-list">
@@ -30,29 +31,27 @@
       <div class="sep"></div>
       <button class="item" id="btnDemo">Demo iskeleti yükle</button>
       <button class="item" id="btnLibSave2">Animasyonu kütüphaneye kaydet</button>
-    </div>
-  </details>
-
-  <span class="sp"></span>
-  <button id="btnUndo" title="Geri al (Ctrl+Z)">↶</button>
-  <button id="btnRedo" title="Yinele (Ctrl+Y)">↷</button>
-
-  <button id="btnVfxUnity" class="primary" data-modes="vfx" title="Efekti Unity'ye prefab olarak gönder">Unity'ye gönder</button>
-  <details class="menu right" data-modes="anim">
-    <summary class="primary">Dışa aktar ▾</summary>
-    <div class="menu-list">
-      <button class="item" id="btnUnitySend"><b>Unity'ye gönder</b> (otomatik .anim)</button>
+      <div class="sep"></div>
       <button class="item" id="btnGif">GIF olarak kaydet</button>
       <button class="item" id="btnUnity">Unity JSON dosyası olarak kaydet</button>
-      <div class="hint-s">GIF ayarları: sağ panel → GIF</div>
     </div>
   </details>
-  <button id="togRight" class="tog" title="Ayarlar paneli (P)">⚙</button>
+  <span class="sp"></span>
+  <div class="hgroup"><button id="btnUndo" class="icon" title="Geri al (Ctrl+Z)">↶</button><button id="btnRedo" class="icon" title="Yinele (Ctrl+Y)">↷</button></div>
+  <button id="btnNoteOpen" title="Claude'a not yaz (N)">💬 <span>Claude'a not</span></button>
+  <button id="btnSendUnity" class="primary" title="Bu moddaki işi Unity'ye gönder (Ctrl+Enter)">⇪ <span id="sendLabel">Unity'ye gönder</span></button>
+  <button id="btnHelp" class="icon" title="Yardım ve kısayollar (F1)">?</button>
+  <span class="vsep"></span>
+  <button id="togLeft" class="tog icon" title="Sol panel (B)">◧</button><button id="togRight" class="tog icon" title="Sağ panel (P)">◨</button>
 </header>
 
 <main>
   <aside id="left">
-    <input id="boneSearch" data-modes="anim" placeholder="Kemik ara…">
+    <div class="ptitle" data-modes="anim">Kemikler<small>tıkla: seç · viewport'taki mavi noktalar da seçer</small></div>
+    <div class="ptitle" data-modes="vfx">Efekt katmanları<small>her emitter bir parçacık katmanı</small></div>
+    <div class="ptitle" data-modes="material">Materyaller<small>kütüphaneden tıkla: yükle</small></div>
+    <div class="ptitle" data-modes="shader">Shader'lar<small>hazır olanlar salt okunur</small></div>
+    <input id="boneSearch" data-modes="anim" type="search" placeholder="Kemik ara…">
     <div id="boneList" data-modes="anim"></div>
     <div id="matLeft" data-modes="material">
       <label class="fl">Materyal adı<input id="matName"></label>
@@ -73,7 +72,8 @@
   </aside>
 
   <section id="center">
-    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip" data-modes="anim">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
+    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div>
+      <div id="viewbar"><button data-view="front" title="Önden bak">Ön</button><button data-view="side" title="Yandan bak">Yan</button><button data-view="top" title="Üstten bak">Üst</button><button data-view="threequarter" title="Çapraz bak">3/4</button><button id="vbFocus" title="Odakla (F)">◎</button></div><div id="tip" data-modes="anim">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
     <div id="shCode" data-modes="shader">
       <div class="shbar"><div class="seg" id="shTabs"></div><span class="sp"></span><span class="hint-s">UPE-SL (Unity HLSL alt kümesi) · Tab: girinti</span></div>
       <div class="shbody"><textarea id="shCodeText" spellcheck="false" wrap="off"></textarea><div id="shLog"></div></div>
@@ -111,6 +111,7 @@
   </section>
 
   <aside id="right">
+    <div class="rhead"><input id="panelFilter" type="search" placeholder="Ayar ara… (Ctrl+F)" autocomplete="off"></div>
     <div id="vfxRight" data-modes="vfx"></div>
     <div id="matRight" data-modes="material"></div>
     <div id="shRight" data-modes="shader"></div>
@@ -166,12 +167,6 @@
     </details>
 
     <details>
-      <summary>Claude'a not</summary>
-      <textarea id="noteText" rows="3" placeholder="örn: kol biraz daha yukarı, 12. kare"></textarea>
-      <div class="row"><button id="btnNote" class="primary">Gönder</button><button id="btnBaseline" title="Şu anki hali Claude'un karşılaştırma noktası yap">Bu hali referans al</button></div>
-    </details>
-
-    <details>
       <summary>GIF ayarları</summary>
       <div class="grid2">
         <label>Boyut (px)<input type="number" id="gifSize" value="400" step="50"></label>
@@ -183,11 +178,46 @@
       <div id="gifStatus"></div>
     </details>
 
-    <div class="hint">Space oynat · ←/→ kare · K key · E/W mod · B/P paneller · Ctrl+Z geri al</div>
     </div>
   </aside>
 </main>
+<footer id="status">
+  <span id="stConn" class="st" title="Editör sunucusu bağlantısı"><i class="dot"></i><span>Bağlanıyor…</span></span>
+  <span id="stClaude" class="st dim" title="Claude'un editöre son gönderimi"></span>
+  <span id="stItem" class="st"></span>
+  <span class="sp"></span>
+  <span id="stHint" class="st dim"></span>
+  <button id="stUnity" class="st link" title="Unity projesi ayarı"><i class="dot"></i><span>Unity</span></button>
+</footer>
 <div id="toast"></div>
+
+<dialog id="dlgNote" class="dlg">
+  <form method="dialog">
+    <h3>💬 Claude'a not</h3>
+    <div class="hint-s" id="noteCtx"></div>
+    <textarea id="noteText" rows="5" placeholder="örn: kol biraz daha yukarı, 12. kare · kıvılcımlar daha uzun yaşasın · rim daha ince olsun"></textarea>
+    <div class="dlg-row"><button type="button" id="btnBaseline" title="Editördeki şu anki hali Claude'un karşılaştırma noktası yapar">Bu hali referans al</button><span class="sp"></span><button value="cancel">Kapat</button><button type="button" id="btnNote" class="primary">Gönder</button></div>
+    <div class="hint-s">Notun ve elle yaptığın değişiklikler Claude'a gider; ona "düzelttim, bak" demen yeterli.</div>
+  </form>
+</dialog>
+
+<dialog id="dlgUnity" class="dlg">
+  <form method="dialog">
+    <h3>⇪ Unity projesi</h3>
+    <label class="fl">Proje klasörü (içinde Assets ve ProjectSettings olan)<input id="dlgUProject" placeholder="örn: C:/Projeler/Oyunum"></label>
+    <div class="hint-s" id="dlgUStatus"></div>
+    <div class="dlg-row"><span class="sp"></span><button value="cancel">Kapat</button><button type="button" id="dlgUSave" class="primary">Kaydet</button></div>
+    <div class="hint-s">Çıktılar: animasyon <code>Assets/AnimRef/Clips</code> · VFX <code>Assets/UnityPreview/VFX</code> · materyal ve shader <code>Assets/UnityPreview/Materials</code>, <code>Shaders</code>. Unity açıksa birkaç saniyede kendisi içe alır.</div>
+  </form>
+</dialog>
+
+<dialog id="dlgHelp" class="dlg wide">
+  <form method="dialog">
+    <h3 id="helpTitle">Unity Preview Editor</h3>
+    <div id="helpBody"></div>
+    <div class="dlg-row"><label class="chk"><input type="checkbox" id="helpNoMore"> Açılışta gösterme</label><span class="sp"></span><button value="cancel" class="primary">Tamam</button></div>
+  </form>
+</dialog>
 <script type="module" src="app.js"></script>
 </body>
 </html>

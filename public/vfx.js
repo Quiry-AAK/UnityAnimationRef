@@ -29,7 +29,8 @@ export function initVfx(ctx) {
   let effect = normalizeEffect(defaultEffect()).effect;
   let sel = 0, active = false, playing = true, speed = 1, dispTime = 0;
   const undoStack = [], redoStack = [];
-  const openMods = new Set(['main', 'emission', 'renderer']);
+  const openMods = new Set((() => { try { return JSON.parse(localStorage.getItem('upe-vfx-open')) || null; } catch { return null; } })() || ['_effect', 'main', 'emission', 'renderer']);
+  const saveOpen = () => { try { localStorage.setItem('upe-vfx-open', JSON.stringify([...openMods])); } catch { /* yok */ } };
 
   // ── bloom'lu çizim
   const composer = new EffectComposer(renderer);
@@ -130,7 +131,12 @@ export function initVfx(ctx) {
   $('#vfxPlay').onclick = togglePlay; $('#vfxRestart').onclick = restart;
   $('#vfxTime').oninput = (e) => { playing = false; seekTo((+e.target.value / 1000) * effect.duration); syncTransport(); };
   $('#vfxSpeed').onchange = (e) => { speed = +e.target.value || 1; };
-  $('#vfxFocus').onclick = () => { const f = frameBox([dispTime]); orbit.target.copy(f.center); camera.position.copy(f.center).addScaledVector(camera.position.clone().sub(orbit.target).normalize().lengthSq() ? new THREE.Vector3().subVectors(camera.position, orbit.target).normalize() : new THREE.Vector3(0.6, 0.35, 0.75).normalize(), f.dist); orbit.update(); };
+  function focus() { // kamerayı efektin şu anki parçacıklarına sığdır, bakış yönü korunur
+    const f = frameBox([dispTime]); const dir = new THREE.Vector3().subVectors(camera.position, orbit.target);
+    if (dir.lengthSq() < 1e-6) dir.set(0.6, 0.35, 0.75); dir.normalize(); player.seek(dispTime);
+    orbit.target.copy(f.center); camera.position.copy(f.center).addScaledVector(dir, f.dist); orbit.update();
+  }
+  $('#vfxFocus').onclick = focus;
 
   // ── sol panel: emitter listesi
   function refreshLeft() {
@@ -302,7 +308,7 @@ export function initVfx(ctx) {
   const R = (getObj, key) => ({ get: () => getObj()[key], set: (v) => { getObj()[key] = v; } });
   function section(title, open, key) {
     const d = el('details'); d.open = open; const s = el('summary', '', title); d.appendChild(s);
-    if (key) d.ontoggle = () => { if (d.open) openMods.add(key); else openMods.delete(key); };
+    if (key) d.ontoggle = () => { if (d.closest('#right') && document.querySelector('#panelFilter')?.value) return; if (d.open) openMods.add(key); else openMods.delete(key); saveOpen(); };
     return d;
   }
   function buildRight() {
@@ -367,20 +373,6 @@ export function initVfx(ctx) {
     sl.querySelector('.vlibsave').onclick = () => saveLib(sl.querySelector('.vlibname').value || effect.name);
     box.appendChild(sl); fillLib(sl.querySelector('.vliblist'));
 
-    // unity
-    const su = section('Unity', openMods.has('_unity'), '_unity');
-    su.innerHTML += '<label class="fl">Unity proje klasörü<input class="vuproj" placeholder="örn: C:/Projeler/Oyunum"></label><label class="chk"><input type="checkbox" class="vuall"> Kütüphanedeki tüm efektleri gönder</label><div class="row"><button class="primary vusend">Unity\'ye gönder (prefab)</button></div><div class="hint-s vustat">Çıktı: Assets/UnityPreview/VFX/&lt;ad&gt;.prefab</div>';
-    fetch('/api/unity').then((r) => r.json()).then((u) => { su.querySelector('.vuproj').value = u.project || ''; }).catch(() => {});
-    su.querySelector('.vusend').onclick = () => sendUnity({ all: su.querySelector('.vuall').checked, project: su.querySelector('.vuproj').value, status: su.querySelector('.vustat') });
-    box.appendChild(su);
-
-    // not
-    const sn = section("Claude'a not", openMods.has('_note'), '_note');
-    sn.innerHTML += '<textarea rows="3" class="vnote" placeholder="örn: kıvılcımlar daha uzun yaşasın, 0.3 sn civarı"></textarea><div class="row"><button class="primary vnotesend">Gönder</button><button class="vbase" title="Şu anki hali Claude\'un karşılaştırma noktası yap">Bu hali referans al</button></div>';
-    sn.querySelector('.vnotesend').onclick = async () => { const t = sn.querySelector('.vnote').value.trim(); if (!t) return; await api('/api/note', { text: t, mode: 'vfx', emitter: em()?.name || null, effectTime: +dispTime.toFixed(2) }); sn.querySelector('.vnote').value = ''; toast('Not Claude için kaydedildi'); };
-    sn.querySelector('.vbase').onclick = async () => { await api('/api/vfx', effect); await api('/api/vfx/baseline', {}); toast('Referans güncellendi'); };
-    box.appendChild(sn);
-    box.appendChild(el('div', 'hint', 'Space oynat · Home baştan · ←/→ zaman · Ctrl+Z geri al · etiketi sürükle: değeri değiştir'));
     $('#right').scrollTop = scroll;
   }
 
@@ -403,12 +395,10 @@ export function initVfx(ctx) {
     effect.name = name; await fetch('/api/vfx/save?name=' + encodeURIComponent(name), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(effect) });
     scheduleSync(); refreshLeft(); buildRight(); toast('Kütüphaneye kaydedildi: ' + name);
   }
-  async function sendUnity({ all = false, project, status } = {}) {
-    const st = (m) => { toast(m); if (status) status.textContent = m; };
-    if (project !== undefined && project.trim()) { const r = await api('/api/unity/config', { project }); if (r.error) return st(r.error); }
-    st("Unity'ye gönderiliyor…"); await api('/api/vfx', effect);
+  async function sendUnity({ all = false } = {}) {
+    toast("Unity'ye gönderiliyor…"); await api('/api/vfx', effect);
     const r = await api('/api/unity/send-vfx', { all });
-    st(r.error ? 'Hata: ' + r.error : r.ok ? "Unity'ye aktarıldı: " + (r.prefabs || []).join(', ') : (r.note || 'Gönderildi'));
+    return r.error ? 'Hata: ' + r.error : r.ok ? "Unity'ye aktarıldı: " + (r.prefabs || []).join(', ') : (r.note || 'Gönderildi');
   }
 
   // ── kadraj + kontak sayfası (MCP render_vfx)
@@ -484,5 +474,12 @@ export function initVfx(ctx) {
   function setFromState(e) { effect = normalizeEffect(e || defaultEffect()).effect; sel = 0; rebuildPlayer(false); }
   function nudge(dt) { playing = false; seekTo(Math.max(0, dispTime + dt)); syncTransport(); }
 
-  return { activate, deactivate, get active() { return active; }, tick, render, onRemoteEffect, setFromState, renderSheet, undo, redo, togglePlay, restart, nudge, sendUnity: () => sendUnity({}), get effect() { return effect; }, player };
+  return {
+    activate, deactivate, get active() { return active; }, tick, render, onRemoteEffect, setFromState, renderSheet, undo, redo, togglePlay, restart, nudge,
+    sendUnity: () => sendUnity({}), frame: focus, get effect() { return effect; }, player,
+    noteContext: () => { const t = player.allLooping ? dispTime % effect.duration : Math.min(dispTime, effect.duration); // ekranda görünen zaman
+      return { label: `VFX · ${effect.name}${em() ? ' · emitter ' + em().name : ''} · ${t.toFixed(2)} sn`, data: { mode: 'vfx', emitter: em()?.name || null, effectTime: +t.toFixed(2) } }; },
+    baseline: async () => { await api('/api/vfx', effect); await api('/api/vfx/baseline', {}); },
+    get itemName() { return `Efekt <b>${effect.name}</b> · ${effect.emitters.length} katman · ${effect.duration} sn`; },
+  };
 }
