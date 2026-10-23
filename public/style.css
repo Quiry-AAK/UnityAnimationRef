@@ -61,6 +61,13 @@ body:not(.left-open) #left, body:not(.right-open) #right { border:0; }
 #right > div[data-modes] { padding:8px 10px 16px; }
 .ptitle { font-weight:600; font-size:13px; display:flex; flex-direction:column; }
 .ptitle small { font-weight:400; color:var(--faint); font-size:11px; }
+/* sol panel bölümleri başlıktan katlanır (varsayılan kapalı) */
+button.ptitle.fold { background:none; border:0; border-radius:0; padding:0 0 0 16px; text-align:left; color:var(--txt); white-space:normal; position:relative; user-select:none; }
+button.ptitle.fold:hover { background:none; color:var(--acc); }
+button.ptitle.fold:active { transform:none; }
+button.ptitle.fold::before { content:""; position:absolute; left:2px; top:6px; width:6px; height:6px; border-right:2px solid var(--dim); border-bottom:2px solid var(--dim); transform:rotate(-45deg); transition:transform .15s; }
+button.ptitle.fold[aria-expanded="true"]::before { transform:rotate(45deg); top:4px; }
+.fold-shut { display:none !important; }
 .rhead { position:sticky; top:0; z-index:5; background:var(--panel); padding:8px 10px; border-bottom:1px solid var(--line); }
 .f-hide { display:none !important; }
 #center { display:flex; flex-direction:column; min-width:0; }

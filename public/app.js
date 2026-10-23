@@ -471,6 +471,18 @@ function refreshBoneList() {
   }
 }
 $('#boneSearch').oninput = refreshBoneList;
+// sol paneldeki her modun bölümü başlığından katlanır; varsayılan kapalı, mod başına hatırlanır
+function setLeftFold(m, open) {
+  document.querySelector(`[data-fold="${m}"]`).setAttribute('aria-expanded', open);
+  for (const el of document.querySelectorAll(`[data-fold-body="${m}"]`)) el.classList.toggle('fold-shut', !open);
+  try { localStorage.setItem(`upe-left-open-${m}`, open ? '1' : '0'); } catch { /* yok say */ }
+}
+for (const h of document.querySelectorAll('#left [data-fold]')) {
+  const m = h.dataset.fold;
+  h.onclick = () => setLeftFold(m, h.getAttribute('aria-expanded') !== 'true');
+  let open = false; try { open = localStorage.getItem(`upe-left-open-${m}`) === '1'; } catch { /* yok */ }
+  setLeftFold(m, open);
+}
 
 // ───────────────────────── timeline
 const tl = $('#timeline'); const tctx = tl.getContext('2d');

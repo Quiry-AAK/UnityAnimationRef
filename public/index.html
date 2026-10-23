@@ -47,24 +47,24 @@
 
 <main>
   <aside id="left">
-    <div class="ptitle" data-modes="anim">Kemikler<small>tıkla: seç · viewport'taki mavi noktalar da seçer</small></div>
-    <div class="ptitle" data-modes="vfx">Efekt katmanları<small>her emitter bir parçacık katmanı</small></div>
-    <div class="ptitle" data-modes="material">Materyaller<small>kütüphaneden tıkla: yükle</small></div>
-    <div class="ptitle" data-modes="shader">Shader'lar<small>hazır olanlar salt okunur</small></div>
-    <input id="boneSearch" data-modes="anim" type="search" placeholder="Kemik ara…">
-    <div id="boneList" data-modes="anim"></div>
-    <div id="matLeft" data-modes="material">
+    <button class="ptitle fold" data-fold="anim" data-modes="anim" aria-expanded="false" title="Aç / kapat">Kemikler<small>tıkla: seç · viewport'taki mavi noktalar da seçer</small></button>
+    <button class="ptitle fold" data-fold="vfx" data-modes="vfx" aria-expanded="false" title="Aç / kapat">Efekt katmanları<small>her emitter bir parçacık katmanı</small></button>
+    <button class="ptitle fold" data-fold="material" data-modes="material" aria-expanded="false" title="Aç / kapat">Materyaller<small>kütüphaneden tıkla: yükle</small></button>
+    <button class="ptitle fold" data-fold="shader" data-modes="shader" aria-expanded="false" title="Aç / kapat">Shader'lar<small>hazır olanlar salt okunur</small></button>
+    <input id="boneSearch" data-modes="anim" data-fold-body="anim" type="search" placeholder="Kemik ara…">
+    <div id="boneList" data-modes="anim" data-fold-body="anim"></div>
+    <div id="matLeft" data-modes="material" data-fold-body="material">
       <label class="fl">Materyal adı<input id="matName"></label>
       <details class="menu" id="matAddMenu"><summary class="primary">+ Materyal ▾</summary><div class="menu-list" id="matAddList"></div></details>
       <div class="vl">Kütüphane</div>
       <div id="matLib" class="list"></div>
     </div>
-    <div id="shLeft" data-modes="shader">
+    <div id="shLeft" data-modes="shader" data-fold-body="shader">
       <label class="fl">Shader adı (UnityPreview/…)<input id="shName"></label>
       <details class="menu" id="shAddMenu"><summary class="primary">+ Shader ▾</summary><div class="menu-list" id="shAddList"></div></details>
       <div id="shList" class="list"></div>
     </div>
-    <div id="vfxLeft" data-modes="vfx">
+    <div id="vfxLeft" data-modes="vfx" data-fold-body="vfx">
       <label class="fl">Efekt adı<input id="vfxName"></label>
       <details class="menu" id="vfxAddMenu"><summary class="primary">+ Emitter ▾</summary><div class="menu-list" id="vfxAddList"></div></details>
       <div id="vfxEmitters" class="list"></div>
