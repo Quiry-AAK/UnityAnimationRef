@@ -42,6 +42,25 @@
 - Kısayollar (VFX): Space oynat · Home baştan · ←/→ ±0.05 sn · Ctrl+Z / Ctrl+Y · B/P paneller.
 - MCP uçtan uca testi: `npm run smoke` (5291 portunda kendi sunucusunu açar, tarayıcı gerektirmez).
 
+## Materyal ve Shader modları
+- **Materyal:** solda materyal adı, **+ Materyal** (shader seçerek yeni), kütüphane. Sağda shader seçimi, shader'ın özellikleri
+  (renk, HDR renk × yoğunluk, kaydırıcılar, vektör, doku + tiling/offset + PNG yükleme), **Giydir** (kahramana/eşyaya; tüm modlarda,
+  animasyon ve VFX önizlemesinde de görünür), **Işık** (tüm UPE shader'ları için ortak yönlü ışık + ortam), **Önizleme** (küre, küp,
+  düzlem, kapsül, simit, kahraman, eşyalar; bloom, döner tabla, arka plan), kütüphane, Unity, Claude'a not. F: kamerayı nesneye odakla.
+- **Shader:** solda shader listesi (hazır portlar salt okunur, "Özel kopya oluştur" ile düzenlenebilir), **+ Shader** şablonları (unlit,
+  toon, fresnel kalkan, dissolve, kayan doku). Altta kod paneli (Fragment / Vertex / Ortak / Outline sekmeleri) ve derleme günlüğü:
+  hata satırına tıklayınca o satır seçilir. Sağda önizleme değerleri, özellik tanımları, render durumu (karışım, cull, ztest, kuyruk,
+  zwrite, gölge, outline), ışık, kütüphane, "Unity'de derle".
+- **UPE-SL:** Unity HLSL alt kümesi; kurallar `public/shader-schema.js` → `SHADER_REFERENCE` (MCP `material_reference`). Unity'de kod
+  aynen URP şablonuna girer (`UnityPreview/<ad>`, forward + outline + gölge + derinlik pass'leri); editörde GLSL ES 3.0'a çevrilir.
+  Dünya girdileri (konum, normal, ışık, kamera) Unity ekseninde gelir, iki tarafta da aynı sonucu verir. Önizlemede gölge yok (shadow = 1).
+- **Hazır shader'lar** mevcut Unity shader'larının portudur: `Elarion/ToonCharacter` (oyunun kahraman shader'ı, birebir), URP Lit
+  (yaklaşık PBR; yansıma ortam rengiyle taklit), Unlit, Particles/Unlit. Bunları kullanan materyal Unity'de o shader'ı kullanır.
+- **Unity'ye:** materyal `Assets/UnityPreview/Materials/<ad>.mat` (+ `Textures/`), özel shader `Assets/UnityPreview/Shaders/<ad>.shader`.
+  Unity kapalıyken `-executeMethod UnityPreviewMaterialImporter.ProcessPending`. Shader derleme hataları `send_*` yanıtında döner.
+  '@mesh' dokusu yalnız önizlemedir; Unity'de kullanılacak dokuyu `unityPath` ile ver.
+- Dokular `materials/textures/*.png`; yerleşikleri yeniden üretmek: `node tools/gen-material-textures.mjs`.
+
 ## Kısayollar
 Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı · B kemik paneli · P ayar paneli · Ctrl+Z / Ctrl+Y
 

@@ -1,12 +1,13 @@
 {
   "name": "unity-preview-editor",
   "version": "2.0.0",
-  "description": "Unity Preview Editor: animasyon + VFX editörü (three.js), Claude için MCP, Unity aktarımı",
+  "description": "Unity Preview Editor: animasyon, VFX, materyal ve shader editörü (three.js), Claude için MCP, Unity aktarımı",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "textures": "node tools/gen-vfx-textures.mjs",
-    "smoke": "node tools/mcp-smoke.mjs"
+    "textures": "node tools/gen-vfx-textures.mjs && node tools/gen-material-textures.mjs",
+    "smoke": "node tools/mcp-smoke.mjs",
+    "hlsl-test": "node tools/hlsl-gen-test.mjs"
   },
   "author": "",
   "license": "ISC",
