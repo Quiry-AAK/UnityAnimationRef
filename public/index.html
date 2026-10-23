@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Anim Ref Editör</title>
+<title>Unity Preview Editor</title>
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
 { "imports": {
@@ -15,10 +15,12 @@
 </head>
 <body>
 <header>
-  <button id="togLeft" class="tog" title="Kemik listesi (B)">☰ Kemikler</button>
+  <b class="brand" title="Unity Preview Editor">UPE</b>
+  <div class="seg modes"><button id="modeAnim" class="on" title="Animasyon modu">Animasyon</button><button id="modeVfx" title="VFX modu">VFX</button></div>
+  <button id="togLeft" class="tog" title="Sol panel (B)">☰ Kemikler</button>
   <select id="modelSelect" title="Karakter"></select>
 
-  <details class="menu">
+  <details class="menu anim-only">
     <summary>Dosya ▾</summary>
     <div class="menu-list">
       <label class="item">Karakter yükle (FBX/GLB)…<input type="file" id="fileModel" accept=".fbx,.glb,.gltf" hidden></label>
@@ -35,7 +37,8 @@
   <button id="btnUndo" title="Geri al (Ctrl+Z)">↶</button>
   <button id="btnRedo" title="Yinele (Ctrl+Y)">↷</button>
 
-  <details class="menu right">
+  <button id="btnVfxUnity" class="primary vfx-only" title="Efekti Unity'ye prefab olarak gönder">Unity'ye gönder</button>
+  <details class="menu right anim-only">
     <summary class="primary">Dışa aktar ▾</summary>
     <div class="menu-list">
       <button class="item" id="btnUnitySend"><b>Unity'ye gönder</b> (otomatik .anim)</button>
@@ -49,13 +52,27 @@
 
 <main>
   <aside id="left">
-    <input id="boneSearch" placeholder="Kemik ara…">
-    <div id="boneList"></div>
+    <input id="boneSearch" class="anim-only" placeholder="Kemik ara…">
+    <div id="boneList" class="anim-only"></div>
+    <div id="vfxLeft" class="vfx-only">
+      <label class="fl">Efekt adı<input id="vfxName"></label>
+      <details class="menu" id="vfxAddMenu"><summary class="primary">+ Emitter ▾</summary><div class="menu-list" id="vfxAddList"></div></details>
+      <div id="vfxEmitters" class="list"></div>
+    </div>
   </aside>
 
   <section id="center">
-    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
-    <div id="transport">
+    <div id="viewport"><div id="guide" hidden></div><div id="hud"></div><div id="tip" class="anim-only">Kemiğe tıkla → döndür · Sol-tık sürükle: kamera · Dosya sürükle-bırak: yükle</div></div>
+    <div id="vfxTransport" class="vfx-only">
+      <button id="vfxRestart" title="Baştan (Home)">⏮</button>
+      <button id="vfxPlay" class="big" title="Oynat / Durdur (Space)">⏸</button>
+      <input type="range" id="vfxTime" min="0" max="1000" value="0" title="Zaman">
+      <span id="vfxTimeLabel">0.00 sn</span>
+      <select id="vfxSpeed" title="Oynatma hızı"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+      <button id="vfxFocus" title="Kamerayı efekte odakla">◎</button>
+      <span id="vfxStats"></span>
+    </div>
+    <div id="transport" class="anim-only">
       <button id="btnPrev" title="Önceki kare (←)">⏮</button>
       <button id="btnPlay" class="big" title="Oynat / Durdur (Space)">▶</button>
       <button id="btnNext" title="Sonraki kare (→)">⏭</button>
@@ -75,10 +92,12 @@
         </div>
       </details>
     </div>
-    <canvas id="timeline"></canvas>
+    <canvas id="timeline" class="anim-only"></canvas>
   </section>
 
   <aside id="right">
+    <div id="vfxRight" class="vfx-only"></div>
+    <div id="animRight" class="anim-only">
     <details open>
       <summary>Seçili kemik</summary>
       <div id="boneName">—</div>
@@ -148,6 +167,7 @@
     </details>
 
     <div class="hint">Space oynat · ←/→ kare · K key · E/W mod · B/P paneller · Ctrl+Z geri al</div>
+    </div>
   </aside>
 </main>
 <div id="toast"></div>
