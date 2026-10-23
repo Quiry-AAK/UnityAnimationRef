@@ -125,10 +125,15 @@ public static class UnityPreviewVfxImporter
             string m = Str(Obj(o as Dictionary<string, object>, "renderer"), "material", "").Trim();
             if (m.Length == 0 || File.Exists(LibMatDir + "/" + m + ".mat")) continue;
             string mj = LibMatDir + "/" + m + ".mat.json";
-            if (File.Exists(mj) && (DateTime.UtcNow - File.GetLastWriteTimeUtc(mj)).TotalSeconds < MaterialWaitSeconds) return true;
+            if (File.Exists(mj) && (DateTime.UtcNow - File.GetLastWriteTimeUtc(mj)).TotalSeconds < MaterialWaitSeconds)
+            {
+                if (waitLogged.Add(json + "|" + m)) Debug.Log(Tag + BaseName(json) + ": materyal bekleniyor (" + m + ".mat henüz üretilmedi)");
+                return true;
+            }
         }
         return false;
     }
+    static readonly HashSet<string> waitLogged = new HashSet<string>(); // bekleme mesajı efekt+materyal başına bir kez
 
     static Material LoadLibraryMaterial(string matName, string emitter)
     {
