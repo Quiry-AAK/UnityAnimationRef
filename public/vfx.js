@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { EffectPlayer, STEP, clearTextureCache } from './vfx-sim.js';
+import { EffectPlayer, clearTextureCache, texturesLoaded } from './vfx-sim.js';
 import { MODULES, TEXTURES, defaultEffect, defaultEmitter, normalizeEffect, presetEmitter, evalGradient, evalCurve, clone } from './vfx-schema.js';
 
 const PRESET_LABELS = { sparks: 'Kıvılcım', embers: 'Kor', fire: 'Alev', smoke: 'Duman', flash: 'Parlama', shockwave: 'Şok dalgası', glow: 'Hale', slash: 'Kılıç kesiği' };
@@ -441,6 +441,7 @@ export function initVfx(ctx) {
     const size = Math.max(128, Math.min(1024, d.size || 320));
     const keep = { pos: camera.position.clone(), target: orbit.target.clone(), aspect: camera.aspect, time: dispTime, playing, bg: effect.preview.background, hero: effect.preview.showHero };
     playing = false;
+    await Promise.race([texturesLoaded(), new Promise((r) => setTimeout(r, 5000))]); // dokular yüklenmeden çizme
     if (d.bg) effect.preview.background = d.bg; if (typeof d.showHero === 'boolean') effect.preview.showHero = d.showHero; applyPreviewSettings();
     const f = frameBox(times);
     const U = (v) => new THREE.Vector3(-v[0], v[1], v[2]); // MCP kamerayı Unity ekseninde verir (three = X aynası)

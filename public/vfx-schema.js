@@ -107,9 +107,9 @@ export const MODULES = [
     ['space', 'enum', 'Uzay', { options: SPACE }],
   ] },
   { key: 'limitVelocity', label: 'Hız sınırı / sürtünme', fields: [
-    ['drag', 'num', 'Sürtünme (drag)', { min: 0, max: 20, step: 0.05 }],
+    ['drag', 'num', 'Sürtünme (m/sn² yavaşlama)', { min: 0, max: 50, step: 0.05 }],
     ['limit', 'num', 'Hız sınırı (m/sn)', { min: 0, max: 100, step: 0.1 }],
-    ['dampen', 'num', 'Sınır yumuşatma', { min: 0, max: 1, step: 0.01 }],
+    ['dampen', 'num', 'Sınır kırpma (kare başına)', { min: 0, max: 1, step: 0.01 }],
   ] },
   { key: 'noise', label: 'Gürültü (türbülans)', fields: [
     ['strength', 'num', 'Güç (m/sn)', { min: 0, max: 20, step: 0.05 }],
@@ -320,7 +320,7 @@ export function diffEffects(base, cur) {
 export const PRESETS = {
   sparks: { name: 'kıvılcım', main: { duration: 1, looping: true, startLifetime: [0.3, 0.6], startSpeed: [4, 8], startSize: [0.03, 0.06], startColor: ['#ffd27a', '#ff8a2a'], gravity: 1 },
     emission: { rateOverTime: 0, bursts: [{ time: 0, count: [30, 40], cycles: 1, interval: 0.1 }] },
-    shape: { type: 'sphere', radius: 0.05 }, limitVelocity: { enabled: true, drag: 2, limit: 100, dampen: 0 },
+    shape: { type: 'sphere', radius: 0.05 }, limitVelocity: { enabled: true, drag: 6, limit: 100, dampen: 0 },
     colorOverLifetime: { enabled: true, color: [[0, '#ffffff'], [0.4, '#ffb347'], [1, '#ff4a1a']], alpha: [[0, 1], [0.7, 1], [1, 0]] },
     renderer: { mode: 'stretched', texture: 'spark', blend: 'additive', intensity: 3, lengthScale: 1, velocityScale: 0.04 } },
   embers: { name: 'kor', main: { startLifetime: [1.2, 2.2], startSpeed: [0.3, 0.8], startSize: [0.02, 0.05], startColor: ['#ffb347', '#ff5a1f'], gravity: -0.05 },
@@ -402,7 +402,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
   shape.enabled=false: kökten +Z yönünde (hız 0 ise yerinde) doğar.
 - velocity: linear[x,y,z] (m/sn), orbital[x,y,z] (rad/sn, emitter merkezi etrafında), radial (merkezden dışa m/sn), space, speedModifier
 - force: force[x,y,z] (m/sn² ivme), space
-- limitVelocity: drag (hız her sn (1-drag·dt) ile çarpılır), limit (m/sn), dampen (0..1 sınır aşımını kırpma)
+- limitVelocity: drag (hız her saniye drag m/sn azalır — sabit yavaşlama, 0'da durur), limit (m/sn), dampen (0..1: sınırı aşan hızın her karede kırpılan oranı)
 - noise: strength (m/sn), frequency, scrollSpeed, octaves
 - colorOverLifetime: color [[t,'#hex']], alpha [[t,a]] (t 0..1 ömür; en çok 8'er anahtar). Son renk = startColor × gradyan.
 - sizeOverLifetime: curve [[t, çarpan]] (doğrusal). Son boyut = startSize × eğri.

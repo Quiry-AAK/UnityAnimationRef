@@ -814,6 +814,7 @@ $('#modeAnim').onclick = () => setEditorMode('anim'); $('#modeVfx').onclick = ()
 $('#btnVfxUnity').onclick = () => vfx.sendUnity();
 
 // ───────────────────────── sunucu bağlantısı (Claude köprüsü)
+let markReady; const ready = new Promise((r) => { markReady = r; }); // açılış (model + durum) bitti
 const es = new EventSource('/api/events');
 es.addEventListener('anim', (e) => {
   const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)');
@@ -833,7 +834,7 @@ es.addEventListener('load-model', (e) => { const d = JSON.parse(e.data); (d.name
 es.addEventListener('vfx', (e) => { const d = JSON.parse(e.data); if (mode !== 'vfx') setEditorMode('vfx', { notify: false }); vfx.onRemoteEffect(d.vfx); });
 es.addEventListener('mode', (e) => setEditorMode(JSON.parse(e.data).mode, { notify: false }));
 es.addEventListener('render', async (e) => {
-  const d = JSON.parse(e.data);
+  const d = JSON.parse(e.data); await ready;
   if (d.kind === 'vfx') { let png = ''; try { png = await vfx.renderSheet(d); } catch (er) { toast('VFX render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   const size = d.size || 512; let png = '';
   const camBackup = [camera.position.clone(), orbit.target.clone()];
@@ -854,6 +855,6 @@ es.addEventListener('render', async (e) => {
   anim = normalizeAnim(st.anim); afterAnimReplaced();
   vfx.setFromState(st.vfx);
   setEditorMode(st.mode === 'vfx' ? 'vfx' : 'anim', { notify: false });
-  requestAnimationFrame(tick);
+  requestAnimationFrame(tick); markReady();
 })();
 window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone };

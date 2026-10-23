@@ -37,16 +37,19 @@ function getFallback() {
   x.fillStyle = g; x.fillRect(0, 0, 64, 64);
   fallbackTex = new THREE.CanvasTexture(c); fallbackTex.colorSpace = THREE.SRGBColorSpace; return fallbackTex;
 }
+const texReady = new Map(); // ad → yükleme sözü (render dokular gelmeden çizmesin)
 export function getTexture(name, onLoad) {
   if (!texCache.has(name)) {
-    const t = new THREE.TextureLoader().load('/vfx-textures/' + encodeURIComponent(name) + '.png?v=' + Date.now(), () => onLoad?.(), undefined, () => { texCache.set(name, getFallback()); onLoad?.(); });
+    let done; texReady.set(name, new Promise((r) => { done = r; }));
+    const t = new THREE.TextureLoader().load('/vfx-textures/' + encodeURIComponent(name) + '.png?v=' + Date.now(), () => { done(); onLoad?.(); }, undefined, () => { texCache.set(name, getFallback()); done(); onLoad?.(); });
     t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; texCache.set(name, t);
   }
   return texCache.get(name);
 }
-export const clearTextureCache = () => texCache.clear();
+export const texturesLoaded = () => Promise.all([...texReady.values()]);
+export const clearTextureCache = () => { texCache.clear(); texReady.clear(); };
 
-// ── shader: billboard / stretched / horizontal / vertical, flipbook, sRGB vertex rengi → doğrusal × intensity
+// ── shader: billboard / stretched / horizontal / vertical, flipbook, sRGB köşe rengi → doğrusal × intensity (Unity Linear proje gibi)
 const VERT = /* glsl */`
 attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF;
 uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles;
@@ -83,7 +86,7 @@ varying vec2 vUv; varying vec4 vCol;
 vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
   vec4 t = texture2D(uMap, vUv);
-  vec4 col = vec4(toLinear(vCol.rgb) * uIntensity, vCol.a) * t;
+  vec4 col = vec4(toLinear(vCol.rgb) * uIntensity, vCol.a) * t; // Unity (Linear proje) köşe rengini ve _BaseColor'ı doğrusala çevirir: kalibrasyonla ölçüldü
   if (col.a < 0.002) discard;
   gl_FragColor = col;
 }`;
@@ -193,7 +196,7 @@ class EmitterSim {
     const orb = vel.enabled ? toSpace(vel.orbital, vel.space, new THREE.Vector3()) : null;
     const center = this.world ? new THREE.Vector3().setFromMatrixPosition(E) : new THREE.Vector3();
     const sm = vel.enabled ? vel.speedModifier : 1;
-    const dampK = lim.enabled ? 1 - Math.pow(1 - lim.dampen, dt * 30) : 0;
+    const dampK = lim.enabled ? 1 - Math.pow(1 - lim.dampen, dt * 60) : 0; // Unity: sınır aşımı kare başına dampen oranında kırpılır (60 fps)
     const nt = this.te * nz.scrollSpeed;
     const P = this.P, V = this.V, D = this.D;
     for (let i = this.n - 1; i >= 0; i--) {
@@ -201,8 +204,9 @@ class EmitterSim {
       const o = i * 3;
       let vx = V[o] + acc.x * dt, vy = V[o + 1] + acc.y * dt, vz = V[o + 2] + acc.z * dt;
       if (lim.enabled) {
-        const k = Math.max(0, 1 - lim.drag * dt); vx *= k; vy *= k; vz *= k;
-        const sp = Math.hypot(vx, vy, vz); if (sp > lim.limit && sp > 1e-6) { const f = lerp(1, lim.limit / sp, dampK); vx *= f; vy *= f; vz *= f; }
+        let sp = Math.hypot(vx, vy, vz);
+        if (lim.drag > 0 && sp > 1e-6) { const k = Math.max(0, sp - lim.drag * dt) / sp; vx *= k; vy *= k; vz *= k; sp *= k; } // Unity: sabit yavaşlama (drag m/sn²), Unity'de ölçüldü
+        if (sp > lim.limit && sp > 1e-6) { const f = lerp(1, lim.limit / sp, dampK); vx *= f; vy *= f; vz *= f; }
       }
       V[o] = vx; V[o + 1] = vy; V[o + 2] = vz;
       let ex = 0, ey = 0, ez = 0;
