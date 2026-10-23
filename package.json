@@ -1,10 +1,12 @@
 {
-  "name": "unity-animation-ref",
-  "version": "1.0.0",
-  "description": "Mixamo animation editor + MCP + Unity export",
+  "name": "unity-preview-editor",
+  "version": "2.0.0",
+  "description": "Unity Preview Editor: animasyon + VFX editörü (three.js), Claude için MCP, Unity aktarımı",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "textures": "node tools/gen-vfx-textures.mjs",
+    "smoke": "node tools/mcp-smoke.mjs"
   },
   "author": "",
   "license": "ISC",

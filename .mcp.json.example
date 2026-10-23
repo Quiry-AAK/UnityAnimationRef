@@ -1,8 +1,10 @@
 {
   "mcpServers": {
-    "anim-ref": {
+    "unity-preview": {
       "command": "node",
-      "args": ["C:/YOL/BURAYA/AnimRef/mcp.js"]
+      "args": [
+        "C:/YOL/BURAYA/AnimRef/mcp.js"
+      ]
     }
   }
 }

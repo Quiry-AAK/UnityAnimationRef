@@ -1,8 +1,8 @@
-# Anim Ref – Çalıştırma ve Kullanım Notları
+# Unity Preview Editor (eski Anim Ref) – Çalıştırma ve Kullanım Notları
 
 ## Çalıştırma
 - `npm install` (ilk kez) → `npm start` → http://localhost:5177
-- MCP (Claude) çalışırken editör sunucusu otomatik başlar; elle `npm start` gerekmez. Port doluysa (`5177`) sunucu zaten çalışıyordur. Port değiştirmek için `ANIMREF_PORT` ortam değişkeni.
+- MCP (Claude) çalışırken editör sunucusu otomatik başlar; elle `npm start` gerekmez. Port doluysa (`5177`) sunucu zaten çalışıyordur. Port değiştirmek için `UPE_PORT` ortam değişkeni (eski adı `ANIMREF_PORT` da geçer).
 - Editörü tarayıcıda açık tut: `render_frame` ve `export_gif` gibi MCP araçları tarayıcıdan render alır.
 - Kod değişince (özellikle `server.js`, `mcp.js`) sunucuyu durdurup yeniden başlat; sadece `public/` dosyaları için sayfayı yenilemek yeter.
 - Windows'ta sunucuyu durdurmak: `Get-NetTCPConnection -LocalPort 5177 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
@@ -19,6 +19,28 @@
 3. Claude'a söylemek zor olan şeyi editörde elle düzelt → "düzelttim" de → Claude `get_user_edits` ile farkı okur. Sağ panelde "Claude'a not" kutusu da var.
 4. Bitince: **Dışa aktar → GIF** ya da **Unity için kaydet** (`exports/*.animref.json`).
 5. Unity: `unity/AnimRefImporter.cs` → `Assets/Editor/` → Tools > Anim Ref > Import (JSON + T-pose'ta karakter seç).
+
+## VFX modu
+Üst bardaki **Animasyon | VFX** anahtarıyla geçilir (Claude bir efekt gönderince editör kendisi VFX'e geçer).
+- **Sol panel:** efekt adı, emitter (katman) listesi — aç/kapat, çoğalt, sırala, sil; **+ Emitter** menüsünde boş emitter ve hazır
+  şablonlar (kıvılcım, kor, alev, duman, parlama, şok dalgası, hale, kılıç kesiği).
+- **Sağ panel:** Efekt ayarları (önizleme süresi, döngü, kemiğe/eşyaya bağlama, animasyonla birlikte oynatma + başlangıç karesi,
+  bloom, arka plan, kahraman/ızgara), seçili emitter'ın Unity modülleri (Ana, Yayım, Şekil, Ömür boyu hız, Kuvvet, Hız sınırı,
+  Gürültü, Ömür boyu renk/boyut/dönüş, Doku karesi, Görünüm). Modül başlığındaki ●/○ modülü açar/kapatır.
+  Sayı etiketini basılı tutup sağa-sola sürüklemek değeri değiştirir (Shift hızlı, Alt ince). Eğri: sürükle / çift tık ekle / sağ tık sil.
+- **Alt çubuk:** baştan, oynat/durdur, zaman çubuğu, hız (0.1×–2×), ◎ kamerayı efekte odakla, parçacık sayısı.
+- Simülasyon Unity ParticleSystem'i taklit eder, sabit adımlı ve tohumludur: aynı efekt aynı anda hep aynı görünür (Claude'un
+  `render_vfx` kontak sayfası ile kullanıcının gördüğü aynıdır). Unity'de birebir değil ama yakındır (gürültü alanı, drag/dampen
+  formülleri yaklaşık). Değerler Unity koordinatlarında (+Z ileri, +Y yukarı), metre/saniye/derece.
+- Kullanıcı değer değiştirince Claude `get_vfx_user_edits` ile farkı okur (yol bazında `from → to`); "Claude'a not" kutusu da var.
+- **Unity'ye gönder** (üst bar ya da sağ panel → Unity): efekt `Assets/UnityPreview/VFX/<ad>.vfx.json` + dokular `Textures/` olarak
+  yazılır, Unity (açıksa birkaç saniyede) `Assets/UnityPreview/VFX/<ad>.prefab` ve `Materials/` üretir. Kök objede `Play()` tüm
+  katmanları oynatır. Unity kapalıyken: `-executeMethod UnityPreviewVfxImporter.ProcessPending`. Aynı adla tekrar gönderim prefab'ı
+  yerinde günceller (GUID korunur). Malzeme: URP Particles/Unlit, additive/alpha, `_BaseColor` = intensity (HDR, bloom).
+- Dokular `vfx/textures/*.png` (beyaz + alfa; renk parçacıktan gelir). Yerleşikleri yeniden üretmek: `npm run textures`.
+  Özel doku: sağ panel → Görünüm → PNG yükle.
+- Kısayollar (VFX): Space oynat · Home baştan · ←/→ ±0.05 sn · Ctrl+Z / Ctrl+Y · B/P paneller.
+- MCP uçtan uca testi: `npm run smoke` (5291 portunda kendi sunucusunu açar, tarayıcı gerektirmez).
 
 ## Kısayollar
 Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı · B kemik paneli · P ayar paneli · Ctrl+Z / Ctrl+Y
