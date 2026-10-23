@@ -1,4 +1,5 @@
-// Anim Ref MCP sunucusu (stdio). Editör sunucusuna (server.js) HTTP ile bağlanır; çalışmıyorsa başlatır.
+// Unity Preview Editor MCP sunucusu (stdio; eski adı Anim Ref). Editör sunucusuna (server.js) HTTP ile bağlanır; çalışmıyorsa başlatır.
+// Araçlar: animasyon (anahtar kare, eşya, Unity .anim) + VFX (parçacık efekti, kontak sayfası render, Unity prefab). Sözleşme: docs/VFX.md
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -8,13 +9,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import * as THREE from 'three';
+import { normalizeEffect, applyChanges, diffEffects, presetEmitter, defaultEffect, findEmitter, getPath, PRESETS, TEXTURES, VFX_REFERENCE } from './public/vfx-schema.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-// Her MCP süreci (= her chat) kendi editör portunu alır; ANIMREF_PORT verilirse o sabit kullanılır (ör. 5177 elle açılan editör).
+// Her MCP süreci (= her chat) kendi editör portunu alır; UPE_PORT (yoksa ANIMREF_PORT) verilirse o sabit kullanılır (ör. 5177 elle açılan editör).
+const FIXED_PORT = process.env.UPE_PORT || process.env.ANIMREF_PORT;
 const freePort = (port) => new Promise((ok) => { const s = net.createServer(); s.once('error', () => ok(false)); s.listen(port, '127.0.0.1', () => s.close(() => ok(true))); });
 let lockFile = null;
 async function pickPort() {
-  if (process.env.ANIMREF_PORT) return Number(process.env.ANIMREF_PORT);
+  if (FIXED_PORT) return Number(FIXED_PORT);
   const dir = path.join(ROOT, '.ports'); fs.mkdirSync(dir, { recursive: true });
   for (let p = 5178; p < 5278; p++) {
     const lock = path.join(dir, p + '.lock');
@@ -41,7 +44,7 @@ const post = async (p, body) => {
 };
 async function ensureServer() {
   try { await get('/api/ping'); return; } catch { /* başlat */ }
-  child = spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, stdio: 'ignore', windowsHide: true, env: { ...process.env, ANIMREF_PORT: String(PORT) } });
+  child = spawn(process.execPath, [path.join(ROOT, 'server.js')], { cwd: ROOT, stdio: 'ignore', windowsHide: true, env: { ...process.env, UPE_PORT: String(PORT) } });
   for (let i = 0; i < 30; i++) { await new Promise((r) => setTimeout(r, 200)); try { await get('/api/ping'); return; } catch { /* bekle */ } }
   throw new Error('Editör sunucusu başlatılamadı');
 }
@@ -68,20 +71,33 @@ const requireAnim = (st) => { if (!st.anim) throw new Error('Henüz animasyon yo
 const restOf = (st, name) => { const b = st.rig?.bones.find((x) => x.name === name); if (!b) throw new Error(`Kemik bulunamadı: ${name}`); return b; };
 const text = (o) => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 1) }] });
 
-const server = new McpServer({ name: 'anim-ref', version: '1.0.0' });
+const server = new McpServer({ name: 'unity-preview-editor', version: '2.0.0' });
+
+// ── VFX yardımcıları (mantık public/vfx-schema.js'de; burada yalnız editörle alışveriş)
+const notesOf = (st, mode) => (st.notes || []).filter((n) => (n.mode || 'anim') === mode);
+const curVfx = (st) => (st.vfx ? normalizeEffect(st.vfx).effect : null);
+const vfxSummary = (e) => (e ? {
+  name: e.name, duration: e.duration, loop: e.loop, attach: e.attach.target === 'none' ? undefined : e.attach,
+  emitters: e.emitters.map((m) => ({ name: m.name, enabled: m.enabled, rateOverTime: m.emission.rateOverTime, bursts: m.emission.bursts.length, texture: m.renderer.texture })),
+} : null);
+// emitter içinde { preset:'fire', ...üzerineYazılanlar } kısayolu → presetEmitter ile açılır
+const expandPresets = (effect) => (Array.isArray(effect?.emitters)
+  ? { ...effect, emitters: effect.emitters.map((em) => (em && typeof em === 'object' && em.preset ? (({ preset, ...rest }) => presetEmitter(preset, rest))(em) : em)) } : effect);
+const pushVfx = async (effect, setBaseline = true) => (await post('/api/claude/vfx', { vfx: effect, setBaseline })).clients > 0;
 
 server.registerTool('get_status', {
-  description: 'Editörün durumu: açık model, kemik listesi, animasyon özeti, kullanıcı notu sayısı. Önce bunu çağır.',
+  description: 'Editörün durumu: açık mod (anim|vfx), model, kemik listesi, animasyon özeti, VFX özeti (ad, süre, emitter başına ad/enabled/rateOverTime/burst sayısı/doku), kullanıcı notu sayısı. Önce bunu çağır.',
   inputSchema: {},
 }, async () => {
   await ensureServer(); const st = await get('/api/state'); const ping = await get('/api/ping');
   const a = st.anim;
   return text({
-    editorUrl: BASE, browserConnected: ping.clients > 0, model: st.modelName,
+    editorUrl: BASE, browserConnected: ping.clients > 0, mode: st.mode || 'anim', model: st.modelName,
     bones: st.rig?.bones.map((b) => b.name + (b.parent ? ` (<- ${b.parent})` : '')) ?? [],
     unitScale: st.rig?.unitScale,
     anim: a ? { name: a.name, fps: a.fps, length: a.length, loop: a.loop, tracks: Object.fromEntries(Object.entries(a.tracks).map(([k, t]) => [k, { rotKeys: t.rot?.length ?? 0, posKeys: t.pos?.length ?? 0 }])) } : null,
-    pendingNotes: st.notes.length,
+    vfx: vfxSummary(curVfx(st)),
+    pendingNotes: notesOf(st, 'anim').length, pendingVfxNotes: notesOf(st, 'vfx').length,
   });
 });
 
@@ -162,7 +178,7 @@ server.registerTool('get_user_edits', {
   inputSchema: { acknowledge: z.boolean().default(false).describe('true: notları temizle ve mevcut hali yeni referans yap') },
 }, async ({ acknowledge }) => {
   await ensureServer(); const st = await get('/api/state'); const cur = st.anim, base = st.baseline;
-  const result = { notes: st.notes.map((n) => ({ frame: n.frame, bone: n.bone, text: n.text })), changes: [], addedKeys: {}, removedKeys: {} };
+  const result = { notes: notesOf(st, 'anim').map((n) => ({ frame: n.frame, bone: n.bone, text: n.text })), changes: [], addedKeys: {}, removedKeys: {} };
   if (cur && base) {
     const names = new Set([...Object.keys(cur.tracks), ...Object.keys(base.tracks)]);
     const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion();
@@ -179,7 +195,7 @@ server.registerTool('get_user_edits', {
     }
     for (const k of ['fps', 'length', 'loop']) if (cur[k] !== base[k]) result.changes.push({ setting: k, from: base[k], to: cur[k] });
   } else result.info = 'Referans yok (henüz set_animation yapılmamış).';
-  if (acknowledge) { await post('/api/notes/clear'); await post('/api/baseline'); }
+  if (acknowledge) { await post('/api/notes/clear?mode=anim'); await post('/api/baseline'); }
   return text(result);
 });
 
@@ -313,7 +329,7 @@ server.registerTool('get_unity_info', {
 }, async () => { await ensureServer(); return text(await get('/api/unity')); });
 
 server.registerTool('set_unity_project', {
-  description: 'Unity proje klasörünü ve karakterini ayarlar (bir kez yapılır). Importer scriptleri projeye otomatik kurulur/güncellenir. character: Unity içindeki yol, örn. "Assets/Characters/YBot.fbx" (get_unity_info ile adayları gör). mode: Auto (önerilen; Humanoid avatar varsa Humanoid yoksa Generic) | Generic (birebir, avatarı Generic olmalı) | Humanoid.',
+  description: 'Unity proje klasörünü ve karakterini ayarlar (bir kez yapılır; VFX gönderimi için yalnız project yeter). Importer scriptleri projeye otomatik kurulur/güncellenir. character: Unity içindeki yol, örn. "Assets/Characters/YBot.fbx" (get_unity_info ile adayları gör). mode: Auto (önerilen; Humanoid avatar varsa Humanoid yoksa Generic) | Generic (birebir, avatarı Generic olmalı) | Humanoid.',
   inputSchema: { project: z.string().describe('Unity proje klasörü (içinde Assets ve ProjectSettings olan)'), character: z.string().optional(), mode: z.enum(['Auto', 'Generic', 'Humanoid']).optional() },
 }, async ({ project, character, mode }) => { await ensureServer(); const r = await post('/api/unity/config', { project, character, mode }); return text({ project: r.project, character: r.character || r.guess, mode: r.mode, valid: r.valid, candidates: r.characters.slice(0, 30) }); });
 
@@ -321,6 +337,194 @@ server.registerTool('send_to_unity', {
   description: 'Animasyonu TEK ADIMDA Unity projesine gönderir: Assets/AnimRef/ içine yazar ve Unity otomatik .anim (Assets/AnimRef/Clips/<ad>.anim) üretir. animation: kütüphaneden ad (yoksa editördeki mevcut), all: tüm kütüphane. Unity açıksa ~birkaç saniyede biter; kapalıysa açılınca aktarılır. Önce set_unity_project ayarlı olmalı.',
   inputSchema: { animation: z.string().optional(), all: z.boolean().default(false) },
 }, async ({ animation, all }) => { await ensureServer(); return text(await post('/api/unity/send', { animation, all })); });
+
+// ── VFX modu (parçacık efektleri; her emitter = Unity ParticleSystem). Format: vfx_reference / public/vfx-schema.js
+const emitterSel = z.union([z.string(), z.number().int().min(0)]).describe('Emitter adı (ör. "alev") ya da sırası (0\'dan)');
+const presetList = () => Object.entries(PRESETS).map(([k, p]) => {
+  const em = presetEmitter(k); const rng = (a) => (a[0] === a[1] ? String(a[0]) : a.join('–'));
+  const emis = em.emission.bursts.length ? `burst ${em.emission.bursts.map((b) => rng(b.count)).join('+')} parçacık` : `${em.emission.rateOverTime}/sn`;
+  return `- ${k}: "${em.name}" — doku ${em.renderer.texture}, ${em.renderer.blend}, ${em.renderer.mode}, ${emis}, ömür ${rng(em.main.startLifetime)} sn${em.main.looping ? '' : ', tek atım'}`;
+}).join('\n');
+
+server.registerTool('vfx_reference', {
+  description: 'VFX efekt formatının tam başvurusu (alanlar, birimler, Unity eksenleri, modüller), doku listesi ve hazır emitter şablonları. VFX işine başlamadan ÖNCE bunu oku.',
+  inputSchema: {},
+}, async () => {
+  await ensureServer(); const files = await get('/api/vfx/textures').catch(() => []);
+  const tex = Object.entries(TEXTURES).map(([k, d]) => `- ${k}: ${d}${files.includes(k) ? '' : ' (dosya henüz yok)'}`).concat(files.filter((f) => !(f in TEXTURES)).map((f) => `- ${f}: özel doku (vfx/textures/${f}.png)`)).join('\n');
+  return text(`${VFX_REFERENCE}
+## Dokular (renderer.texture alanına uzantısız ad)
+${tex}
+
+## Hazır emitter şablonları (add_emitter preset / set_vfx'te emitters[i].preset)
+${presetList()}
+
+## Araç akışı
+- Sıfırdan: set_vfx { effect } (emitter'da { preset:'fire', ...üzerineYaz } kısayolu geçerli) ya da add_emitter + update_vfx ile adım adım.
+- İnce ayar: update_vfx changes=[{ emitter:'alev', path:'main.startSize', value:[0.2,0.4] }, { path:'preview.bloom', value:1.2 }].
+- Görsel kontrol: render_vfx (editör tarayıcıda açık olmalı) → zaman karelerinden kontak sayfası.
+- Kullanıcı editörde düzeltince: get_vfx_user_edits (fark + notlar), farkı öğren; acknowledge:true ile referansı yenile.
+- Bitince: save_vfx { name } → send_vfx_to_unity { name } (Unity'de Assets/UnityPreview/VFX/<ad>.prefab).
+`);
+});
+
+server.registerTool('get_vfx', {
+  description: 'Editördeki efekt (normalize edilmiş tam JSON: name, duration, loop, attach, preview, emitters[]). Büyük olabilir; emitters ile filtrele.',
+  inputSchema: { emitters: z.array(z.string()).optional().describe('Yalnız bu emitter\'lar (ad ya da "0","1" gibi sıra)') },
+}, async ({ emitters }) => {
+  await ensureServer(); const st = await get('/api/state'); const e = curVfx(st);
+  if (!e) return text({ effect: null, info: 'Editörde efekt yok. set_vfx / add_emitter / load_vfx ile başla.' });
+  if (!emitters) return text(e);
+  const picked = emitters.map((s) => findEmitter(e, s)).filter(Boolean);
+  return text({ ...e, emitters: picked, missingEmitters: emitters.filter((s) => !findEmitter(e, s)) });
+});
+
+server.registerTool('set_vfx', {
+  description: 'Efektin TAMAMINI değiştirir; editör VFX moduna geçer ve anında günceller (kullanıcı Ctrl+Z ile geri alabilir). Bu hâl kullanıcı düzeltmeleri için referans olur (get_vfx_user_edits buna göre kıyaslar). Önce vfx_reference oku. '
+    + 'effect = { name, duration (sn), loop, attach?, preview?: { bloom, background, showHero, ... }, emitters: [ { name, main:{ startLifetime:[min,max] sn, startSpeed:[min,max] m/sn, startSize:[min,max] m, startColor:["#hex","#hex"], gravity, ... }, emission:{ rateOverTime, bursts:[{time,count:[min,max],cycles,interval}] }, shape:{...}, colorOverLifetime:{ enabled, color:[[t,"#hex"]], alpha:[[t,a]] }, renderer:{ mode, texture, blend, intensity } } ] }. '
+    + 'Kısayol: emitter yerine { preset:"fire", name:"alev", main:{...} } yaz → şablon + üzerine yazılanlar. Eksik alanlar varsayılanla dolar, bilinmeyen/geçersiz olanlar atılıp warnings\'te döner. Unity koordinatları: +X sağ, +Y yukarı, +Z ileri; metre/saniye/derece.',
+  inputSchema: { effect: z.record(z.string(), z.any()).describe('Efekt nesnesi (format: vfx_reference)') },
+}, async ({ effect }) => {
+  await ensureServer();
+  const { effect: e, warnings } = normalizeEffect(expandPresets(effect));
+  const browserConnected = await pushVfx(e);
+  return text({ ok: true, warnings, summary: vfxSummary(e), browserConnected });
+});
+
+server.registerTool('update_vfx', {
+  description: 'Efektte yol bazlı küçük değişiklikler (editör anında güncellenir; sonuç yeni referans olur). changes: [{ emitter?, path, value }]. emitter verilirse yol emitter içinde (ör. "main.startSize" → [0.1,0.3], "main.startColor" → ["#ffb347","#ff5a1f"], "emission.rateOverTime" → 40, "renderer.intensity" → 3, "renderer.texture" → "spark", "shape.angle" → 25, "noise.enabled" → true, "enabled" → false); '
+    + 'emitter yoksa efekt düzeyi (ör. "duration" → 1.2, "preview.bloom" → 1.2, "attach.target" → "bone"). value bütün bir alt nesne de olabilir (ör. path "colorOverLifetime.alpha"). Geçerli değişiklikler uygulanır, geçersiz yollar errors\'ta döner; değerler sınırlara kırpılır (applied\'da son değeri gör). Editörde efekt yoksa varsayılan efektle başlar.',
+  inputSchema: { changes: z.array(z.object({ emitter: emitterSel.optional(), path: z.string().describe('Nokta ile yol, ör. "main.startSize"'), value: z.any() })).min(1) },
+}, async ({ changes }) => {
+  await ensureServer(); const st = await get('/api/state'); const base = curVfx(st) || defaultEffect();
+  const { effect: e, errors, warnings } = applyChanges(base, changes);
+  const appliedN = changes.length - errors.length; let browserConnected = null;
+  if (appliedN > 0) browserConnected = await pushVfx(e);
+  const applied = changes.map((c) => { const t = c.emitter === undefined || c.emitter === null || c.emitter === '' ? e : findEmitter(e, c.emitter); const v = t ? getPath(t, c.path) : undefined; return v === undefined ? null : { emitter: c.emitter, path: c.path, value: v }; }).filter(Boolean);
+  return text({ ok: errors.length === 0, applied, errors, warnings, summary: vfxSummary(e), browserConnected, ...(appliedN ? {} : { info: 'Geçerli değişiklik yok; editöre gönderilmedi.' }) });
+});
+
+server.registerTool('add_emitter', {
+  description: `Efekte yeni emitter (katman) ekler; şablonla başlamak en kolayı: ${Object.keys(PRESETS).join(', ')} (ayrıntı: vfx_reference). overrides şablonun üstüne derin birleştirilir (ör. { main:{ startColor:["#7ab8ff","#3a6dff"] }, renderer:{ intensity:3 } }). Ad çakışırsa _2 eklenir. Editörde efekt yoksa boş bir efekt açılır. Sonuç yeni referans olur.`,
+  inputSchema: {
+    preset: z.enum(Object.keys(PRESETS)).optional().describe('Şablon adı (verilmezse varsayılan beyaz koni emitter)'),
+    name: z.string().optional().describe('Emitter adı (efekt içinde benzersiz)'),
+    overrides: z.record(z.string(), z.any()).optional().describe('Şablonun üstüne yazılacak alanlar (emitter formatında)'),
+    index: z.number().int().min(0).optional().describe('Listedeki yeri (verilmezse sona; çizim sırası için renderer.sortingOrder)'),
+  },
+}, async ({ preset, name, overrides, index }) => {
+  await ensureServer(); const st = await get('/api/state'); const base = curVfx(st) || { ...defaultEffect(), emitters: [] };
+  const em = presetEmitter(preset, { ...(overrides || {}), ...(name ? { name } : {}) });
+  const at = index === undefined ? base.emitters.length : Math.min(index, base.emitters.length);
+  base.emitters.splice(at, 0, em);
+  const { effect: e, warnings } = normalizeEffect(base);
+  const browserConnected = await pushVfx(e);
+  return text({ ok: true, added: e.emitters[at].name, index: at, warnings, summary: vfxSummary(e), browserConnected });
+});
+
+server.registerTool('remove_emitter', {
+  description: 'Efektten bir emitter\'ı siler (editör anında güncellenir, Ctrl+Z ile geri alınabilir; sonuç yeni referans olur). Geçici kapatmak için update_vfx { emitter, path:"enabled", value:false } daha iyi.',
+  inputSchema: { emitter: emitterSel },
+}, async ({ emitter }) => {
+  await ensureServer(); const st = await get('/api/state'); const base = curVfx(st) || defaultEffect();
+  const em = findEmitter(base, emitter); if (!em) throw new Error(`Emitter yok: ${emitter} (var olanlar: ${base.emitters.map((x) => x.name).join(', ') || '—'})`);
+  base.emitters.splice(base.emitters.indexOf(em), 1);
+  const { effect: e } = normalizeEffect(base);
+  const browserConnected = await pushVfx(e);
+  return text({ ok: true, removed: em.name, summary: vfxSummary(e), browserConnected });
+});
+
+server.registerTool('get_vfx_user_edits', {
+  description: 'Kullanıcının editörde efekte yaptığı düzeltmeler: referansa (Claude\'un son set_vfx/update_vfx/add_emitter/remove_emitter/load_vfx hâli) göre değişen alanlar [{ path:"emitters.<ad>.main.startSize", from, to }], eklenen/silinen emitter\'lar + VFX modunda yazılan notlar. Kullanıcı "düzelttim/şöyle olsun" dediğinde çağır; farkı öğren. acknowledge:true notları temizler ve mevcut hâli yeni referans yapar.',
+  inputSchema: { acknowledge: z.boolean().default(false).describe('true: VFX notlarını temizle ve mevcut hâli yeni referans yap') },
+}, async ({ acknowledge }) => {
+  await ensureServer(); const st = await get('/api/state'); const cur = curVfx(st);
+  const base = st.vfxBaseline ? normalizeEffect(st.vfxBaseline).effect : null;
+  const result = { notes: notesOf(st, 'vfx').map(({ mode, ...n }) => n) };
+  if (cur && base) Object.assign(result, diffEffects(base, cur));
+  else result.info = cur ? 'Referans yok (henüz set_vfx / load_vfx yapılmamış).' : 'Editörde efekt yok.';
+  if (acknowledge) { await post('/api/notes/clear?mode=vfx'); await post('/api/vfx/baseline'); }
+  return text(result);
+});
+
+server.registerTool('render_vfx', {
+  description: 'Editördeki efekti zaman karelerinden bir kontak sayfası PNG\'si olarak çizer (hücreler soldan sağa, yukarıdan aşağı zaman sırasıyla). Editör tarayıcıda (uygulama içi tarayıcı) açık olmalı. Görsel kontrol için her önemli değişiklikten sonra kullan. '
+    + 'times verilmezse 0..duration arası count eşit aralıklı kare (t = duration·(i+0.5)/count). Kamera verilmezse otomatik kadraj: tüm karelerdeki parçacıkların %5–95 sınırları (+ showHero ise kahraman) çapraz açıdan sığdırılır. '
+    + 'Hazırlar yalnız yönü seçer, uzaklık otomatik: front (karakterin önünden, +Z), side (yandan), top (üstten), threequarter (çapraz, varsayılan). Ya da position/target (metre, Unity eksenleri: +X karakterin sağı, +Y yukarı, +Z ileri). Hücre etiketi: zaman + parçacık sayısı.',
+  inputSchema: {
+    times: z.array(z.number().min(0)).max(24).optional().describe('Çizilecek anlar (sn, efekt başından), ör. [0.05,0.1,0.2,0.4]'),
+    count: z.number().int().min(1).max(24).default(6).describe('times yoksa kare sayısı'),
+    cols: z.number().int().min(1).max(8).optional().describe('Sütun sayısı (varsayılan otomatik)'),
+    size: z.number().int().min(96).max(1024).default(320).describe('Hücre boyu (px)'),
+    camera: z.object({ preset: z.enum(['front', 'side', 'top', 'threequarter']).optional(), position: vec3.optional(), target: vec3.optional() }).optional(),
+    showHero: z.boolean().optional().describe('Kahramanı göster (ölçek için; varsayılan efektin preview.showHero)'),
+    bg: z.string().optional().describe('Arka plan rengi (varsayılan preview.background)'),
+  },
+}, async (args) => {
+  await ensureServer();
+  const ping = await get('/api/ping');
+  if (!ping.clients) throw new Error(`Editör tarayıcıda açık değil (http://localhost:${PORT}). render_vfx görüntüyü tarayıcıdaki editör çizer: editörü uygulama içi tarayıcıda aç, sonra tekrar dene.`);
+  const r = await post('/api/claude/render', { kind: 'vfx', ...args });
+  if (!r.png) throw new Error('Editör görüntü döndürmedi (VFX modunu destekleyen editör sürümü açık mı?).');
+  return { content: [{ type: 'image', data: r.png.replace(/^data:image\/png;base64,/, ''), mimeType: 'image/png' }] };
+});
+
+server.registerTool('list_vfx', {
+  description: 'VFX kütüphanesi (vfx/ klasörü): kayıtlı efektler [{ name, file, modified, emitters (sayı), duration }].',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(await get('/api/vfx/list')); });
+
+server.registerTool('save_vfx', {
+  description: 'Efekti kütüphaneye kaydeder (vfx/<name>.json; aynı ad varsa üzerine yazar). effect verilmezse editördeki mevcut efekt kaydedilir. Kayıtlı ad = efekt adı = Unity prefab adı.',
+  inputSchema: { name: z.string().describe('Dosya/efekt adı, ör. "alev_kesigi"'), effect: z.record(z.string(), z.any()).optional() },
+}, async ({ name, effect }) => {
+  await ensureServer(); const st = await get('/api/state');
+  const src = effect ? expandPresets(effect) : curVfx(st);
+  if (!src) throw new Error('Kaydedilecek efekt yok (editörde VFX boş; effect ver ya da set_vfx kullan).');
+  const { effect: e, warnings } = normalizeEffect({ ...src, name });
+  const r = await post('/api/vfx/save?name=' + encodeURIComponent(e.name), e);
+  return text({ saved: r.name, warnings });
+});
+
+server.registerTool('load_vfx', {
+  description: 'Kütüphaneden efekti editöre yükler (editör VFX moduna geçer; yüklenen hâl yeni referans olur).',
+  inputSchema: { name: z.string() },
+}, async ({ name }) => {
+  await ensureServer(); const r = await post('/api/claude/vfx-load', { name });
+  const st = await get('/api/state');
+  return text({ loaded: r.name, warnings: r.warnings, summary: vfxSummary(curVfx(st)), browserConnected: r.clients > 0 });
+});
+
+server.registerTool('delete_vfx', {
+  description: 'Kütüphaneden efekti siler (geri alınamaz; kullanıcı istemeden çağırma).',
+  inputSchema: { name: z.string() },
+}, async ({ name }) => {
+  await ensureServer(); const had = (await get('/api/vfx/list')).some((x) => x.name === name);
+  await post('/api/vfx/delete?name=' + encodeURIComponent(name));
+  return text(had ? 'Silindi: ' + name : 'Kütüphanede yoktu: ' + name);
+});
+
+server.registerTool('list_vfx_textures', {
+  description: 'Parçacık dokuları (vfx/textures/*.png): yerleşikler açıklamalarıyla + kullanıcının eklediği özel dokular. renderer.texture alanına uzantısız ad yazılır (ör. "spark"). Hepsi beyaz + alfa; renk startColor/colorOverLifetime\'dan gelir.',
+  inputSchema: {},
+}, async () => {
+  await ensureServer(); const files = await get('/api/vfx/textures');
+  return text({
+    builtin: Object.fromEntries(Object.entries(TEXTURES).map(([k, d]) => [k, files.includes(k) ? d : `${d} (dosya henüz yok: vfx/textures/${k}.png)`])),
+    custom: files.filter((f) => !(f in TEXTURES)),
+  });
+});
+
+server.registerTool('set_editor_mode', {
+  description: 'Kullanıcının ekranındaki editör modunu değiştirir: anim (animasyon) | vfx (parçacık efekti). set_vfx/update_vfx/load_vfx zaten VFX moduna geçirir; bunu yalnız kullanıcıya başka modu göstermek için kullan.',
+  inputSchema: { mode: z.enum(['anim', 'vfx']) },
+}, async ({ mode }) => { await ensureServer(); const r = await post('/api/claude/mode', { mode }); return text({ mode: r.mode, browserConnected: r.clients > 0 }); });
+
+server.registerTool('send_vfx_to_unity', {
+  description: 'Efekti TEK ADIMDA Unity projesine gönderir: Assets/UnityPreview/VFX/<ad>.vfx.json + kullandığı dokular (Textures/) yazılır, importer script\'leri Assets/Editor/UnityPreview/\'a kurulur; Unity açıksa birkaç saniyede Assets/UnityPreview/VFX/<ad>.prefab (kökte Play() tüm emitter\'ları oynatır) üretir. '
+    + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. ≤20 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Karakter gerekmez; önce set_unity_project ile proje ayarlı olmalı. Yanıt: { ok, sent, imported, waiting, prefabs, missingTextures, note | error }.',
+  inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
+}, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-vfx', { name, all })); });
 
 await ensureServer().catch(() => {});
 await server.connect(new StdioServerTransport());
