@@ -723,23 +723,22 @@ $('#btnGif').onclick = async () => {
 
 // ───────────────────────── açılır/kapanır paneller
 const LEFT_NAMES = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar" };
-// sol panel her modda varsayılan kapalı; eski panel2-*-left kayıtları sayılmasın diye ayrı anahtar
-const panelKey = (side) => side === 'left' ? `upe-left-${mode}` : `panel2-${mode}-${side}`;
+// iki yan panel de her modda varsayılan kapalı (önizleme geniş açılsın); eski panel2-* kayıtları sayılmasın diye ayrı anahtar
+const panelKey = (side) => `upe-${side}-${mode}`;
+const panelName = (side) => side === 'left' ? LEFT_NAMES[mode] : 'Ayarlar';
 function setPanel(side, open) {
   document.body.classList.toggle(side + '-open', open);
   $(side === 'left' ? '#togLeft' : '#togRight').classList.toggle('on', open);
-  if (side === 'left') {
-    const h = $('#leftEdge');
-    h.querySelector('.chev').textContent = open ? '‹' : '›'; h.querySelector('.lbl').textContent = LEFT_NAMES[mode];
-    h.title = `${LEFT_NAMES[mode]} paneli (B)`;
-  }
+  const h = $(side === 'left' ? '#leftEdge' : '#rightEdge');
+  h.querySelector('.chev').textContent = (side === 'left') === open ? '‹' : '›'; h.querySelector('.lbl').textContent = panelName(side);
+  h.title = `${panelName(side)} paneli (${side === 'left' ? 'B' : 'P'})`;
   try { localStorage.setItem(panelKey(side), open ? '1' : '0'); } catch { /* yok say */ }
   setTimeout(() => { onResize(); drawTimeline(); }, 220);
 }
 const panelOpen = (side) => document.body.classList.contains(side + '-open');
 $('#togLeft').onclick = $('#leftEdge').onclick = () => setPanel('left', !panelOpen('left'));
-$('#togRight').onclick = () => setPanel('right', !panelOpen('right'));
-const savedPanel = (s, d = s === 'right') => { try { const v = localStorage.getItem(panelKey(s)); return v === null ? d : v === '1'; } catch { return d; } };
+$('#togRight').onclick = $('#rightEdge').onclick = () => setPanel('right', !panelOpen('right'));
+const savedPanel = (s, d = false) => { try { const v = localStorage.getItem(panelKey(s)); return v === null ? d : v === '1'; } catch { return d; } };
 setPanel('left', savedPanel('left')); setPanel('right', savedPanel('right'));
 
 
