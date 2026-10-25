@@ -97,6 +97,7 @@ const MODE = { billboard: 0, stretched: 1, horizontal: 2, vertical: 3 };
 
 // ── tek emitter: parçacık havuzu + Unity modül davranışı
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+const _Ei = new THREE.Matrix4(), _qe = new THREE.Quaternion(), _qa = new THREE.Quaternion(), _pa = new THREE.Vector3(), _pi = new THREE.Vector3(), _pc = new THREE.Vector3(), _si = new THREE.Vector3();
 class EmitterSim {
   // upe: { shader, values } — renderer.material kütüphaneden çözüldüyse; yoksa doku/karışım/parlaklıkla yerleşik çizim
   constructor(em, seed, onTexture, upe = null) {
@@ -139,7 +140,7 @@ class EmitterSim {
     this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false;
     this.reset();
   }
-  reset() { const m = this.em.main; this.n = 0; this.te = m.prewarm && m.looping ? 0 : -m.startDelay; this.accum = 0; this.rng = mulberry32(this.seed); this.prewarmed = false; } // prewarm'da gecikme yok sayılır (Unity gibi)
+  reset() { const m = this.em.main; this.n = 0; this.te = m.prewarm && m.looping ? 0 : -m.startDelay; this.accum = 0; this.rng = mulberry32(this.seed); this.prewarmed = false; this.prevOk = false; this.prevP ??= new THREE.Vector3(); this.prevQ ??= new THREE.Quaternion(); } // prewarm'da gecikme yok sayılır (Unity gibi)
   dispose() { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); this.mat.dispose(); }
 
   // şekilden doğum noktası ve yönü (emitter yereli)
@@ -238,7 +239,14 @@ class EmitterSim {
       D[o] = (vx + ex) * sm; D[o + 1] = (vy + ey) * sm; D[o + 2] = (vz + ez) * sm;
       P[o] += D[o] * dt; P[o + 1] += D[o + 1] * dt; P[o + 2] += D[o + 2] * dt;
     }
-    // ── yayım
+    // ── yayım. Unity gibi: hareket eden dünya emitter'ında kare içindeki doğumlar önceki ve şimdiki emitter konumu arasına yayılır
+    // (hızlı kılıç izi boncuklanmaz). Işınlanma (>2 m/kare) aradeğerlenmez.
+    let lerpE = false;
+    if (this.world) {
+      _pc.setFromMatrixPosition(E);
+      if (this.prevOk && this.prevP.distanceToSquared(_pc) < 4) { lerpE = true; _pa.copy(this.prevP); _qa.copy(this.prevQ); _si.setFromMatrixScale(E); }
+      this.prevP.copy(_pc); this.prevQ.copy(EQ); this.prevOk = true;
+    }
     const te0 = this.te, te1 = te0 + dt; this.te = te1;
     if (te1 <= 0) return;
     const dur = m.duration, a0 = Math.max(0, te0);
@@ -253,7 +261,11 @@ class EmitterSim {
         if (bt >= lo && bt < hi && bt < dur + 1e-9) count += Math.round(lerp(b.count[0], b.count[1], this.rng()));
       }
     }
-    for (let j = 0; j < count; j++) this.spawn(E, EQ, (1 - (j + 0.5) / count) * dt);
+    for (let j = 0; j < count; j++) {
+      const f = (j + 0.5) / count;
+      if (lerpE) { _pi.lerpVectors(_pa, _pc, f); _qe.slerpQuaternions(_qa, EQ, f); this.spawn(_Ei.compose(_pi, _qe, _si), _qe, (1 - f) * dt); }
+      else this.spawn(E, EQ, (1 - f) * dt);
+    }
   }
 
   // çizim tamponlarını doldur (alfa karışımda kameradan uzaktan yakına sıralı)
