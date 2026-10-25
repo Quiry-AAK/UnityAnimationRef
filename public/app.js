@@ -151,6 +151,8 @@ function buildRig(root, modelName) {
   // FBXLoader, skin için aynı isimli çocuk "kopya" kemikler üretir (parent ile aynı ad); bunları atla
   root.traverse((o) => { if (o.isBone && !(o.parent?.isBone && o.parent.name === o.name) && !byName.has(o.name)) { const e = { name: o.name, obj: o, parent: o.parent?.isBone ? o.parent.name : null, restQ: o.quaternion.toArray(), restP: o.position.toArray() }; bones.push(e); byName.set(o.name, e); } });
   if (!bones.length) throw new Error('Modelde kemik (skeleton) bulunamadı');
+  // skinned mesh sınır küresi rest pozda kalır; karakter orijinden uzaklaşınca (atılma/zıplama) gövde kırpılıyordu
+  root.traverse((o) => { if (o.isSkinnedMesh) o.frustumCulled = false; });
   for (const b of bones) { const q = new THREE.Quaternion(...b.restQ); b.restWQ = b.parent ? byName.get(b.parent).restWQ.clone().multiply(q) : q; }
   stage.updateMatrixWorld(true);
   const box = new THREE.Box3();
