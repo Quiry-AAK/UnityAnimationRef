@@ -226,7 +226,7 @@ export function buildParticlePrograms(shader) {
 ${user([1, 2])}
 #line 10000 0
 attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF;
-uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles;
+uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles; uniform mat3 uAlign;
 varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
 vec3 upeLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
@@ -248,6 +248,8 @@ void main() {
     vec3 tc = cameraPosition - p; tc.y = 0.0; vec3 f = length(tc) > 1e-5 ? normalize(tc) : vec3(0.0, 0.0, 1.0);
     vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
     wp = p + (r * rc.x + vec3(0.0, 1.0, 0.0) * rc.y) * size; nW = f;
+  } else if (uMode == 4) {
+    wp = (modelMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0)).xyz; nW = normalize(mat3(modelMatrix) * (uAlign * vec3(0.0, 0.0, -1.0)));
   } else {
     vec4 mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += rc * size;
     wp = (iv * mv).xyz; nW = mat3(iv) * vec3(0.0, 0.0, 1.0);

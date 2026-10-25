@@ -45,7 +45,7 @@ export function defaultEmitter() {
     sizeOverLifetime: { enabled: false, curve: [[0, 1], [1, 1]] },
     rotationOverLifetime: { enabled: false, angularVelocity: [0, 0] },
     textureSheet: { enabled: false, tilesX: 1, tilesY: 1, cycles: 1, randomStart: false },
-    renderer: { mode: 'billboard', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
+    renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
   };
 }
 
@@ -128,6 +128,7 @@ export const MODULES = [
   ] },
   { key: 'renderer', label: 'Görünüm', always: true, fields: [
     ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)']] }],
+    ['alignment', 'enum', 'Hizalama (billboard)', { options: [['view', 'Kameraya bakar (View)'], ['local', 'Emitter dönüşüne göre (Local, 3B)']] }],
     ['material', 'material', 'Materyal (kütüphaneden)'],
     ['texture', 'texture', 'Doku'],
     ['blend', 'enum', 'Karışım', { options: [['additive', 'Toplamalı (ışık)'], ['alpha', 'Alfa (duman)']] }],
@@ -410,6 +411,9 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - sizeOverLifetime: curve [[t, çarpan]] (doğrusal). Son boyut = startSize × eğri.
 - rotationOverLifetime: angularVelocity[min,max] (°/sn)
 - textureSheet: tilesX, tilesY, cycles, randomStart (flipbook dokular için)
+- renderer.alignment: view|local (yalnız billboard). local = Unity ParticleSystemRenderSpace.Local: quad emitter'ın yerel XY
+  düzleminde durur (doku +X sağ, +Y yukarı; -Z tarafından bakınca aynasız, startRotation yerel Z etrafında saat yönü); kesik gibi
+  3B düzlemi olan şekiller için. Düzlemi emitter rotation belirler.
 - renderer: mode billboard|stretched|horizontal|vertical, texture (${Object.keys(TEXTURES).join(', ')} ya da vfx/textures/<ad>.png için <ad>),
   blend additive|alpha, intensity (HDR çarpanı, >1 bloom verir), lengthScale + velocityScale (stretched uzunluğu = boyut·lengthScale + hız·velocityScale), sortingOrder
 - renderer.material: kütüphaneden materyal adı (materials/<ad>.json, list_materials; '' = yok). Doluysa parçacık o materyalin

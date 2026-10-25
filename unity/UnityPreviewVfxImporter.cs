@@ -462,7 +462,8 @@ public static class UnityPreviewVfxImporter
         pr.lengthScale = Num(r, "lengthScale", 2f);
         pr.velocityScale = Num(r, "velocityScale", 0f);
         pr.cameraVelocityScale = 0f;
-        pr.alignment = ParticleSystemRenderSpace.View;
+        // local: quad emitter'ın XY düzleminde (kesik gibi 3B düzlemli şekiller); yalnız billboard'da anlamlı
+        pr.alignment = mode == "billboard" && Lower(Str(r, "alignment", "view")) == "local" ? ParticleSystemRenderSpace.Local : ParticleSystemRenderSpace.View;
         pr.minParticleSize = 0f; pr.maxParticleSize = 10f; // önizleme ekran boyutunu kırpmaz; Unity varsayılanı (0.5) yakın planda büyük parlamaları keserdi
         pr.sortingOrder = Int(r, "sortingOrder", 0);
         bool additive = Lower(Str(r, "blend", "additive")) != "alpha";

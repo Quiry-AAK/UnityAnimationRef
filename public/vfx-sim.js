@@ -53,7 +53,7 @@ export const clearTextureCache = () => { texCache.clear(); texReady.clear(); };
 // ── shader: billboard / stretched / horizontal / vertical, flipbook, sRGB köşe rengi → doğrusal × intensity (Unity Linear proje gibi)
 const VERT = /* glsl */`
 attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF;
-uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles;
+uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles; uniform mat3 uAlign;
 varying vec2 vUv; varying vec4 vCol;
 void main() {
   vec2 c = position.xy; float size = iSRF.x, rot = iSRF.y;
@@ -73,6 +73,8 @@ void main() {
     vec3 tc = cameraPosition - wp.xyz; tc.y = 0.0; vec3 f = length(tc) > 1e-5 ? normalize(tc) : vec3(0.0, 0.0, 1.0);
     vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
     wp.xyz += (r * rc.x + vec3(0.0, 1.0, 0.0) * rc.y) * size; mv = viewMatrix * wp;
+  } else if (uMode == 4) {
+    mv = modelViewMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0); // Local hizalama: emitter'ın XY düzlemi (Unity koordinatı, ayna modelMatrix'te)
   } else {
     mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += rc * size;
   }
@@ -118,8 +120,11 @@ class EmitterSim {
     g.setAttribute('iPos', ia(3)); g.setAttribute('iVel', ia(3)); g.setAttribute('iCol', ia(4)); g.setAttribute('iSRF', ia(4));
     g.instanceCount = 0;
     const r = em.renderer, ts = em.textureSheet;
-    const quad = { uMode: { value: MODE[r.mode] ?? 0 }, uLengthScale: { value: r.lengthScale }, uVelScale: { value: r.velocityScale },
-      uTiles: { value: new THREE.Vector2(ts.enabled ? ts.tilesX : 1, ts.enabled ? ts.tilesY : 1) } };
+    const local = r.mode === 'billboard' && r.alignment === 'local';
+    const quad = { uMode: { value: local ? 4 : MODE[r.mode] ?? 0 }, uLengthScale: { value: r.lengthScale }, uVelScale: { value: r.velocityScale },
+      uTiles: { value: new THREE.Vector2(ts.enabled ? ts.tilesX : 1, ts.enabled ? ts.tilesY : 1) },
+      uAlign: { value: new THREE.Matrix3() } }; // Local: dünya simülasyonunda emitter dönüşü (step'te), yerelde birim
+    this.quad = quad; this.alignM = new THREE.Matrix4();
     if (upe) {
       const u = createUPEParticleMaterial(upe.shader, upe.values, quad, { onTexture });
       this.mat = u.material; this.sortBack = ['alpha', 'premultiply', 'multiply'].includes(u.blend);
@@ -196,6 +201,7 @@ class EmitterSim {
   step(dt, E, EQ) {
     const em = this.em, m = em.main;
     if (!this.prewarmed) { this.prewarmed = true; if (m.prewarm && m.looping && this.te >= 0) { const te = this.te; for (let t = 0; t < m.duration; t += dt) this.step(dt, E, EQ); this.te = te; } }
+    if (this.world) this.quad.uAlign.value.setFromMatrix4(this.alignM.makeRotationFromQuaternion(EQ)); // Unity Local: o anki emitter dönüşü
     // ── mevcut parçacıklar
     _qi.copy(EQ).invert();
     const toSpace = (vec, space, out) => { out.set(...vec); if (space === 'world' && !this.world) out.applyQuaternion(_qi); else if (space === 'local' && this.world) out.applyQuaternion(EQ); return out; };
