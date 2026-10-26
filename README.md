@@ -8,6 +8,7 @@ Modlar (üst bardaki anahtar):
 - **VFX** — Unity ParticleSystem'e birebir karşılık gelen çok katmanlı parçacık efektleri → Unity prefab
 - **Materyal** — Unity materyalleri (oyunun shader'ları, URP Lit/Unlit/Particles ya da özel shader) küre/kahraman/eşya üzerinde → Unity `.mat`
 - **Shader** — özel shader'lar UPE-SL ile (Unity HLSL alt kümesi): Unity'de aynen URP shader'ı olur, editör GLSL'e çevirip önizler → Unity `.shader`
+- **Model** — GLB/FBX/OBJ görüntüleyici: ölçü, üçgen, parça, materyal, doku, kemik bilgisi; kil/normal/UV/tel kafes/iskelet görünümleri, gömülü animasyon (yalnız görüntüleme, Unity'ye gönderim yok)
 
 ## Kurulum (herhangi bir klasörde)
 ```bash
@@ -29,11 +30,11 @@ otomatik başlar (her chat kendi portunu alır).
 Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md) · Sözleşmeler: [docs/VFX.md](docs/VFX.md), [docs/MATERIAL.md](docs/MATERIAL.md)
 
 ## Klasörler
-- `models/` karakterler (repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX)
+- `models/` karakterler (repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX) · `meshes/` Model sekmesinde görüntülenen genel modeller (repoda yok)
 - `animations/` animasyon kütüphanesi (json repoda, fbx değil) · `vfx/` efekt kütüphanesi (json) · `vfx/textures/` parçacık dokuları (png)
 - `shaders/` özel shader'lar (json) · `materials/` materyaller (json) · `materials/textures/` materyal dokuları (png)
 - `exports/` çıktılar · `unity/` Unity editör scriptleri (gönderimde projeye otomatik kurulur)
-- `public/` editör (app.js animasyon + mod sistemi, vfx*.js VFX, material.js Materyal/Shader modları, shader-compile.js UPE-SL→GLSL,
+- `public/` editör (app.js animasyon + mod sistemi, vfx*.js VFX, material.js Materyal/Shader modları, model.js Model modu, shader-compile.js UPE-SL→GLSL,
   shader-schema.js + vfx-schema.js formatlar, shader-builtins.js hazır shader portları — MCP de şema dosyalarını kullanır)
 - `lib/shader-hlsl.js` UPE shader → Unity URP `.shader` üretici
 - `tools/` yardımcılar: `gen-vfx-textures.mjs`, `gen-material-textures.mjs` (yerleşik dokular), `mcp-smoke.mjs` (MCP uçtan uca testi), `hlsl-gen-test.mjs`, animasyon üreteçleri
@@ -45,4 +46,5 @@ Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md) · 
 - Materyal/Shader: `material_reference` (önce bu), `list/get/new/set/update/save/load/delete_material`, `list/get/new/set/update/save/load/delete_shader`
   (set/update shader editörün GLSL derleme sonucunu döner), `assign_material` (kahramana/eşyaya giydir), `get/set_lighting`, `render_material`,
   `get_material_user_edits`, `get_shader_user_edits`, `list_material_textures`, `send_material_to_unity`, `send_shader_to_unity`
+- Model: `list_model_files`, `view_model` (ad ya da mutlak yol + görünüm ayarları; modelin bilgisini döner), `get_model_view`, `render_model`
 - Unity: `get_unity_info`, `set_unity_project`

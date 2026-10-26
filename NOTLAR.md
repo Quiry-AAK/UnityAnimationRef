@@ -61,6 +61,20 @@
   '@mesh' dokusu yalnız önizlemedir; Unity'de kullanılacak dokuyu `unityPath` ile ver.
 - Dokular `materials/textures/*.png`; yerleşikleri yeniden üretmek: `node tools/gen-material-textures.mjs`.
 
+## Model modu
+- GLB/glTF/FBX/OBJ görüntüleyici (yalnız inceleme; Unity'ye gönderim yok). **Solda** kütüphane üç grupta: Modeller (`meshes/`),
+  Karakterler (`models/`), Eşyalar (`props/`); arama kutusu, **Model yükle** ya da pencereye sürükle-bırak (`meshes/`'e kaydeder).
+- **Sağda:** Bilgi (dosya, ölçü G×Y×D m, birim, parça, üçgen, köşe, materyal, doku, kemik, gömülü animasyon, morph, UV'siz parça),
+  Görünüm (Doku | Kil | Normal | UV kontrol dokusu | Işıksız; tel kafes, iskelet, sınır kutusu, pivot eksenleri, 1,8 m boy referansı
+  kapsülü, ızgara, döner tabla, ortam yansıması, pozlama, arka plan, birim Otomatik/m/cm), Animasyonlar, Parçalar (göster/gizle,
+  ◎ odakla; viewport'ta parçaya tıklamak da seçer), Materyaller + doku küçük resimleri.
+- Model gerçek pivotunda ve ölçüsünde durur (normalize edilmez). Birim "Otomatik": en büyük boyut 20'yi aşarsa santimetre sayılır (×0,01).
+  Pivot eksenleri Unity ekseninde: kırmızı +X, yeşil +Y, mavi +Z.
+- Gömülü animasyon varsa alt çubukta oynatılır (klip seçimi, zaman, hız); ilk klip kendiliğinden başlar, "bind pozu" seçilebilir.
+- Claude: `view_model { path:'C:/.../x.glb' }` (dosyayı `meshes/`'e kopyalar) ya da `{ name }` → editör Model sekmesine geçer, bilgi
+  yanıtta döner; `render_model` kontak sayfası; kullanıcı notları `get_model_view` ile okunur.
+- Kısayollar (Model): Space oynat/durdur · ←/→ ±1 kare · F odakla · Ctrl+Z / Ctrl+Y (görünüm ayarları).
+
 ## Arayüz
 - Üst bar: mod sekmeleri (her modun rengi ayrı), karakter seçimi, geri al/yinele, **💬 Claude'a not** (her modda; bağlamı kendisi ekler,
   "Bu hali referans al" Claude'un karşılaştırma noktasını günceller), **⇪ Unity'ye gönder** (hangi moddaysan onu gönderir;
@@ -71,7 +85,7 @@
 - İlk açılışta yardım penceresi gelir (F1 ile her zaman açılır).
 
 ## Kısayollar
-- Genel: F1 yardım · N Claude'a not · Ctrl+Enter Unity'ye gönder · Ctrl+F ayar ara · 1/2/3/4 mod · F odakla · B/P sol/sağ panel · Ctrl+Z / Ctrl+Y
+- Genel: F1 yardım · N Claude'a not · Ctrl+Enter Unity'ye gönder · Ctrl+F ayar ara · 1–5 mod · F odakla · B/P sol/sağ panel · Ctrl+Z / Ctrl+Y
 - Animasyon: Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı
 - VFX: Space oynat · Home baştan · ←/→ ±0.05 sn
 
