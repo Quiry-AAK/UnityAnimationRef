@@ -14,3 +14,5 @@ meshes/*
 !meshes/.gitkeep
 animations/*.fbx
 .ports/
+# heavy-attack-4.mjs ara çıktısı ve konsol kayıtları (geçici)
+tools/.heavy4_*
