@@ -1,6 +1,6 @@
 // Unity Preview Editor MCP sunucusu (stdio; eski adı Anim Ref). Editör sunucusuna (server.js) HTTP ile bağlanır; çalışmıyorsa başlatır.
 // Araçlar: animasyon (anahtar kare, eşya, Unity .anim) + VFX (parçacık efekti, kontak sayfası render, Unity prefab; docs/VFX.md)
-// + materyal/shader (UPE-SL shader, materyal, ışık, giydirme, Unity .mat/.shader; docs/MATERIAL.md).
+// + materyal/shader (UPE-SL shader, materyal, ışık, giydirme, Unity .mat/.shader; docs/MATERIAL.md) + model görüntüleyici (GLB/FBX/OBJ; Model sekmesi).
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -112,8 +112,19 @@ const shaderPathGet = (s, p) => { const m = /^properties\.([^.]+)(?:\.(.+))?$/.e
 const BUILTIN_EDIT_WARN = `Bu hazır (builtin) bir shader: değişiklikler yalnız önizlemede, Unity'ye .shader yazılmaz. Kalıcı/Unity'ye gidecek sürüm için save_shader { name:"<yeni_ad>" } ile özel kopya oluştur (UnityPreview/<yeni_ad>).`;
 const shownValue = (p, v) => (typeof v === 'string' && /^code\./.test(p) ? `(${v.length} karakter)` : v);
 
+// ── Model modu yardımcıları (bilgiyi editör ölçer; info biçimi public/model.js)
+const countOf = (v) => (Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.keys(v).length : v);
+const clipName = (c) => (typeof c === 'string' ? c : c?.name);
+const modelInfoSummary = (i) => (i && typeof i === 'object' ? { // büyük parts/textures listeleri olmadan
+  size: i.size, triangles: i.triangles, vertices: i.vertices, meshes: countOf(i.meshes ?? i.parts), materials: countOf(i.materials), textures: countOf(i.textures),
+  bones: countOf(i.bones), clips: Array.isArray(i.clips) ? i.clips.map(clipName) : i.clips,
+} : null);
+const modelViewSummary = (mv) => (mv ? { file: mv.file ?? null, view: mv.view ?? {}, info: modelInfoSummary(mv.info) } : null);
+const LIST_CAP = 100; // view_model yanıtında uzun listeler kırpılır (tamamı get_model_view'da)
+const capInfo = (i) => (i && typeof i === 'object' ? Object.fromEntries(Object.entries(i).map(([k, v]) => [k, Array.isArray(v) && v.length > LIST_CAP ? [...v.slice(0, LIST_CAP), `… +${v.length - LIST_CAP} daha (get_model_view)`] : v])) : i);
+
 server.registerTool('get_status', {
-  description: 'Editörün durumu: açık mod (anim|vfx|material|shader), model, kemik listesi, animasyon özeti, VFX özeti (ad, süre, emitter başına ad/enabled/rateOverTime/burst sayısı/doku), materyal özeti (ad, shader, önizleme hedefi, değerler), shader özeti (ad, unityName, builtin, özellikler, renderState), giydirmeler (materialOverrides), sahne ışığı, mod başına kullanıcı notu sayısı. Önce bunu çağır.',
+  description: 'Editörün durumu: açık mod (anim|vfx|material|shader|model), model, kemik listesi, animasyon özeti, VFX özeti (ad, süre, emitter başına ad/enabled/rateOverTime/burst sayısı/doku), materyal özeti (ad, shader, önizleme hedefi, değerler), shader özeti (ad, unityName, builtin, özellikler, renderState), giydirmeler (materialOverrides), sahne ışığı, Model sekmesi özeti (modelView: dosya, görünüm ayarları, boyut/üçgen/köşe/parça/materyal/kemik sayısı, animasyon adları), mod başına kullanıcı notu sayısı. Önce bunu çağır.',
   inputSchema: {},
 }, async () => {
   await ensureServer(); const st = await get('/api/state'); const ping = await get('/api/ping');
@@ -126,9 +137,9 @@ server.registerTool('get_status', {
     vfx: vfxSummary(curVfx(st)),
     material: mat ? { ...materialSummary(mat.material), shaderFound: !!mat.shader } : null,
     shader: shaderSummary(curShader(st)),
-    overrides: st.materialOverrides || {}, lighting: normalizeLighting(st.lighting),
+    overrides: st.materialOverrides || {}, lighting: normalizeLighting(st.lighting), modelView: modelViewSummary(st.modelView),
     pendingNotes: notesOf(st, 'anim').length, pendingVfxNotes: notesOf(st, 'vfx').length,
-    pendingMaterialNotes: notesOf(st, 'material').length, pendingShaderNotes: notesOf(st, 'shader').length,
+    pendingMaterialNotes: notesOf(st, 'material').length, pendingShaderNotes: notesOf(st, 'shader').length, pendingModelNotes: notesOf(st, 'model').length,
   });
 });
 
@@ -553,8 +564,8 @@ server.registerTool('list_vfx_textures', {
 });
 
 server.registerTool('set_editor_mode', {
-  description: 'Kullanıcının ekranındaki editör modunu değiştirir: anim (animasyon) | vfx (parçacık efekti) | material (materyal) | shader (shader kodu). set_vfx/update_vfx/load_vfx VFX moduna, new_material/set_material/update_material/load_material Materyal moduna, new_shader/set_shader/update_shader/load_shader Shader moduna zaten geçirir; bunu yalnız kullanıcıya başka modu göstermek için kullan.',
-  inputSchema: { mode: z.enum(['anim', 'vfx', 'material', 'shader']) },
+  description: 'Kullanıcının ekranındaki editör modunu değiştirir: anim (animasyon) | vfx (parçacık efekti) | material (materyal) | shader (shader kodu) | model (model görüntüleyici: GLB/FBX/OBJ). set_vfx/update_vfx/load_vfx VFX moduna, new_material/set_material/update_material/load_material Materyal moduna, new_shader/set_shader/update_shader/load_shader Shader moduna, view_model Model moduna zaten geçirir; bunu yalnız kullanıcıya başka modu göstermek için kullan.',
+  inputSchema: { mode: z.enum(['anim', 'vfx', 'material', 'shader', 'model']) },
 }, async ({ mode }) => { await ensureServer(); const r = await post('/api/claude/mode', { mode }); return text({ mode: r.mode, browserConnected: r.clients > 0 }); });
 
 server.registerTool('send_vfx_to_unity', {
@@ -595,6 +606,7 @@ ${templateList()}
 - Claude'un her new_/set_/update_/load_ çağrısı yeni referanstır; kullanıcı editörde düzeltince get_material_user_edits / get_shader_user_edits (fark + notlar) → farkı öğren; acknowledge:true referansı yeniler.
 - Önizlemede giydirme: assign_material { target:'hero' | 'hero:<mesh>' | 'prop:<id>', material } (tüm modlarda görünür). Işık: get_lighting / set_lighting.
 - Bitince: save_shader (özelse) → save_material → send_material_to_unity { name } (özel shader'ın .shader'ı da gider; Unity: Assets/UnityPreview/Materials/<ad>.mat). Yalnız shader: send_shader_to_unity { name } (Unity derleme hatalarını döndürür).
+- Model sekmesi (GLB/FBX/OBJ görüntüleyici): view_model { path:'C:/.../x.glb' } → render_model ile bak → kullanıcı editörde inceler (notları get_model_view).
 `);
 });
 
@@ -858,6 +870,79 @@ server.registerTool('send_shader_to_unity', {
     + 'name: ad ya da unityName (verilmezse editördeki shader; editörde aynı adlı kaydedilmemiş çalışma kopyası varsa o gider). İçerik değişmediyse Unity yeniden derlemez: unchanged:true + son bilinen durum döner. Önce set_unity_project.',
   inputSchema: { name: z.string().optional() },
 }, async ({ name }) => { await ensureServer(); return text(await post('/api/unity/send-shader', { name })); });
+
+// ── Model modu (model görüntüleyici: GLB/FBX/GLTF/OBJ). Modeli editör (tarayıcı) yükler ve ölçer; bilgi /api/model-view ile döner
+const MODEL_DIR_NAMES = ['meshes', 'models', 'props'];
+const modelViewSchema = z.object({
+  shading: z.enum(['texture', 'clay', 'normals', 'uv', 'unlit']).optional().describe('Doku | Kil | Normaller | UV kontrol | Işıksız'),
+  wireframe: z.boolean().optional().describe('Tel kafes (üstte)'), skeleton: z.boolean().optional().describe('İskelet'),
+  bounds: z.boolean().optional().describe('Sınır kutusu + ölçüler'), axes: z.boolean().optional().describe('Orijin/pivot eksenleri'),
+  grid: z.boolean().optional().describe('Zemin ızgarası'), scaleRef: z.boolean().optional().describe('1,8 m boy referansı'),
+  rotate: z.boolean().optional().describe('Döner tabla'), env: z.boolean().optional().describe('Ortam yansıması (IBL)'),
+  exposure: z.number().min(0).optional().describe('Pozlama'), background: z.string().optional().describe('Arka plan rengi (#hex)'),
+  unit: z.enum(['auto', 'm', 'cm']).optional().describe('Dosyanın birimi (auto: otomatik)'),
+  clip: z.string().nullable().optional().describe('Gömülü animasyon adı (null: animasyonsuz / bind pozu)'),
+  speed: z.number().optional().describe('Oynatma hızı çarpanı'), paused: z.boolean().optional().describe('Duraklat (time ile o karede durur)'),
+  time: z.number().min(0).optional().describe('Animasyon anı (sn)'), hidden: z.array(z.string()).optional().describe('Gizlenecek parça (mesh) adları'),
+});
+
+server.registerTool('list_model_files', {
+  description: 'Model sekmesinde görüntülenebilecek modeller (GLB/FBX/GLTF/OBJ): meshes/ genel modeller (çevre, düşman vb.), models/ karakterler, props/ eşyalar. Yanıt { meshes:[...], models:[...], props:[...] }; view_model { name, dir } ile aç.',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(await get('/api/model-files')); });
+
+server.registerTool('view_model', {
+  description: 'Editörü Model sekmesine geçirir ve modeli yükler. path: mutlak dosya yolu (GLB/FBX/GLTF/OBJ) → meshes/\'e kopyalanır (aynı ad üzerine yazılır; .gltf harici .bin/doku kullanıyorsa GLB tercih et). name: kütüphanedeki dosya (list_model_files; uzantısız da olur), dir verilmezse meshes → models → props sırasıyla aranır. '
+    + 'name/path yoksa yalnız görünüm ayarlarını değiştirir (view birleştirilir, verilmeyenler korunur; model değişince clip/hidden/time/paused sıfırlanır, clip verilmezse ilk gömülü animasyon oynar).Yanıt modelin bilgisini içerir (editör ölçer: boyut m, üçgen, köşe, parça, materyal, doku, kemik, gömülü animasyonlar); editör 60 sn içinde yükleyemezse timeout:true. '
+    + 'Kullanıcıya göstermek için bundan sonra editörü tarayıcıda (uygulama içi tarayıcı) açık tut; görsel kontrol: render_model, kullanıcının notları: get_model_view.',
+  inputSchema: {
+    name: z.string().optional().describe('Dosya adı (list_model_files), ör. "Elarion_Katana.glb" ya da "Elarion_Katana"'),
+    dir: z.enum(MODEL_DIR_NAMES).optional().describe('Yalnız bu klasörde ara'),
+    path: z.string().optional().describe('Mutlak dosya yolu, ör. "C:/Elarion/Art/Arena/sutun.glb" (meshes/\'e kopyalanır)'),
+    view: modelViewSchema.optional().describe('Görünüm ayarları (verilenler mevcutların üstüne yazılır)'),
+  },
+}, async ({ name, dir, path: src, view }) => {
+  await ensureServer();
+  const r = await fetch(BASE + '/api/claude/model-view', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, dir, path: src, view }) });
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error || r.statusText) + (j.files ? ' — mevcut: ' + Object.entries(j.files).map(([d, l]) => `${d}/ ${l.join(', ') || '—'}`).join(' · ') : ''));
+  const out = { ok: !j.error && !j.timeout, file: j.file, view: j.view, browserConnected: j.clients > 0 };
+  if (!j.clients) out.note = `Editör tarayıcıda açık değil (${BASE}); açılınca son model yüklenir.`;
+  else if (j.timeout) out.note = 'Editör 60 sn içinde modeli yükleyip bildirmedi (dosya çok büyük mü? Model sekmesini destekleyen editör sürümü açık mı?). Sonra get_model_view ile bak.';
+  else { out.info = capInfo(j.info); if (j.error) out.error = j.error; }
+  if (!j.file) out.note = (out.note ? out.note + ' ' : '') + 'Açık model yok: name (list_model_files) ya da path ver.';
+  if (j.warning) out.warning = j.warning;
+  return text(out);
+});
+
+server.registerTool('get_model_view', {
+  description: 'Model sekmesinin tam durumu: açık model (file: { dir, name }), görünüm ayarları (view), editörün ölçtüğü tam bilgi (info: boyut, üçgen, köşe, parçalar, materyaller, dokular, kemikler, animasyonlar) + Model modunda yazılan kullanıcı notları. Kullanıcı modelde bir şey gösterdiğinde / not yazdığında çağır. acknowledge:true Model notlarını temizler.',
+  inputSchema: { acknowledge: z.boolean().default(false).describe('true: Model notlarını temizle') },
+}, async ({ acknowledge }) => {
+  await ensureServer(); const st = await get('/api/state'); const mv = st.modelView || {};
+  const result = { file: mv.file ?? null, view: mv.view ?? {}, info: mv.info ?? null, notes: notesOf(st, 'model').map(({ mode, ...n }) => n) };
+  if (!result.file) result.note = 'Model sekmesinde model yok; view_model { name | path } ile aç.';
+  else if (!result.info) result.note = 'Model bilgisi henüz yok: editör modeli yükleyip bildirmedi (tarayıcıda açık mı?).';
+  if (acknowledge) await post('/api/notes/clear?mode=model');
+  return text(result);
+});
+
+server.registerTool('render_model', {
+  description: 'Model sekmesindeki modeli kontak sayfası PNG\'si olarak çizer (bakış açıları yan yana). Editör tarayıcıda (uygulama içi tarayıcı) açık olmalı; önce view_model. views: front | side | back | top | threequarter (varsayılan ["threequarter","front","side"]; uzaklık otomatik, model kadraja sığar) ya da camera { position, target } (metre, Unity eksenleri: +X sağ, +Y yukarı, +Z ileri) tek kare. '
+    + 'view: yalnız bu render için geçici görünüm ayarları (ör. { shading:"clay", wireframe:true } topoloji, { shading:"uv" } UV kontrolü, { bounds:true, scaleRef:true } ölçek; editördeki ayarlar değişmez). time: animasyon anı (sn; view.clip ile klip seçilir). size: hücre boyu (px).',
+  inputSchema: {
+    views: z.array(z.enum(['front', 'side', 'back', 'top', 'threequarter'])).min(1).max(8).optional(), size: z.number().int().min(128).max(1024).default(320).describe('Hücre boyu (px)'),
+    camera: z.object({ position: vec3, target: vec3.optional() }).optional().describe('Tek kare kamera (metre, Unity eksenleri)'),
+    view: modelViewSchema.optional().describe('Yalnız bu render için geçici görünüm ayarları'), time: z.number().min(0).optional().describe('Animasyon anı (sn)'),
+  },
+}, async ({ views, size, camera, view, time }) => {
+  await ensureServer(); const ping = await get('/api/ping');
+  if (!ping.clients) throw new Error(`Editör tarayıcıda açık değil (${BASE}). render_model görüntüyü tarayıcıdaki editör çizer: editörü uygulama içi tarayıcıda aç, sonra tekrar dene.`);
+  if (!(await get('/api/state')).modelView?.file) throw new Error('Model sekmesinde model yok. Önce view_model { name | path }.');
+  const r = await post('/api/claude/render', { kind: 'model', views: views ?? (camera ? undefined : ['threequarter', 'front', 'side']), size, camera, view, time });
+  if (!r.png) throw new Error('Editör görüntü döndürmedi (Model sekmesini destekleyen editör sürümü açık mı?).');
+  return { content: [{ type: 'image', data: r.png.replace(/^data:image\/png;base64,/, ''), mimeType: 'image/png' }] };
+});
 
 await ensureServer().catch(() => {});
 await server.connect(new StdioServerTransport());

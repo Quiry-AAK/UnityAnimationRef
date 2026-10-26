@@ -1,5 +1,5 @@
 // Unity Preview Editor sunucusu (eski adı Anim Ref): statik dosyalar + state API + SSE (editör <-> MCP köprüsü).
-// Modlar: animasyon + VFX (docs/VFX.md) + materyal/shader (docs/MATERIAL.md). Unity'ye .anim, VFX prefab, .mat/.shader gönderimi.
+// Modlar: animasyon + VFX (docs/VFX.md) + materyal/shader (docs/MATERIAL.md) + model görüntüleyici (GLB/FBX/OBJ). Unity'ye .anim, VFX prefab, .mat/.shader gönderimi.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,23 +22,25 @@ const VFX_TEX_DIR = path.join(VFX_DIR, 'textures'); // parçacık dokuları: vfx
 const SHADERS_DIR = path.join(ROOT, 'shaders'); // özel shader'lar: shaders/<ad>.json (builtin'ler kodda: public/shader-builtins.js)
 const MAT_DIR = path.join(ROOT, 'materials'); // materyaller: materials/<ad>.json
 const MAT_TEX_DIR = path.join(MAT_DIR, 'textures'); // materyal dokuları: materials/textures/<ad>.png
-for (const d of [ANIMS_DIR, PROPS_DIR, VFX_DIR, VFX_TEX_DIR, SHADERS_DIR, MAT_DIR, MAT_TEX_DIR]) fs.mkdirSync(d, { recursive: true });
+const MESHES_DIR = path.join(ROOT, 'meshes'); // Model modunda görüntülenen genel modeller: çevre, düşman vb. (meshes/<ad>.glb|fbx|gltf|obj)
+for (const d of [ANIMS_DIR, PROPS_DIR, VFX_DIR, VFX_TEX_DIR, SHADERS_DIR, MAT_DIR, MAT_TEX_DIR, MESHES_DIR]) fs.mkdirSync(d, { recursive: true });
 const safeName = (n) => path.basename(String(n || '')).replace(/[^\w .-]+/g, '_');
 fs.mkdirSync(MODELS_DIR, { recursive: true });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript',
   '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.fbx': 'application/octet-stream',
-  '.glb': 'model/gltf-binary', '.map': 'application/json',
+  '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.obj': 'text/plain; charset=utf-8', '.map': 'application/json',
 };
 
 // mode: editörün açık modu; vfx: editördeki efekt; vfxBaseline: Claude'un son verdiği hâl (kullanıcı farkı buna göre)
 // material/shader: editördeki materyal/shader (+ *Baseline aynı mantık); lighting: ortak sahne ışığı; materialOverrides: { 'hero'|'hero:<mesh>'|'prop:<id>': materyal }
+// modelView: Model sekmesi { file: { dir:'meshes'|'models'|'props', name } | null, view: görünüm ayarları, info: editörün ölçtüğü model bilgisi | null }
 let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0, mode: 'anim', vfx: null, vfxBaseline: null,
-  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {} };
+  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {}, modelView: null };
 fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
 try { state = { ...state, ...JSON.parse(fs.readFileSync(fs.existsSync(STATE_FILE) ? STATE_FILE : MAIN_STATE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
-const MODES = ['anim', 'vfx', 'material', 'shader'];
+const MODES = ['anim', 'vfx', 'material', 'shader', 'model'];
 if (!MODES.includes(state.mode)) state.mode = 'anim';
 const normOverrides = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' && !Array.isArray(o) ? o : {}).filter(([k, v]) => k && typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()]));
 state.lighting = normalizeLighting(state.lighting); state.materialOverrides = normOverrides(state.materialOverrides);
@@ -345,6 +347,17 @@ async function unitySendShader({ name }) { // yalnız özel shader: .shader yaz,
   return out;
 }
 
+// ── Model modu (model görüntüleyici): meshes/ genel modeller, models/ karakterler, props/ eşyalar
+const MODEL_DIRS = { meshes: MESHES_DIR, models: MODELS_DIR, props: PROPS_DIR }; // arama sırası: meshes → models → props
+const MODEL_EXT = /\.(fbx|glb|gltf|obj)$/i;
+const listModelFiles = () => Object.fromEntries(Object.entries(MODEL_DIRS).map(([k, d]) => [k, fs.readdirSync(d).filter((f) => MODEL_EXT.test(f) && fs.statSync(path.join(d, f)).isFile()).sort()]));
+const findModelFile = (name, dir) => { // ad (uzantılı ya da uzantısız, büyük/küçük harf duyarsız) → { dir, name } | null
+  const files = listModelFiles(); const k = lc(path.basename(String(name ?? ''))); const bare = (f) => lc(f).replace(MODEL_EXT, '');
+  for (const d of dir ? [dir] : Object.keys(MODEL_DIRS)) { const hit = files[d].find((f) => lc(f) === k) || files[d].find((f) => bare(f) === k); if (hit) return { dir: d, name: hit }; }
+  return null;
+};
+const sameModelFile = (a, b) => !!a && !!b && a.dir === b.dir && a.name === b.name;
+
 const clients = new Set();
 const emit = (event, data) => {
   const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -354,6 +367,7 @@ const emit = (event, data) => {
 const pendingRenders = new Map();
 const pendingGifs = new Map();
 const pendingCompiles = new Map(); // shader-compile id → çözücü (editör GLSL derleme sonucu)
+const pendingModelViews = new Map(); // model-view id → çözücü (editör modeli yükleyip /api/model-view ile bildirir)
 
 const listAnims = () => fs.readdirSync(ANIMS_DIR).filter((f) => /\.(json|fbx)$/i.test(f)).map((f) => {
   const full = path.join(ANIMS_DIR, f); const st = fs.statSync(full); const o = { file: f, name: f.replace(/\.(json|fbx)$/i, ''), kind: /\.fbx$/i.test(f) ? 'fbx' : 'json', modified: st.mtimeMs };
@@ -381,6 +395,7 @@ const staticMaps = [
   ['/animations/', ANIMS_DIR + path.sep],
   ['/vfx-textures/', VFX_TEX_DIR + path.sep],
   ['/material-textures/', MAT_TEX_DIR + path.sep],
+  ['/meshes/', MESHES_DIR + path.sep],
   ['/', path.join(ROOT, 'public') + path.sep],
 ];
 
@@ -664,6 +679,54 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/unity/send-material' && req.method === 'POST') return send(res, 200, await unitySendMaterial(await readJson(req)));
     if (p === '/api/unity/send-shader' && req.method === 'POST') return send(res, 200, await unitySendShader(await readJson(req)));
+    // ── Model modu: dosya listesi, yükleme, editörün bildirimi, Claude'un view_model isteği
+    if (p === '/api/model-files' && req.method === 'GET') return send(res, 200, listModelFiles());
+    if (p === '/api/upload-mesh' && req.method === 'POST') { // ham dosya baytı → meshes/<ad>
+      const name = safeName(url.searchParams.get('name'));
+      if (!MODEL_EXT.test(name)) return send(res, 400, { error: `Desteklenmeyen model dosyası: ${name || '(ad yok)'} (fbx|glb|gltf|obj)` });
+      fs.writeFileSync(path.join(MESHES_DIR, name), await readBody(req));
+      return send(res, 200, { name });
+    }
+    if (p === '/api/model-view' && req.method === 'POST') { // editör bildirir (olay yok); id varsa bekleyen view_model isteğini çözer
+      const b = await readJson(req);
+      state.modelView = { file: b.file || null, view: b.view && typeof b.view === 'object' ? b.view : {}, info: b.info || null }; save();
+      if (b.id) { pendingModelViews.get(b.id)?.(b); pendingModelViews.delete(b.id); }
+      return send(res, 200, { ok: true });
+    }
+    if (p === '/api/claude/model-view' && req.method === 'POST') { // MCP: path (mutlak; meshes/'e kopyalanır) | name (+dir) | yalnız view; Model moduna geçer
+      const b = await readJson(req); const prev = state.modelView; let file = prev?.file || null; let warning;
+      if (b.dir != null && !Object.hasOwn(MODEL_DIRS, b.dir)) return send(res, 400, { error: `Geçersiz klasör: ${b.dir} (${Object.keys(MODEL_DIRS).join('|')})` });
+      if (b.path) {
+        const raw = String(b.path).trim().replace(/^"|"$/g, '');
+        if (!path.isAbsolute(raw)) return send(res, 400, { error: 'path mutlak dosya yolu olmalı: ' + raw });
+        const src = path.resolve(raw);
+        if (!fs.existsSync(src)) return send(res, 404, { error: 'Dosya bulunamadı: ' + src });
+        if (!fs.statSync(src).isFile()) return send(res, 400, { error: 'Dosya değil: ' + src });
+        const name = safeName(path.basename(src));
+        if (!MODEL_EXT.test(name)) return send(res, 400, { error: `Desteklenmeyen model biçimi: ${path.extname(src) || '(uzantı yok)'} (fbx|glb|gltf|obj)` });
+        const dst = path.join(MESHES_DIR, name); if (path.relative(src, dst)) fs.copyFileSync(src, dst); // kaynak zaten meshes/<ad> ise kopyalanmaz
+        file = { dir: 'meshes', name };
+        if (/\.gltf$/i.test(name)) warning = '.gltf yalnız kendisi kopyalandı; harici .bin/doku dosyaları kullanıyorsa model eksik yüklenir (tek dosya GLB tercih et).';
+      } else if (b.name) {
+        file = findModelFile(b.name, b.dir);
+        if (!file) return send(res, 404, { error: 'Model bulunamadı: ' + b.name, files: listModelFiles() });
+      }
+      const base = { ...(prev?.view || {}) };
+      if (b.path || !sameModelFile(file, prev?.file)) for (const k of ['clip', 'hidden', 'time', 'paused']) delete base[k]; // dosyaya özgü ayarlar yeni modele taşınmaz
+      const view = { ...base, ...(b.view && typeof b.view === 'object' ? b.view : {}) };
+      // path ile yeniden kopyalanan dosyanın içeriği değişmiş olabilir: eski info atılır, olayda reload:true (editör aynı adı da yeniden yükler)
+      state.mode = 'model'; state.modelView = { file, view, info: !b.path && sameModelFile(file, prev?.file) ? prev.info ?? null : null }; save();
+      const extra = warning ? { warning } : {};
+      if (!clients.size) return send(res, 200, { ok: true, clients: 0, file, view, ...extra });
+      const id = Math.random().toString(36).slice(2);
+      const r = await new Promise((resolve) => { // editör modeli yükleyip aynı id ile /api/model-view'e bildirir; ≤60 sn
+        const t = setTimeout(() => { pendingModelViews.delete(id); resolve(null); }, 60000);
+        pendingModelViews.set(id, (x) => { clearTimeout(t); resolve(x); });
+        emit('model-view', { id, file, view, reload: !!b.path });
+      });
+      if (!r) return send(res, 200, { ok: true, clients: clients.size, timeout: true, file, view, ...extra });
+      return send(res, 200, { ok: true, clients: clients.size, file: r.file || file, view: r.view || view, info: r.info || null, ...(r.error ? { error: String(r.error) } : {}), ...extra });
+    }
     if (p === '/api/rig' && req.method === 'POST') {
       const b = await readJson(req);
       state.rig = b.rig; state.modelName = b.modelName; save();

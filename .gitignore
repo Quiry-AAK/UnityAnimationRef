@@ -10,5 +10,7 @@ models/*
 !models/.gitkeep
 props/*
 !props/.gitkeep
+meshes/*
+!meshes/.gitkeep
 animations/*.fbx
 .ports/
