@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { initVfx } from './vfx.js';
 import { initMaterials } from './material.js';
+import { initModel } from './model.js';
 
 const $ = (s) => document.querySelector(s);
 const toast = (msg, type) => { // type: 'ok' | 'err' (yoksa mesajdan tahmin)
@@ -54,7 +55,7 @@ let sel = null;
 let curFrame = 0;
 let playing = false;
 let poseClip = null;
-let mode = 'anim'; // editör modu: 'anim' | 'vfx'
+let mode = 'anim'; // editör modu: 'anim' | 'vfx' | 'material' | 'shader' | 'model'
 
 const undoStack = [], redoStack = [];
 const pushUndo = () => { undoStack.push(JSON.stringify(anim)); if (undoStack.length > 100) undoStack.shift(); redoStack.length = 0; };
@@ -323,7 +324,7 @@ tc.addEventListener('objectChange', () => {
 const ray = new THREE.Raycaster(); let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (mode === 'vfx' || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || tc.dragging || tc.axis) return;
+  if (mode !== 'anim' || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4 || tc.dragging || tc.axis) return;
   const r = renderer.domElement.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
   const hits = ray.intersectObjects(overlay.children.filter((o) => o.userData.bone), false);
@@ -635,6 +636,7 @@ $('#fileJson').onchange = async (e) => {
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', async (e) => {
   e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return;
+  if (mode === 'model') return mdl.dropFile(f);
   if (/\.json$/i.test(f.name)) { anim = normalizeAnim(JSON.parse(await f.text())); afterAnimReplaced(); return; }
   if (!rig || rig.modelName === 'demo') { const n = await upload(f); loadModel(n).catch((er) => toast(er.message)); }
   else importAnimFile(f).catch((er) => toast(er.message));
@@ -724,7 +726,7 @@ $('#btnGif').onclick = async () => {
 };
 
 // ───────────────────────── açılır/kapanır paneller
-const LEFT_NAMES = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar" };
+const LEFT_NAMES = { anim: 'Kemikler', vfx: 'Efekt katmanları', material: 'Materyaller', shader: "Shader'lar", model: 'Modeller' };
 // iki yan panel de her modda varsayılan kapalı (önizleme geniş açılsın); eski panel2-* kayıtları sayılmasın diye ayrı anahtar
 const panelKey = (side) => `upe-${side}-${mode}`;
 const panelName = (side) => side === 'left' ? LEFT_NAMES[mode] : 'Ayarlar';
@@ -782,7 +784,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); return sendCurrent(); }
   if (document.querySelector('dialog[open]')) return;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['checkbox', 'range'].includes(document.activeElement.type)) return;
-  if (!e.ctrlKey && !e.altKey && ['1', '2', '3', '4'].includes(e.key)) return setEditorMode(MODES[+e.key - 1]);
+  if (!e.ctrlKey && !e.altKey && ['1', '2', '3', '4', '5'].includes(e.key)) return setEditorMode(MODES[+e.key - 1]);
   if (!e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); return openNote(); }
   if (e.key === '?') return openHelp();
   if (mode === 'vfx') {
@@ -793,6 +795,17 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'ArrowLeft') vfx.nudge(-0.05);
     else if (e.key === 'ArrowRight') vfx.nudge(0.05);
     else if (e.key.toLowerCase() === 'f') vfx.frame();
+    else if (e.key.toLowerCase() === 'b') $('#togLeft').click();
+    else if (e.key.toLowerCase() === 'p') $('#togRight').click();
+    return;
+  }
+  if (mode === 'model') {
+    if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? mdl.redo() : mdl.undo(); }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); mdl.redo(); }
+    else if (e.code === 'Space') { e.preventDefault(); mdl.togglePlay(); }
+    else if (e.key === 'ArrowLeft') mdl.nudge(-1 / 30);
+    else if (e.key === 'ArrowRight') mdl.nudge(1 / 30);
+    else if (e.key.toLowerCase() === 'f') mdl.frame();
     else if (e.key.toLowerCase() === 'b') $('#togLeft').click();
     else if (e.key.toLowerCase() === 'p') $('#togRight').click();
     return;
@@ -834,8 +847,12 @@ const mats = initMaterials({
   getRig: () => rig, getProps: () => props, onResize: () => onResize(),
   setMode: (m, o) => setEditorMode(m, o), setHeroVisible: (v) => { stage.visible = v; },
 });
-const MODES = ['anim', 'vfx', 'material', 'shader'];
-const modeModule = (m) => ({ vfx, material: mats.material, shader: mats.shader })[m] || null;
+const mdl = initModel({
+  scene, camera, renderer, orbit, viewport, grid, overlay, api, toast, $, BG, onResize: () => onResize(),
+  setMode: (m, o) => setEditorMode(m, o), getMode: () => mode, setHeroVisible: (v) => { stage.visible = v; },
+});
+const MODES = ['anim', 'vfx', 'material', 'shader', 'model'];
+const modeModule = (m) => ({ vfx, material: mats.material, shader: mats.shader, model: mdl })[m] || null;
 const camByMode = {}; // her modun kamerası ayrı hatırlanır
 function setEditorMode(m, { notify = true } = {}) {
   m = MODES.includes(m) ? m : 'anim';
@@ -855,15 +872,17 @@ function setEditorMode(m, { notify = true } = {}) {
 for (const k of MODES) { const b = $('#mode' + k[0].toUpperCase() + k.slice(1)); if (b) b.onclick = () => setEditorMode(k); }
 
 // ───────────────────────── genel arayüz: Unity'ye gönder, Claude'a not, yardım, durum çubuğu, kamera, panel araması
-const SEND_LABEL = { anim: "Unity'ye gönder", vfx: "Unity'ye gönder", material: "Unity'ye gönder", shader: "Unity'de derle" };
+const SEND_LABEL = { anim: "Unity'ye gönder", vfx: "Unity'ye gönder", material: "Unity'ye gönder", shader: "Unity'de derle", model: "Unity'ye gönder" };
 const HINTS = {
   anim: 'Space oynat · ←/→ kare · K key · E döndür / W taşı · F odakla',
   vfx: 'Space oynat · Home baştan · ←/→ zaman · etiketi sürükle: değer · F odakla',
   material: 'Etiketi sürükle: değer · Giydir: kahramana tak · F odakla',
   shader: 'Kod değişince kendisi derlenir · hataya tıkla: satıra git · F odakla',
+  model: 'Parçaya tıkla: seç · Space animasyon · ←/→ kare · F odakla',
 };
-const SEND_WHAT = { anim: 'animasyonu (.anim)', vfx: 'efekti (prefab)', material: 'materyali (.mat)', shader: "shader'ı (.shader derleme denetimi)" };
+const SEND_WHAT = { anim: 'animasyonu (.anim)', vfx: 'efekti (prefab)', material: 'materyali (.mat)', shader: "shader'ı (.shader derleme denetimi)", model: 'modeli' };
 async function sendCurrent() {
+  if (mode === 'model') return toast('Model sekmesi yalnız görüntüleyici; Unity\'ye gönderim yok');
   const u = await fetch('/api/unity').then((r) => r.json()).catch(() => null);
   if (!u?.valid) { openUnityDialog(u?.project ? 'Kayıtlı klasör Unity projesi değil; düzelt.' : 'Önce Unity proje klasörünü ayarla.'); return; }
   setUnityStatus('warn', 'Unity: gönderiliyor…');
@@ -953,12 +972,13 @@ const HELP = {
   vfx: ['VFX', ['Efekt = parçacık katmanları (emitter). Solda aç/kapat, çoğalt, sırala; <b>+ Emitter</b> hazır şablonlar (kıvılcım, alev, duman…).', 'Sağ panelde Unity\'nin parçacık modülleri; başlıktaki ●/○ modülü açar/kapatır.', 'Sayı etiketini basılı tutup sürükle → değer değişir (<kbd>Shift</kbd> hızlı, <kbd>Alt</kbd> ince).', '<kbd>Space</kbd> oynat, <kbd>Home</kbd> baştan, alt çubukta hız ve zaman.']],
   material: ['Materyal', ['Shader seç (oyunun toon shader\'ı, URP ya da özel), özellikleri değiştir.', 'Önizleme nesnesi: küre, küp… ya da <b>Kahraman</b>; <b>Giydir</b> materyali kahramana/eşyaya takar (diğer modlarda da görünür).', '<b>Işık</b> bölümü tüm materyaller için ortak sahne ışığıdır.']],
   shader: ['Shader', ['Kod Unity HLSL\'inin bir alt kümesi (UPE-SL); Unity\'de aynen çalışır, burada önizlenir.', 'Kod değişince kendisi derlenir; hatalar sağ altta, tıklayınca satır seçilir.', 'Hazır shader\'lar salt okunur: <b>Özel kopya oluştur</b> ile düzenlenebilir hâle getir.']],
+  model: ['Model', ['GLB/FBX/OBJ görüntüleyici: soldan seç ya da dosyayı pencereye sürükle-bırak (<code>meshes/</code> klasörüne gider).', 'Sağ panel: ölçü, üçgen, parça, materyal, doku, kemik bilgisi; görünüm (kil, normal, UV, tel kafes, iskelet, sınır kutusu, pivot, 1,8 m boy referansı).', 'Parçaya tıkla → seçilir; listeden gizle/göster, ◎ ile odakla. Gömülü animasyon varsa altta oynatılır (<kbd>Space</kbd>, <kbd>←</kbd>/<kbd>→</kbd>).']],
 };
 const helpOpen = () => $('#dlgHelp').open;
 function fillHelp() {
   const sec = (k) => { const [t, items] = HELP[k]; return `<section class="${k === mode ? 'cur' : ''}"><h4>${t}${k === mode ? ' <small style="color:var(--acc)">· şu anki mod</small>' : ''}</h4><ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul></section>`; };
-  $('#helpBody').innerHTML = `<section class="full"><h4>Nasıl çalışır?</h4><p>İşi Claude yapar; sen izlersin, istersen değerlerle oynarsın. Beğenmediğin bir şey için <b>💬 Claude'a not</b> yaz ya da elle düzeltip Claude'a "düzelttim" de; değişikliklerini kendisi okur. Beğendiğinde <b>⇪ Unity'ye gönder</b>.</p><p>Üstteki sekmeler modlar: <kbd>1</kbd> Animasyon · <kbd>2</kbd> VFX · <kbd>3</kbd> Materyal · <kbd>4</kbd> Shader. Alttaki çubukta bağlantı, Claude'un son güncellemesi ve Unity projesi görünür.</p></section>`
-    + ['anim', 'vfx', 'material', 'shader'].map(sec).join('')
+  $('#helpBody').innerHTML = `<section class="full"><h4>Nasıl çalışır?</h4><p>İşi Claude yapar; sen izlersin, istersen değerlerle oynarsın. Beğenmediğin bir şey için <b>💬 Claude'a not</b> yaz ya da elle düzeltip Claude'a "düzelttim" de; değişikliklerini kendisi okur. Beğendiğinde <b>⇪ Unity'ye gönder</b>.</p><p>Üstteki sekmeler modlar: <kbd>1</kbd> Animasyon · <kbd>2</kbd> VFX · <kbd>3</kbd> Materyal · <kbd>4</kbd> Shader · <kbd>5</kbd> Model. Alttaki çubukta bağlantı, Claude'un son güncellemesi ve Unity projesi görünür.</p></section>`
+    + MODES.map(sec).join('')
     + `<section class="full"><h4>Kısayollar</h4><p><kbd>F1</kbd> yardım · <kbd>N</kbd> Claude'a not · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Unity'ye gönder · <kbd>Ctrl</kbd>+<kbd>F</kbd> ayar ara · <kbd>F</kbd> odakla · <kbd>B</kbd>/<kbd>P</kbd> sol/sağ panel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> geri al · <kbd>Ctrl</kbd>+<kbd>Y</kbd> yinele · Fare: sol sürükle döndür, sağ sürükle kaydır, tekerlek yakınlaştır</p></section>`;
 }
 function openHelp(welcome = false) {
@@ -994,11 +1014,13 @@ es.addEventListener('shader-compile', async (e) => { const d = JSON.parse(e.data
 es.addEventListener('lighting', (e) => mats.onLighting(JSON.parse(e.data).lighting));
 es.addEventListener('overrides', (e) => mats.onOverrides(JSON.parse(e.data).overrides));
 es.addEventListener('vfx', (e) => { const d = JSON.parse(e.data); claudeTouched('efekti güncelledi'); if (mode !== 'vfx') setEditorMode('vfx', { notify: false }); vfx.onRemoteEffect(d.vfx); });
+es.addEventListener('model-view', async (e) => { const d = JSON.parse(e.data); await ready; claudeTouched('modeli açtı'); if (mode !== 'model') setEditorMode('model', { notify: false }); mdl.onRemoteView(d); });
 es.addEventListener('mode', (e) => setEditorMode(JSON.parse(e.data).mode, { notify: false }));
 es.addEventListener('render', async (e) => {
   const d = JSON.parse(e.data); await ready;
   if (d.kind === 'vfx') { let png = ''; try { png = await vfx.renderSheet(d); } catch (er) { toast('VFX render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   if (d.kind === 'material') { let png = ''; try { png = await mats.renderSheet(d); } catch (er) { toast('Materyal render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
+  if (d.kind === 'model') { let png = ''; try { png = await mdl.renderSheet(d); } catch (er) { toast('Model render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   const size = d.size || 512; let png = '';
   const camBackup = [camera.position.clone(), orbit.target.clone()];
   if (d.camera) { const [px, py, pz] = d.camera.position || []; if (px !== undefined) camera.position.set(px, py, pz); if (d.camera.target) orbit.target.set(...d.camera.target); orbit.update(); }
@@ -1018,10 +1040,11 @@ es.addEventListener('render', async (e) => {
   anim = normalizeAnim(st.anim); afterAnimReplaced();
   vfx.setFromState(st.vfx);
   await mats.setFromState(st);
+  mdl.setFromState(st.modelView);
   setEditorMode(MODES.includes(st.mode) ? st.mode : 'anim', { notify: false });
   requestAnimationFrame(tick); markReady();
   refreshStatusUnity(); setInterval(updateStatusItem, 1000);
   let off = false; try { off = localStorage.getItem('upe-help-off') === '1' || localStorage.getItem('upe-welcomed') === '1'; localStorage.setItem('upe-welcomed', '1'); } catch { /* yok */ }
   if (!off) openHelp(true);
 })();
-window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; } }; // hata ayıklama
+window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; }, mdl }; // hata ayıklama

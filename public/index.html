@@ -17,10 +17,10 @@
 <header>
   <div class="brand" title="Unity Preview Editor"><span class="logo">UPE</span><span class="bname">Unity Preview<br>Editor</span></div>
   <nav class="modes" aria-label="Mod">
-    <button id="modeAnim" title="Animasyon (1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6m0 0-3.5 7M12 13l3.5 7M7 9.5l5 1.5 5-1.5"/></svg><span>Animasyon</span></button><button id="modeVfx" title="VFX (2)"><svg viewBox="0 0 24 24"><path d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 16.5l-1.8-5.2L5 9.5l5.2-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>VFX</span></button><button id="modeMaterial" title="Materyal (3)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6.5 9.5c2.5-3 8-3.5 11 .5"/><circle cx="9.3" cy="8.4" r="1.2"/></svg><span>Materyal</span></button><button id="modeShader" title="Shader (4)"><svg viewBox="0 0 24 24"><path d="M8.5 7 4 12l4.5 5M15.5 7 20 12l-4.5 5M13.5 5l-3 14"/></svg><span>Shader</span></button>
+    <button id="modeAnim" title="Animasyon (1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6m0 0-3.5 7M12 13l3.5 7M7 9.5l5 1.5 5-1.5"/></svg><span>Animasyon</span></button><button id="modeVfx" title="VFX (2)"><svg viewBox="0 0 24 24"><path d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 16.5l-1.8-5.2L5 9.5l5.2-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>VFX</span></button><button id="modeMaterial" title="Materyal (3)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6.5 9.5c2.5-3 8-3.5 11 .5"/><circle cx="9.3" cy="8.4" r="1.2"/></svg><span>Materyal</span></button><button id="modeShader" title="Shader (4)"><svg viewBox="0 0 24 24"><path d="M8.5 7 4 12l4.5 5M15.5 7 20 12l-4.5 5M13.5 5l-3 14"/></svg><span>Shader</span></button><button id="modeModel" title="Model (5)"><svg viewBox="0 0 24 24"><path d="M12 2.8 20 7.2v9.6L12 21.2 4 16.8V7.2z"/><path d="M4 7.2l8 4.4 8-4.4M12 11.6v9.6"/></svg><span>Model</span></button>
   </nav>
   <span class="vsep"></span>
-  <label class="hsel" title="Önizlemedeki karakter"><span>Karakter</span><select id="modelSelect"></select></label>
+  <label class="hsel" data-modes="anim vfx material shader" title="Önizlemedeki karakter"><span>Karakter</span><select id="modelSelect"></select></label>
   <details class="menu" data-modes="anim">
     <summary>Dosya ▾</summary>
     <div class="menu-list">
@@ -39,7 +39,7 @@
   <span class="sp"></span>
   <div class="hgroup"><button id="btnUndo" class="icon" title="Geri al (Ctrl+Z)">↶</button><button id="btnRedo" class="icon" title="Yinele (Ctrl+Y)">↷</button></div>
   <button id="btnNoteOpen" title="Claude'a not yaz (N)">💬 <span>Claude'a not</span></button>
-  <button id="btnSendUnity" class="primary" title="Bu moddaki işi Unity'ye gönder (Ctrl+Enter)">⇪ <span id="sendLabel">Unity'ye gönder</span></button>
+  <button id="btnSendUnity" class="primary" data-modes="anim vfx material shader" title="Bu moddaki işi Unity'ye gönder (Ctrl+Enter)">⇪ <span id="sendLabel">Unity'ye gönder</span></button>
   <button id="btnHelp" class="icon" title="Yardım ve kısayollar (F1)">?</button>
   <span class="vsep"></span>
   <button id="togLeft" class="tog icon" title="Sol panel (B)">◧</button><button id="togRight" class="tog icon" title="Sağ panel (P)">◨</button>
@@ -51,6 +51,7 @@
     <div class="ptitle" data-modes="vfx">Efekt katmanları<small>her emitter bir parçacık katmanı</small></div>
     <div class="ptitle" data-modes="material">Materyaller<small>kütüphaneden tıkla: yükle</small></div>
     <div class="ptitle" data-modes="shader">Shader'lar<small>hazır olanlar salt okunur</small></div>
+    <div class="ptitle" data-modes="model">Modeller<small>tıkla: görüntüle · sürükle-bırak: yükle</small></div>
     <input id="boneSearch" data-modes="anim" type="search" placeholder="Kemik ara…">
     <div id="boneList" data-modes="anim"></div>
     <div id="matLeft" data-modes="material">
@@ -69,6 +70,12 @@
       <details class="menu" id="vfxAddMenu"><summary class="primary">+ Emitter ▾</summary><div class="menu-list" id="vfxAddList"></div></details>
       <div id="vfxEmitters" class="list"></div>
     </div>
+    <div id="mdlLeft" data-modes="model">
+      <input id="mdlSearch" type="search" placeholder="Model ara…">
+      <div id="mdlLib" class="list"></div>
+      <label class="btn small">Model yükle (GLB/FBX/OBJ)…<input type="file" id="mdlFile" accept=".glb,.gltf,.fbx,.obj" hidden></label>
+      <div class="hint-s">Yüklenenler <code>meshes/</code> klasörüne gider.</div>
+    </div>
   </aside>
 
   <section id="center">
@@ -86,6 +93,13 @@
       <select id="vfxSpeed" title="Oynatma hızı"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
       <button id="vfxFocus" title="Kamerayı efekte odakla">◎</button>
       <span id="vfxStats"></span>
+    </div>
+    <div id="mdlTransport" data-modes="model" class="empty">
+      <button id="mdlPlay" class="big" title="Oynat / Durdur (Space)">⏸</button>
+      <select id="mdlClip" title="Gömülü animasyon"></select>
+      <input type="range" id="mdlTime" min="0" max="1000" value="0" title="Zaman">
+      <span id="mdlTimeLabel">0.00 / 0.00 sn</span>
+      <select id="mdlSpeed" title="Oynatma hızı"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
     </div>
     <div id="transport" data-modes="anim">
       <button id="btnPrev" title="Önceki kare (←)">⏮</button>
@@ -115,6 +129,7 @@
     <div id="vfxRight" data-modes="vfx"></div>
     <div id="matRight" data-modes="material"></div>
     <div id="shRight" data-modes="shader"></div>
+    <div id="mdlRight" data-modes="model"></div>
     <div id="animRight" data-modes="anim">
     <details open>
       <summary>Seçili kemik</summary>

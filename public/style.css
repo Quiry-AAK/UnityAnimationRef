@@ -1,4 +1,4 @@
-/* Unity Preview Editor — koyu tema; her modun vurgu rengi (--acc) ayrı: Animasyon mavi, VFX turuncu, Materyal yeşil, Shader mor */
+/* Unity Preview Editor — koyu tema; her modun vurgu rengi (--acc) ayrı: Animasyon mavi, VFX turuncu, Materyal yeşil, Shader mor, Model camgöbeği */
 :root {
   --bg:#16191f; --panel:#1f232b; --panel2:#262b35; --card:#232833; --line:#323846; --line2:#3d4454;
   --txt:#e3e7ee; --dim:#949cad; --faint:#636b7d; --acc:#4da3ff; --acc-ink:#06121f; --ok:#48d597; --warn:#f5b942; --err:#ff6b6b;
@@ -7,6 +7,7 @@
 body[data-mode="vfx"] { --acc:#ff8f45; --acc-ink:#1f0d00; }
 body[data-mode="material"] { --acc:#3ecf8e; --acc-ink:#00160c; }
 body[data-mode="shader"] { --acc:#b48cff; --acc-ink:#150730; }
+body[data-mode="model"] { --acc:#2cc9e0; --acc-ink:#001a1f; }
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:13px/1.45 system-ui, 'Segoe UI', sans-serif; overflow:hidden; }
 code { font:11px Consolas, monospace; background:#0003; padding:0 3px; border-radius:3px; }
@@ -85,7 +86,7 @@ body.left-open #leftEdge .lbl, body.right-open #rightEdge .lbl { display:none; }
 #tip.gone { opacity:0; }
 
 /* ── alt çubuklar */
-#transport, #vfxTransport { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:7px 10px; background:var(--panel); border-top:1px solid var(--line); }
+#transport, #vfxTransport, #mdlTransport { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:7px 10px; background:var(--panel); border-top:1px solid var(--line); }
 button.big { min-width:44px; height:32px; background:var(--acc); color:var(--acc-ink); border-color:var(--acc); font-weight:700; font-size:14px; }
 #frameLabel { min-width:80px; text-align:center; font-variant-numeric:tabular-nums; color:var(--dim); }
 #btnKey.has { background:var(--warn); color:#241800; border-color:var(--warn); }
@@ -93,6 +94,10 @@ button.big { min-width:44px; height:32px; background:var(--acc); color:var(--acc
 #vfxTime { flex:1; min-width:120px; }
 #vfxTimeLabel { min-width:100px; text-align:center; font-variant-numeric:tabular-nums; color:var(--dim); }
 #vfxStats { color:var(--dim); font-size:12px; min-width:84px; text-align:right; }
+#mdlTransport.empty { display:none; }
+#mdlTime { flex:1; min-width:120px; }
+#mdlTimeLabel { min-width:110px; text-align:center; font-variant-numeric:tabular-nums; color:var(--dim); }
+#mdlClip { max-width:240px; }
 
 /* ── durum çubuğu */
 #status { height:var(--sh); display:flex; align-items:center; gap:14px; padding:0 10px; background:var(--panel); border-top:1px solid var(--line); font-size:11.5px; color:var(--dim); }
@@ -168,8 +173,25 @@ textarea { width:100%; resize:vertical; }
 
 /* ── modlar: data-modes ile görünürlük */
 body[data-mode="anim"] [data-modes]:not([data-modes~="anim"]), body[data-mode="vfx"] [data-modes]:not([data-modes~="vfx"]),
-body[data-mode="material"] [data-modes]:not([data-modes~="material"]), body[data-mode="shader"] [data-modes]:not([data-modes~="shader"]) { display:none !important; }
-#vfxLeft, #matLeft, #shLeft { display:flex; flex-direction:column; gap:8px; }
+body[data-mode="material"] [data-modes]:not([data-modes~="material"]), body[data-mode="shader"] [data-modes]:not([data-modes~="shader"]),
+body[data-mode="model"] [data-modes]:not([data-modes~="model"]) { display:none !important; }
+#vfxLeft, #matLeft, #shLeft, #mdlLeft { display:flex; flex-direction:column; gap:8px; }
+/* Model modu */
+#mdlSearch { width:100%; }
+#mdlLib .vl.grp { margin:6px 2px 0; font-weight:600; color:var(--txt); }
+#mdlLib .li span.n { font-size:12.5px; }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; margin:4px 0; }
+.kv > span { color:var(--dim); white-space:nowrap; }
+.kv > b { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.grid2.togs { gap:4px 8px; margin:6px 0; }
+.grid2.togs label.chk { font-size:12px; color:var(--txt); }
+#mdlRight .li input[type=checkbox] { margin:0; }
+#mdlRight .li .sw { width:14px; height:14px; border-radius:3px; border:1px solid var(--line2); flex:none; }
+.texgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:6px; margin:8px 0 2px; }
+.texgrid .tex { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.texgrid canvas { width:100%; aspect-ratio:1; background:#0d1018; border:1px solid var(--line); border-radius:4px; }
+.texgrid small { color:var(--dim); font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hint-s.err { color:var(--err); }
 #vfxLeft .menu-list { min-width:200px; }
 #matLeft .menu-list, #shLeft .menu-list { min-width:250px; max-height:60vh; overflow:auto; }
 #vfxLeft > details.menu > summary, #matLeft > details.menu > summary, #shLeft > details.menu > summary { text-align:center; }
