@@ -12,7 +12,9 @@ const ARGS = process.argv.slice(2);
 const BASE = ARGS.find((a) => /^https?:\/\//.test(a));
 if (!BASE) { console.error('kullanım: node hit-react.mjs <editorUrl> [--heavy] [--nosend]'); process.exit(1); }
 const HEAVY = ARGS.includes('--heavy'), NOSEND = ARGS.includes('--nosend');
-const NAME = HEAVY ? 'game_hit_react_heavy' : 'game_hit_react';
+const NAME = ARGS.find((a) => a.startsWith('--name='))?.slice(7) || (HEAVY ? 'game_hit_react_heavy' : 'game_hit_react');
+const LELB = +(ARGS.find((a) => a.startsWith('--lelb='))?.slice(7) ?? 1);
+const LARM = (ARGS.find((a) => a.startsWith('--larm='))?.slice(7) || '1,1,1').split(',').map(Number);   // tanı: sol kol yaw,pitch,roll ölçeği
 const st = await (await fetch(BASE + '/api/state')).json();
 const bones = st.rig.bones; const by = Object.fromEntries(bones.map((b) => [b.name, b]));
 const rad = THREE.MathUtils.degToRad, deg = THREE.MathUtils.radToDeg;
@@ -83,7 +85,8 @@ const K = HEAVY ? {
   rArm: [[0, [0, 0, 0]], [3, [-6, 8, -10]], [8, [-10, 16, -18]], [14, [-8, 10, -12]], [22, [-3, 2, -4]], [30, [0, -1, 0]], [38, [0, 0, 0]], [45, [0, 0, 0]]],
   rElb: [[0, 0], [4, -10], [9, -18], [16, -8], [25, 2], [33, 0], [45, 0]],
   lArm: [[0, [0, 0, 0]], [3, [6, 10, 14]], [9, [10, 20, 24]], [15, [7, 12, 14]], [24, [2, 2, 3]], [32, [0, -1, 0]], [40, [0, 0, 0]], [45, [0, 0, 0]]],
-  lElb: [[0, 0], [4, -12], [10, -22], [17, -10], [26, 2], [34, 0], [45, 0]],
+  // sol dirsek idle'da neredeyse düz (~6°): açmak ters bükülme olurdu (Humanoid kırpıyor, dirsek 38 mm kayıyordu) → savrulan kol gevşekçe bükülür
+  lElb: [[0, 0], [4, 7], [10, 15], [17, 8], [26, 1], [34, 0], [45, 0]],
 } : {
   hz: [[0, 0], [3, -0.035], [6, -0.06], [10, -0.055], [16, -0.025], [22, -0.004], [26, 0]],
   hy: [[0, 0], [3, -0.02], [6, -0.04], [11, -0.035], [17, -0.012], [26, 0]],
@@ -94,7 +97,7 @@ const K = HEAVY ? {
   rArm: [[0, [0, 0, 0]], [2, [-4, 6, -7]], [6, [-7, 11, -12]], [11, [-4, 4, -5]], [17, [-1, -1, 0]], [22, [0, 0, 0]], [26, [0, 0, 0]]],
   rElb: [[0, 0], [3, -7], [7, -12], [12, -3], [18, 1], [26, 0]],
   lArm: [[0, [0, 0, 0]], [2, [4, 7, 10]], [7, [7, 13, 17]], [12, [3, 4, 5]], [18, [0, -1, 0]], [26, [0, 0, 0]]],
-  lElb: [[0, 0], [3, -8], [8, -15], [13, -4], [19, 1], [26, 0]],
+  lElb: [[0, 0], [3, 5], [8, 10], [13, 3], [19, 0], [26, 0]],
 };
 // omurga payları (aşağıdan yukarı kırbaç: üst segment daha geç ve biraz daha çok) ve boyun/baş payları
 const SPINE = [['Spine02', 0.3, 0], ['Spine01', 0.33, 0.7], ['Spine', 0.37, 1.4]];
@@ -120,6 +123,7 @@ const elbowAxis = (side, cur) => {
   const u = iPos[side + 'ForeArm'].clone().sub(iPos[side + 'Arm']).normalize(), fd = iPos[side + 'Hand'].clone().sub(iPos[side + 'ForeArm']).normalize();
   return u.cross(fd).normalize().applyQuaternion(cur);
 };
+console.log('idle dirsek bükümü (°) sol', deg(iPos.LeftForeArm.clone().sub(iPos.LeftArm).angleTo(iPos.LeftHand.clone().sub(iPos.LeftForeArm))).toFixed(1), 'sağ', deg(iPos.RightForeArm.clone().sub(iPos.RightArm).angleTo(iPos.RightHand.clone().sub(iPos.RightForeArm))).toFixed(1));
 const L1 = { Left: iPos.LeftLeg.distanceTo(iPos.LeftUpLeg), Right: iPos.RightLeg.distanceTo(iPos.RightUpLeg) };
 const L2 = { Left: iPos.LeftFoot.distanceTo(iPos.LeftLeg), Right: iPos.RightFoot.distanceTo(iPos.RightLeg) };
 
@@ -133,9 +137,12 @@ function solve(f) {
   for (const [n, w, lag] of HEADS) { const e = at(K.head, f, lag).map((v) => v * w); acc = eul(e).multiply(acc); A[n] = acc.clone(); }
   const chestA = A.Spine.clone();
   A.LeftShoulder = chestA.clone(); A.RightShoulder = chestA.clone();
-  A.RightArm = eul(at(K.rArm, f)).multiply(chestA); A.LeftArm = eul(at(K.lArm, f)).multiply(chestA);
+  // üst kol yalnız salınır (kol ekseni etrafında burulma yok): Humanoid kol kas sınırları burulmayı taşımıyor, dirsek kayıyordu
+  const swing = (side, e) => { const u = iPos[side + 'ForeArm'].clone().sub(iPos[side + 'Arm']).normalize().applyQuaternion(chestA);
+    return new THREE.Quaternion().setFromUnitVectors(u, u.clone().applyQuaternion(eul(e))).multiply(chestA); };
+  A.RightArm = swing('Right', at(K.rArm, f)); A.LeftArm = swing('Left', at(K.lArm, f).map((v, i) => v * LARM[i]));
   A.RightForeArm = rot(elbowAxis('Right', A.RightArm), at(K.rElb, f)).multiply(A.RightArm);
-  A.LeftForeArm = rot(elbowAxis('Left', A.LeftArm), at(K.lElb, f)).multiply(A.LeftArm);
+  A.LeftForeArm = rot(elbowAxis('Left', A.LeftArm), at(K.lElb, f) * LELB).multiply(A.LeftArm);
   // dünya yönelimleri: A'sı olmayan kemik ebeveyninin A'sını taşır (yerel dönüşü idle'daki gibi kalır)
   const cur = {}, Ab = {};
   for (const b of bones) {
