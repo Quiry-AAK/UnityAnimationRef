@@ -37,7 +37,7 @@ const MIME = {
 // material/shader: editördeki materyal/shader (+ *Baseline aynı mantık); lighting: ortak sahne ışığı; materialOverrides: { 'hero'|'hero:<mesh>'|'prop:<id>': materyal }
 // modelView: Model sekmesi { file: { dir:'meshes'|'models'|'props', name } | null, view: görünüm ayarları, info: editörün ölçtüğü model bilgisi | null }
 let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0, mode: 'anim', vfx: null, vfxBaseline: null,
-  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {}, modelView: null };
+  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {}, modelView: null, compare: [] };
 fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
 try { state = { ...state, ...JSON.parse(fs.readFileSync(fs.existsSync(STATE_FILE) ? STATE_FILE : MAIN_STATE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
 const MODES = ['anim', 'vfx', 'material', 'shader', 'model'];
@@ -474,6 +474,15 @@ const server = http.createServer(async (req, res) => {
       }
       if (fs.existsSync(path.join(ANIMS_DIR, base + '.fbx'))) { emit('load-animation-fbx', { name: base + '.fbx' }); return send(res, 200, { ok: true, kind: 'fbx', clients: clients.size }); }
       return send(res, 404, { error: 'Kütüphanede yok: ' + b.name });
+    }
+    // Karşılaştırma listesi: kütüphanedeki json animasyonlar ana karakterin yanında, her biri kendi kopyasında yan yana oynar
+    if (p === '/api/compare' && req.method === 'POST') {
+      const b = await readJson(req); const seen = new Set();
+      const names = (Array.isArray(b.names) ? b.names : []).map((n) => safeName(n).replace(/\.json$/i, '')).filter((n) => n && !seen.has(n) && seen.add(n));
+      const missing = names.filter((n) => !fs.existsSync(path.join(ANIMS_DIR, n + '.json')));
+      state.compare = names.filter((n) => !missing.includes(n)); save();
+      emit('compare', { names: state.compare });
+      return send(res, 200, { ok: true, names: state.compare, missing, clients: clients.size });
     }
     if (p === '/api/props-files' && req.method === 'GET') return send(res, 200, fs.readdirSync(PROPS_DIR).filter((f) => /\.(fbx|glb|gltf)$/i.test(f)));
     if (p === '/api/upload-prop' && req.method === 'POST') {

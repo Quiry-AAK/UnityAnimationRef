@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { initVfx } from './vfx.js';
 import { initMaterials } from './material.js';
@@ -377,6 +378,7 @@ async function buildProps() {
     pivot.add(obj); bone.obj.add(pivot); a.pivot = pivot; a.obj = obj;
   }
   refreshPropList(); mats.onSceneChanged(); // giydirilmiş materyaller yeni eşya mesh'lerine
+  if (compareNames.length) buildCompare(); // kopyalar eşyalarla birlikte
 }
 function readPropTransform(a) {
   a.pos = a.obj.position.toArray().map((v) => +v.toFixed(4));
@@ -443,6 +445,11 @@ async function refreshLib() {
     const el = document.createElement('div'); el.className = 'li';
     el.innerHTML = '<span class="n"></span><small></small><button title="Sil">✕</button>';
     el.querySelector('.n').textContent = it.name; el.querySelector('small').textContent = it.kind === 'fbx' ? 'fbx' : it.length + ' kare';
+    if (it.kind !== 'fbx') {
+      const add = document.createElement('button'); add.textContent = '⊕'; add.title = 'Yan yana karşılaştırmaya ekle';
+      add.onclick = (e) => { e.stopPropagation(); setCompare([...compareNames, it.name]); };
+      el.insertBefore(add, el.querySelector('button'));
+    }
     el.title = 'Yüklemek için tıkla';
     el.onclick = () => loadFromLibrary(it).catch((e) => toast(e.message));
     el.querySelector('button').onclick = async (e) => { e.stopPropagation(); if (!confirm(it.name + ' silinsin mi?')) return; await fetch('/api/animations/delete?name=' + encodeURIComponent(it.name), { method: 'POST' }); refreshLib(); };
@@ -456,6 +463,94 @@ $('#fileLib').onchange = async (e) => {
   if (/\.fbx$/i.test(f.name)) return importAnimFile(f).catch((er) => toast(er.message));
   try { const a = normalizeAnim(JSON.parse(await f.text())); pushUndo(); anim = a; afterAnimReplaced(); await saveToLibrary(f.name.replace(/\.json$/i, '')); toast('Yüklendi'); } catch { toast('Geçersiz dosya'); }
 };
+
+// ───────────────────────── yan yana karşılaştırma
+// Her animasyon ana karakterin bir kopyasında (eşyalar dahil) sağa doğru dizilir; zaman ana oynatma çubuğundan (saniye) gelir,
+// her klip kendi uzunluğunda döner. Kopyaların pozu ana rig'in kemik adlarıyla ve rest pozuyla hesaplanır.
+const COMPARE_GAP = 1.1;
+let compareNames = [], compare = [], compareToken = 0;
+const compareRoot = new THREE.Group(); scene.add(compareRoot);
+function nameSprite(text) {
+  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d'); const px = 44;
+  ctx.font = `600 ${px}px system-ui, sans-serif`; cv.width = Math.ceil(ctx.measureText(text).width) + 32; cv.height = px + 24;
+  ctx.font = `600 ${px}px system-ui, sans-serif`; ctx.fillStyle = 'rgba(20,24,30,0.78)'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = '#e8eef7'; ctx.textBaseline = 'middle'; ctx.fillText(text, 16, cv.height / 2);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false })); sp.renderOrder = 20;
+  const h = 0.11; sp.scale.set(h * cv.width / cv.height, h, 1); return sp;
+}
+function disposeCompare() {
+  compareRoot.traverse((o) => { if (o.isSprite) { o.material.map?.dispose(); o.material.dispose(); } });
+  compareRoot.clear(); compare = [];
+}
+async function buildCompare() {
+  const token = ++compareToken;
+  const anims = await Promise.all(compareNames.map((n) => fetch('/api/animations/get?name=' + encodeURIComponent(n)).then((r) => (r.ok ? r.json() : null)).catch(() => null)));
+  if (token !== compareToken) return;
+  disposeCompare();
+  const src = stage.children[0];
+  if (rig && src) {
+    // Ana pozu rest'e alıp kopyala (track'i olmayan kemikler kopyada da rest'te kalsın), sonra ana pozu geri kur
+    for (const b of rig.bones) { b.obj.quaternion.set(...b.restQ); b.obj.position.set(...b.restP); }
+    compareNames.forEach((name, i) => {
+      const a = anims[i]; if (!a || !a.tracks) return;
+      const g = new THREE.Group(); g.scale.copy(stage.scale); g.position.copy(stage.position); g.position.x += (i + 1) * COMPARE_GAP;
+      const root = cloneSkinned(src); g.add(root);
+      const byName = new Map();
+      root.traverse((o) => { if (o.isBone && !(o.parent?.isBone && o.parent.name === o.name) && !byName.has(o.name)) byName.set(o.name, o); if (o.isSkinnedMesh) o.frustumCulled = false; });
+      const bones = rig.bones.map((b) => ({ b, obj: byName.get(b.name) })).filter((x) => x.obj);
+      const label = nameSprite(name); label.position.set(g.position.x, 2.0, 0);
+      compareRoot.add(g, label);
+      compare.push({ name, anim: normalizeAnim(a), bones });
+    });
+    refreshPose();
+  }
+  poseCompare(); refreshCompareList();
+}
+function poseCompare() {
+  if (!compare.length) return;
+  const sec = curFrame / anim.fps;
+  for (const c of compare) {
+    const end = c.anim.length - 1;
+    let f = sec * c.anim.fps; f = c.anim.loop ? f % end : Math.min(f, end);
+    for (const { b, obj } of c.bones) {
+      const t = c.anim.tracks[b.name];
+      if (t?.rot?.length) evalRot(t.rot, f, _q); else _q.set(...b.restQ);
+      obj.quaternion.copy(_q);
+      if (t?.pos?.length) evalPos(t.pos, f, _v); else _v.set(...b.restP);
+      obj.position.copy(_v);
+    }
+  }
+}
+function refreshCompareList() {
+  const box = $('#compareList'); box.innerHTML = '';
+  if (!compareNames.length) { box.innerHTML = '<div class="hint-s">Liste boş.</div>'; return; }
+  for (const n of compareNames) {
+    const el = document.createElement('div'); el.className = 'li';
+    el.innerHTML = '<span class="n"></span><small></small><button title="Listeden çıkar">✕</button>';
+    el.querySelector('.n').textContent = n;
+    const c = compare.find((x) => x.name === n); el.querySelector('small').textContent = c ? c.anim.length + ' kare' : 'yok';
+    el.title = 'Düzenlemek için yükle';
+    el.onclick = () => loadFromLibrary({ name: n }).catch((e) => toast(e.message));
+    el.querySelector('button').onclick = (e) => { e.stopPropagation(); setCompare(compareNames.filter((x) => x !== n)); };
+    box.appendChild(el);
+  }
+}
+async function setCompare(names, { sync = true } = {}) {
+  compareNames = [...new Set(names)];
+  if (sync) { const r = await api('/api/compare', { names: compareNames }).catch(() => null); if (r?.names) compareNames = r.names; }
+  await buildCompare();
+  if (compareNames.length) { // satırın ortasına bak, ana karakter + kopyalar kadraja sığsın (kamera yalnız uzaklaşır)
+    const dx = compareNames.length * COMPARE_GAP / 2 - orbit.target.x;
+    orbit.target.x += dx; camera.position.x += dx;
+    const half = Math.max((compareNames.length * COMPARE_GAP) / 2 + 0.6, 1.2);
+    const fit = half / (Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+    const off = camera.position.clone().sub(orbit.target);
+    if (off.length() < fit) camera.position.copy(orbit.target).add(off.setLength(fit));
+    orbit.update();
+  }
+}
+$('#btnCompareClear').onclick = () => setCompare([]);
 
 // ───────────────────────── sol panel (kemik listesi)
 function refreshBoneList() {
@@ -565,6 +660,7 @@ function tick(now) {
     if (curFrame >= end) { if (anim.loop) curFrame %= end; else { curFrame = end; playing = false; } }
     refreshPose(); uiUpdate();
   }
+  if (mode === 'anim') poseCompare();
   const dt = (now - last) / 1000; last = now;
   orbit.update();
   mats?.tick(dt); // giydirilmiş UPE materyallerinin ışık/zaman uniform'ları (tüm modlarda)
@@ -996,6 +1092,7 @@ es.onopen = () => setConn(true); es.onerror = () => setConn(false);
 es.addEventListener('anim', (e) => {
   const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)'); claudeTouched('animasyonu güncelledi');
 });
+es.addEventListener('compare', async (e) => { await ready; if (mode !== 'anim') setEditorMode('anim', { notify: false }); setCompare(JSON.parse(e.data).names, { sync: false }); claudeTouched('karşılaştırma listesini güncelledi'); });
 es.addEventListener('props', (e) => { props = JSON.parse(e.data).props; selProp = null; buildProps(); });
 es.addEventListener('load-animation-fbx', async (e) => {
   const d = JSON.parse(e.data); const buf = await fetch('/animations/' + encodeURIComponent(d.name)).then((r) => r.arrayBuffer());
@@ -1042,6 +1139,7 @@ es.addEventListener('render', async (e) => {
   await mats.setFromState(st);
   mdl.setFromState(st.modelView);
   setEditorMode(MODES.includes(st.mode) ? st.mode : 'anim', { notify: false });
+  await setCompare(st.compare || [], { sync: false });
   requestAnimationFrame(tick); markReady();
   refreshStatusUnity(); setInterval(updateStatusItem, 1000);
   let off = false; try { off = localStorage.getItem('upe-help-off') === '1' || localStorage.getItem('upe-welcomed') === '1'; localStorage.setItem('upe-welcomed', '1'); } catch { /* yok */ }

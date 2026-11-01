@@ -288,6 +288,14 @@ server.registerTool('load_animation', {
   inputSchema: { name: z.string() },
 }, async ({ name }) => { await ensureServer(); const r = await post('/api/claude/load-animation', { name }); return text(r.kind === 'fbx' ? 'FBX bake ediliyor (editörde).' : 'Yüklendi.'); });
 
+server.registerTool('compare_animations', {
+  description: 'Kütüphanedeki animasyonları (json) editördeki ana karakterin yanında, her biri kendi kopyasında yan yana ve aynı anda oynatır; adları kafalarının üstünde yazar. Kullanıcı editördeki listeden ekleyip çıkarabilir. Ana animasyon değişmez. Boş liste karşılaştırmayı kapatır.',
+  inputSchema: { names: z.array(z.string()).describe('Kütüphane adları, soldan sağa sırayla') },
+}, async ({ names }) => {
+  await ensureServer(); const r = await post('/api/compare', { names });
+  return text({ showing: r.names, missing: r.missing, editorOpen: r.clients > 0 });
+});
+
 server.registerTool('delete_animation', {
   description: 'Kütüphaneden animasyonu siler (geri alınamaz; kullanıcı istemeden çağırma).',
   inputSchema: { name: z.string() },
