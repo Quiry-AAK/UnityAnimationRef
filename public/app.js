@@ -465,19 +465,27 @@ $('#fileLib').onchange = async (e) => {
 };
 
 // ───────────────────────── yan yana karşılaştırma
-// Her animasyon ana karakterin bir kopyasında (eşyalar dahil) sağa doğru dizilir; zaman ana oynatma çubuğundan (saniye) gelir,
-// her klip kendi uzunluğunda döner. Kopyaların pozu ana rig'in kemik adlarıyla ve rest pozuyla hesaplanır.
-const COMPARE_GAP = 1.1;
-let compareNames = [], compare = [], compareToken = 0;
+// Her animasyon ana karakterin bir kopyasında (eşyalar dahil) dizilir: ana karakter ilk yuvada, satırda COMPARE_PER_ROW yuva,
+// sonraki satırlar arkaya. Zaman ana oynatma çubuğundan (saniye) gelir, her klip kendi uzunluğunda döner. Kopyaların pozu ana
+// rig'in kemik adlarıyla ve rest pozuyla hesaplanır. İsteğe bağlı etiket (compareTags[ad]) adın altında ikinci satırda yazar.
+const COMPARE_GAP = 1.1, COMPARE_ROW_GAP = 3, COMPARE_PER_ROW = 8;
+let compareNames = [], compareTags = {}, compare = [], compareToken = 0;
 const compareRoot = new THREE.Group(); scene.add(compareRoot);
-function nameSprite(text) {
-  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d'); const px = 44;
-  ctx.font = `600 ${px}px system-ui, sans-serif`; cv.width = Math.ceil(ctx.measureText(text).width) + 32; cv.height = px + 24;
-  ctx.font = `600 ${px}px system-ui, sans-serif`; ctx.fillStyle = 'rgba(20,24,30,0.78)'; ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.fillStyle = '#e8eef7'; ctx.textBaseline = 'middle'; ctx.fillText(text, 16, cv.height / 2);
+// Kameranın baktığı yöne göre: satır soldan sağa okunur, sonraki satırlar kameradan uzağa düşer (dizilim kurulurken sabitlenir)
+let compareDir = 1;
+const compareSlot = (i) => { const s = i + 1; return { x: compareDir * (s % COMPARE_PER_ROW) * COMPARE_GAP, z: -compareDir * Math.floor(s / COMPARE_PER_ROW) * COMPARE_ROW_GAP }; };
+function nameSprite(text, sub) {
+  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d'); const px = 44, spx = 36;
+  const font = '600 ' + px + 'px system-ui, sans-serif', sfont = '500 ' + spx + 'px system-ui, sans-serif';
+  ctx.font = font; let w = ctx.measureText(text).width;
+  if (sub) { ctx.font = sfont; w = Math.max(w, ctx.measureText(sub).width); }
+  cv.width = Math.ceil(w) + 32; cv.height = px + 24 + (sub ? spx + 8 : 0);
+  ctx.fillStyle = 'rgba(20,24,30,0.78)'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.textBaseline = 'middle'; ctx.font = font; ctx.fillStyle = '#e8eef7'; ctx.fillText(text, 16, 12 + px / 2);
+  if (sub) { ctx.font = sfont; ctx.fillStyle = '#ffc233'; ctx.fillText(sub, 16, 12 + px + 4 + spx / 2); }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false })); sp.renderOrder = 20;
-  const h = 0.11; sp.scale.set(h * cv.width / cv.height, h, 1); return sp;
+  const h = sub ? 0.18 : 0.11; sp.scale.set(h * cv.width / cv.height, h, 1); return sp;
 }
 function disposeCompare() {
   compareRoot.traverse((o) => { if (o.isSprite) { o.material.map?.dispose(); o.material.dispose(); } });
@@ -488,18 +496,20 @@ async function buildCompare() {
   const anims = await Promise.all(compareNames.map((n) => fetch('/api/animations/get?name=' + encodeURIComponent(n)).then((r) => (r.ok ? r.json() : null)).catch(() => null)));
   if (token !== compareToken) return;
   disposeCompare();
+  compareDir = camera.position.z >= orbit.target.z ? 1 : -1;
   const src = stage.children[0];
   if (rig && src) {
     // Ana pozu rest'e alıp kopyala (track'i olmayan kemikler kopyada da rest'te kalsın), sonra ana pozu geri kur
     for (const b of rig.bones) { b.obj.quaternion.set(...b.restQ); b.obj.position.set(...b.restP); }
     compareNames.forEach((name, i) => {
       const a = anims[i]; if (!a || !a.tracks) return;
-      const g = new THREE.Group(); g.scale.copy(stage.scale); g.position.copy(stage.position); g.position.x += (i + 1) * COMPARE_GAP;
+      const slot = compareSlot(i);
+      const g = new THREE.Group(); g.scale.copy(stage.scale); g.position.copy(stage.position); g.position.x += slot.x; g.position.z += slot.z;
       const root = cloneSkinned(src); g.add(root);
       const byName = new Map();
       root.traverse((o) => { if (o.isBone && !(o.parent?.isBone && o.parent.name === o.name) && !byName.has(o.name)) byName.set(o.name, o); if (o.isSkinnedMesh) o.frustumCulled = false; });
       const bones = rig.bones.map((b) => ({ b, obj: byName.get(b.name) })).filter((x) => x.obj);
-      const label = nameSprite(name); label.position.set(g.position.x, 2.0, 0);
+      const label = nameSprite(name, compareTags[name]); label.position.set(g.position.x, 2.05, g.position.z);
       compareRoot.add(g, label);
       compare.push({ name, anim: normalizeAnim(a), bones });
     });
@@ -529,22 +539,26 @@ function refreshCompareList() {
     const el = document.createElement('div'); el.className = 'li';
     el.innerHTML = '<span class="n"></span><small></small><button title="Listeden çıkar">✕</button>';
     el.querySelector('.n').textContent = n;
-    const c = compare.find((x) => x.name === n); el.querySelector('small').textContent = c ? c.anim.length + ' kare' : 'yok';
+    const c = compare.find((x) => x.name === n);
+    el.querySelector('small').textContent = [compareTags[n], c ? c.anim.length + ' kare' : 'yok'].filter(Boolean).join(' · ');
     el.title = 'Düzenlemek için yükle';
     el.onclick = () => loadFromLibrary({ name: n }).catch((e) => toast(e.message));
     el.querySelector('button').onclick = (e) => { e.stopPropagation(); setCompare(compareNames.filter((x) => x !== n)); };
     box.appendChild(el);
   }
 }
-async function setCompare(names, { sync = true } = {}) {
+async function setCompare(names, { sync = true, tags } = {}) {
   compareNames = [...new Set(names)];
-  if (sync) { const r = await api('/api/compare', { names: compareNames }).catch(() => null); if (r?.names) compareNames = r.names; }
+  if (tags !== undefined) compareTags = tags || {};
+  compareTags = Object.fromEntries(Object.entries(compareTags).filter(([k]) => compareNames.includes(k)));
+  if (sync) { const r = await api('/api/compare', { names: compareNames, tags: compareTags }).catch(() => null); if (r?.names) compareNames = r.names; }
   await buildCompare();
-  if (compareNames.length) { // satırın ortasına bak, ana karakter + kopyalar kadraja sığsın (kamera yalnız uzaklaşır)
-    const dx = compareNames.length * COMPARE_GAP / 2 - orbit.target.x;
-    orbit.target.x += dx; camera.position.x += dx;
-    const half = Math.max((compareNames.length * COMPARE_GAP) / 2 + 0.6, 1.2);
-    const fit = half / (Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+  if (compareNames.length) { // dizinin ortasına bak, ana karakter + kopyalar kadraja sığsın (kamera yalnız uzaklaşır)
+    const cols = Math.min(compareNames.length + 1, COMPARE_PER_ROW), rows = Math.ceil((compareNames.length + 1) / COMPARE_PER_ROW);
+    const d = new THREE.Vector3(compareDir * (cols - 1) * COMPARE_GAP / 2, orbit.target.y, -compareDir * (rows - 1) * COMPARE_ROW_GAP / 2).sub(orbit.target);
+    orbit.target.add(d); camera.position.add(d);
+    const half = Math.max(cols * COMPARE_GAP / 2 + 0.6, (rows - 1) * COMPARE_ROW_GAP / 2 + 1.2, 1.2);
+    const fit = half / (Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * Math.min(camera.aspect, 1.6)) + (rows - 1) * COMPARE_ROW_GAP / 2;
     const off = camera.position.clone().sub(orbit.target);
     if (off.length() < fit) camera.position.copy(orbit.target).add(off.setLength(fit));
     orbit.update();
@@ -1092,7 +1106,7 @@ es.onopen = () => setConn(true); es.onerror = () => setConn(false);
 es.addEventListener('anim', (e) => {
   const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)'); claudeTouched('animasyonu güncelledi');
 });
-es.addEventListener('compare', async (e) => { await ready; if (mode !== 'anim') setEditorMode('anim', { notify: false }); setCompare(JSON.parse(e.data).names, { sync: false }); claudeTouched('karşılaştırma listesini güncelledi'); });
+es.addEventListener('compare', async (e) => { await ready; if (mode !== 'anim') setEditorMode('anim', { notify: false }); { const d = JSON.parse(e.data); setCompare(d.names, { sync: false, tags: d.tags || {} }); } claudeTouched('karşılaştırma listesini güncelledi'); });
 es.addEventListener('props', (e) => { props = JSON.parse(e.data).props; selProp = null; buildProps(); });
 es.addEventListener('load-animation-fbx', async (e) => {
   const d = JSON.parse(e.data); const buf = await fetch('/animations/' + encodeURIComponent(d.name)).then((r) => r.arrayBuffer());
@@ -1139,7 +1153,7 @@ es.addEventListener('render', async (e) => {
   await mats.setFromState(st);
   mdl.setFromState(st.modelView);
   setEditorMode(MODES.includes(st.mode) ? st.mode : 'anim', { notify: false });
-  await setCompare(st.compare || [], { sync: false });
+  await setCompare(st.compare || [], { sync: false, tags: st.compareTags || {} });
   requestAnimationFrame(tick); markReady();
   refreshStatusUnity(); setInterval(updateStatusItem, 1000);
   let off = false; try { off = localStorage.getItem('upe-help-off') === '1' || localStorage.getItem('upe-welcomed') === '1'; localStorage.setItem('upe-welcomed', '1'); } catch { /* yok */ }

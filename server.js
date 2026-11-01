@@ -37,7 +37,7 @@ const MIME = {
 // material/shader: editördeki materyal/shader (+ *Baseline aynı mantık); lighting: ortak sahne ışığı; materialOverrides: { 'hero'|'hero:<mesh>'|'prop:<id>': materyal }
 // modelView: Model sekmesi { file: { dir:'meshes'|'models'|'props', name } | null, view: görünüm ayarları, info: editörün ölçtüğü model bilgisi | null }
 let state = { rig: null, modelName: null, anim: null, baseline: null, notes: [], props: [], version: 0, mode: 'anim', vfx: null, vfxBaseline: null,
-  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {}, modelView: null, compare: [] };
+  material: null, materialBaseline: null, shader: null, shaderBaseline: null, lighting: null, materialOverrides: {}, modelView: null, compare: [], compareTags: {} };
 fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
 try { state = { ...state, ...JSON.parse(fs.readFileSync(fs.existsSync(STATE_FILE) ? STATE_FILE : MAIN_STATE, 'utf8')) }; } catch { /* ilk çalıştırma */ }
 const MODES = ['anim', 'vfx', 'material', 'shader', 'model'];
@@ -480,9 +480,12 @@ const server = http.createServer(async (req, res) => {
       const b = await readJson(req); const seen = new Set();
       const names = (Array.isArray(b.names) ? b.names : []).map((n) => safeName(n).replace(/\.json$/i, '')).filter((n) => n && !seen.has(n) && seen.add(n));
       const missing = names.filter((n) => !fs.existsSync(path.join(ANIMS_DIR, n + '.json')));
-      state.compare = names.filter((n) => !missing.includes(n)); save();
-      emit('compare', { names: state.compare });
-      return send(res, 200, { ok: true, names: state.compare, missing, clients: clients.size });
+      state.compare = names.filter((n) => !missing.includes(n));
+      const tags = b.tags && typeof b.tags === 'object' ? b.tags : {}; // ad → kısa etiket (adın altında yazar)
+      state.compareTags = Object.fromEntries(state.compare.filter((n) => typeof tags[n] === 'string' && tags[n].trim()).map((n) => [n, tags[n].trim().slice(0, 60)]));
+      save();
+      emit('compare', { names: state.compare, tags: state.compareTags });
+      return send(res, 200, { ok: true, names: state.compare, tags: state.compareTags, missing, clients: clients.size });
     }
     if (p === '/api/props-files' && req.method === 'GET') return send(res, 200, fs.readdirSync(PROPS_DIR).filter((f) => /\.(fbx|glb|gltf)$/i.test(f)));
     if (p === '/api/upload-prop' && req.method === 'POST') {

@@ -290,10 +290,13 @@ server.registerTool('load_animation', {
 
 server.registerTool('compare_animations', {
   description: 'Kütüphanedeki animasyonları (json) editördeki ana karakterin yanında, her biri kendi kopyasında yan yana ve aynı anda oynatır; adları kafalarının üstünde yazar. Kullanıcı editördeki listeden ekleyip çıkarabilir. Ana animasyon değişmez. Boş liste karşılaştırmayı kapatır.',
-  inputSchema: { names: z.array(z.string()).describe('Kütüphane adları, soldan sağa sırayla') },
-}, async ({ names }) => {
-  await ensureServer(); const r = await post('/api/compare', { names });
-  return text({ showing: r.names, missing: r.missing, editorOpen: r.clients > 0 });
+  inputSchema: {
+    names: z.array(z.string()).describe('Kütüphane adları, sırayla (satırda 8 yuva, ilki ana karakter; sonraki satırlar arkaya)'),
+    tags: z.record(z.string(), z.string()).optional().describe('ad → kısa etiket (ör. "oyunda: L1"), adın altında ikinci satırda yazar'),
+  },
+}, async ({ names, tags }) => {
+  await ensureServer(); const r = await post('/api/compare', { names, tags });
+  return text({ showing: r.names, tags: r.tags, missing: r.missing, editorOpen: r.clients > 0 });
 });
 
 server.registerTool('delete_animation', {
