@@ -170,8 +170,14 @@
       <div class="row"><select id="propSelect" style="flex:1;min-width:0"></select></div>
       <div class="row"><select id="propBone" style="flex:1;min-width:0"></select><button id="btnPropAdd" class="primary">Tak</button></div>
       <div id="propList" class="list"></div>
+      <div id="propEdit" hidden>
+        <div class="row"><span style="width:52px">Kemik</span><select id="propEditBone" style="flex:1;min-width:0"></select></div>
+        <div class="row"><span style="width:52px">Konum</span><input type="number" step="0.01" data-k="pos" data-i="0" title="X (m, +X karakterin solu)"><input type="number" step="0.01" data-k="pos" data-i="1" title="Y (m, yukarı)"><input type="number" step="0.01" data-k="pos" data-i="2" title="Z (m, ileri)"></div>
+        <div class="row"><span style="width:52px">Dönüş</span><input type="number" step="5" data-k="rot" data-i="0" title="X (derece)"><input type="number" step="5" data-k="rot" data-i="1" title="Y (derece)"><input type="number" step="5" data-k="rot" data-i="2" title="Z (derece)"></div>
+        <div class="row"><span style="width:52px">Ölçek</span><input type="number" step="0.05" data-k="scale" style="flex:1"><button id="propEditReset" class="small" title="Konum/dönüşü sıfırla">Sıfırla</button></div>
+      </div>
       <label class="btn small">Eşya dosyası yükle (GLB/FBX)…<input type="file" id="filePropUp" accept=".fbx,.glb,.gltf" hidden></label>
-      <div class="hint-s">Takılan eşyayı listeden seç, sonra sahnede taşı/döndür (W/E).</div>
+      <div class="hint-s">Takılan eşyayı listeden seç: alttaki alanlarla sayıyla ayarla ya da sahnede taşı/döndür (W/E). Konum/dönüş kemiğin T-pozuna göre: +X karakterin solu, +Y yukarı, +Z ileri.</div>
     </details>
 
     <details>

@@ -276,3 +276,5 @@ details.menu > summary.primary { background:var(--acc); color:var(--acc-ink); bo
 @media (max-width: 860px) { nav.modes button span { display:none; } }
 details.menu > summary { white-space:nowrap; }
 ::-webkit-scrollbar-corner { background:transparent; }
+#propEdit { margin:4px 0; }
+#propEdit input[type=number] { width:0; flex:1; min-width:0; }

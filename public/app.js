@@ -292,7 +292,7 @@ let drag = null;
 const propGizmo = () => selProp && selProp.obj && tc.object === selProp.obj;
 tc.addEventListener('dragging-changed', (e) => {
   orbit.enabled = !e.value;
-  if (propGizmo()) { if (!e.value) scheduleProps(); return; }
+  if (propGizmo()) { if (!e.value) { scheduleProps(); scheduleCompareRebuild(); } return; }
   if (e.value && sel) {
     pushUndo();
     const t = anim.tracks[sel.name];
@@ -384,7 +384,39 @@ function readPropTransform(a) {
   a.pos = a.obj.position.toArray().map((v) => +v.toFixed(4));
   a.rot = [a.obj.rotation.x, a.obj.rotation.y, a.obj.rotation.z].map((v) => +THREE.MathUtils.radToDeg(v).toFixed(1));
   a.scale = +a.obj.scale.x.toFixed(4);
+  if (a === selProp) fillPropEdit();
 }
+// Seçili eşyanın sayısal düzenleyicisi (kemik, konum, dönüş, ölçek); karşılaştırma kopyaları kısa gecikmeyle yeniden kurulur
+let compareRebuildTimer = null;
+const scheduleCompareRebuild = () => { if (!compareNames.length) return; clearTimeout(compareRebuildTimer); compareRebuildTimer = setTimeout(buildCompare, 300); };
+function applyPropTransform(a) {
+  if (!a.obj) return;
+  a.obj.position.set(...a.pos); a.obj.rotation.set(...a.rot.map(THREE.MathUtils.degToRad)); a.obj.scale.setScalar(a.scale);
+  scheduleProps(); scheduleCompareRebuild();
+}
+function fillPropEdit() {
+  const box = $('#propEdit'); box.hidden = !selProp; if (!selProp) return;
+  const bs = $('#propEditBone');
+  if (bs.options.length !== (rig?.bones.length || 0)) { bs.innerHTML = ''; for (const b of rig?.bones || []) bs.add(new Option(shortBone(b.name), b.name)); }
+  bs.value = selProp.bone;
+  for (const inp of box.querySelectorAll('input[data-k]')) {
+    if (document.activeElement === inp) continue;
+    inp.value = inp.dataset.k === 'scale' ? selProp.scale : selProp[inp.dataset.k][+inp.dataset.i];
+  }
+}
+for (const inp of document.querySelectorAll('#propEdit input[data-k]')) {
+  inp.oninput = () => {
+    const a = selProp, v = +inp.value; if (!a || !Number.isFinite(v) || inp.value === '') return;
+    if (inp.dataset.k === 'scale') a.scale = Math.max(0.01, v); else a[inp.dataset.k][+inp.dataset.i] = v;
+    applyPropTransform(a); refreshPropList();
+  };
+}
+$('#propEditBone').onchange = async () => {
+  const a = selProp; if (!a) return;
+  a.bone = $('#propEditBone').value; await buildProps(); scheduleProps();
+  selProp = a; if (a.obj) tc.attach(a.obj); refreshPropList();
+};
+$('#propEditReset').onclick = () => { const a = selProp; if (!a) return; a.pos = [0, 0, 0]; a.rot = defaultPropRot(a.bone); applyPropTransform(a); fillPropEdit(); };
 const shortBone = (n) => n.replace(/^mixamorig:?/, '');
 function refreshPropList() {
   const box = $('#propList'); box.innerHTML = '';
@@ -394,16 +426,17 @@ function refreshPropList() {
     el.querySelector('.n').textContent = a.prop.replace('builtin:', '') + ' → ' + shortBone(a.bone);
     const sc = el.querySelector('input'); sc.value = a.scale;
     sc.onclick = (e) => e.stopPropagation();
-    sc.oninput = () => { a.scale = Math.max(0.01, +sc.value || 1); a.obj?.scale.setScalar(a.scale); scheduleProps(); };
+    sc.oninput = () => { a.scale = Math.max(0.01, +sc.value || 1); a.obj?.scale.setScalar(a.scale); scheduleProps(); scheduleCompareRebuild(); if (a === selProp) fillPropEdit(); };
     el.querySelector('button').onclick = (e) => { e.stopPropagation(); props = props.filter((p) => p !== a); a.pivot?.removeFromParent(); if (selProp === a) { selProp = null; if (sel) tc.attach(sel.obj); else tc.detach(); } refreshPropList(); scheduleProps(); };
     el.onclick = () => { if (!a.obj) return; selProp = a; tc.attach(a.obj); refreshPropList(); };
     box.appendChild(el);
   }
+  fillPropEdit();
 }
 function fillPropBones() {
   const s = $('#propBone'); s.innerHTML = '';
   for (const b of rig.bones) s.add(new Option(shortBone(b.name), b.name));
-  const rh = rig.bones.find((b) => /RightHand$/.test(b.name)); if (rh) s.value = rh.name;
+  const rh = rig.bones.find((b) => /(RightHand|Hand\.?R)$/.test(b.name)); if (rh) s.value = rh.name;
 }
 async function refreshPropFiles() {
   const s = $('#propSelect'); const files = await fetch('/api/props-files').then((r) => r.json()).catch(() => []);
@@ -411,7 +444,7 @@ async function refreshPropFiles() {
   for (const n of ['pistol', 'rifle', 'sword', 'box']) s.add(new Option('● ' + n, 'builtin:' + n));
   for (const f of files) s.add(new Option(f, f));
 }
-const defaultPropRot = (bone) => (/RightHand$/.test(bone) ? [0, 0, -90] : /LeftHand$/.test(bone) ? [0, 0, 90] : [0, 0, 0]);
+const defaultPropRot = (bone) => (/(RightHand|Hand\.?R)$/.test(bone) ? [0, 0, -90] : /(LeftHand|Hand\.?L)$/.test(bone) ? [0, 0, 90] : [0, 0, 0]);
 $('#btnPropAdd').onclick = async () => {
   if (!rig) return;
   const prop = $('#propSelect').value, bone = $('#propBone').value; if (!prop || !bone) return;
@@ -1107,7 +1140,7 @@ es.addEventListener('anim', (e) => {
   const d = JSON.parse(e.data); pushUndo(); anim = d.anim; afterAnimReplaced(); toast('Claude animasyonu güncelledi (Ctrl+Z ile geri al)'); claudeTouched('animasyonu güncelledi');
 });
 es.addEventListener('compare', async (e) => { await ready; if (mode !== 'anim') setEditorMode('anim', { notify: false }); { const d = JSON.parse(e.data); setCompare(d.names, { sync: false, tags: d.tags || {} }); } claudeTouched('karşılaştırma listesini güncelledi'); });
-es.addEventListener('props', (e) => { props = JSON.parse(e.data).props; selProp = null; buildProps(); });
+es.addEventListener('props', (e) => { for (const a of props) a.pivot?.removeFromParent(); props = JSON.parse(e.data).props; selProp = null; buildProps(); }); // eski pivotlar kalırsa hayalet kopya olur
 es.addEventListener('load-animation-fbx', async (e) => {
   const d = JSON.parse(e.data); const buf = await fetch('/animations/' + encodeURIComponent(d.name)).then((r) => r.arrayBuffer());
   importAnimBuffer(buf, d.name.replace(/\.fbx$/i, '')).catch((er) => toast(er.message));
