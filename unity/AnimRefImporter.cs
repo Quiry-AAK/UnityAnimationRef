@@ -2,7 +2,7 @@
 // Kullanım: bu dosyayı projede bir "Editor" klasörüne koy → Tools > Anim Ref > Import.
 //  - Generic: Transform eğrileri (Mixamo FBX'in kendisi / Generic rig ile birebir).
 //  - Humanoid: Karakter Humanoid avatar ise kareleri HumanPoseHandler ile muscle eğrilerine bake eder.
-// Karakter (hedef) bind/T-pose'ta olmalı: rest pozu hedeften okunur.
+// Retarget dünya uzayında: hedefin rest pozu (A-poz vb.) kaynaktan (T-poz) farklı olabilir, kemik dünya dönüşleri aynalı aktarılır.
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
@@ -82,8 +82,74 @@ public static class AnimRefImporter
 
     class Bound
     {
-        public Transform t; public TrackInfo track; public BoneInfo info;
-        public Quaternion unityRestQ; public Vector3 unityRestP; public float posRatio;
+        public BoneInfo info; public Bound parent; public Transform t; public TrackInfo track;
+        public Quaternion unityRestQ, k = Quaternion.identity; public Vector3 unityRestP; public float posRatio;
+        public Quaternion wg; public Vector3 pg; public bool write; // wg/pg: UPE dünya dönüşü/konumu (karakter kökü = kimlik)
+    }
+
+    static Vector3 V3(float[] a) => new Vector3(a[0], a[1], a[2]);
+    static Vector3 MirrorP(Vector3 p) => new Vector3(-p.x, p.y, p.z);
+    const float AxisMatchDeg = 10f;
+
+    // UPE ileri kinematik (sağ-el); izi olmayan kemik rest'te kalır
+    static void Fk(Bound b, float frame, bool rest = false)
+    {
+        var tr = rest ? null : b.track;
+        var lq = tr?.rot != null && tr.rot.Length >= 5 ? EvalRot(tr.rot, frame) : new Quaternion(b.info.restQ[0], b.info.restQ[1], b.info.restQ[2], b.info.restQ[3]);
+        var lp = tr?.pos != null && tr.pos.Length >= 4 ? EvalPos(tr.pos, frame) : V3(b.info.restP);
+        b.wg = b.parent == null ? lq : Quaternion.Normalize(b.parent.wg * lq);
+        b.pg = b.parent == null ? lp : b.parent.pg + b.parent.wg * lp;
+    }
+
+    // Dünya uzayı retarget. Rest pozlar farklı olabilir (UPE Player.glb T-poz, Unity Player.fbx A-poz): rest'e göre yerel delta
+    // A-poz kolun üstüne binip zincir boyunca kayar. Bunun yerine her kemiğin UPE dünya dönüşü hedefe aynalı verilir: Wu = Mirror(Wg).
+    // Bu, kemik eksenleri iki rigde aynıysa (Mixamo) doğrudur; çocuk kemiğin yerel ofseti (pozdan bağımsız) hedefte başka yöne
+    // bakıyorsa eksenler farklıdır, o kemikte rest'ler aynı poz sayılır: Wu = Mirror(Wg) * K, K = inv(Mirror(WgRest)) * WuRest.
+    static List<Bound> Bind(Data data, Transform root, Dictionary<string, Transform> byNorm)
+    {
+        var tracks = new Dictionary<string, TrackInfo>();
+        foreach (var tr in data.trackList) tracks[tr.bone] = tr;
+        var byName = new Dictionary<string, Bound>();
+        foreach (var b in data.bones) byName[b.name] = new Bound { info = b };
+        var order = new List<Bound>(); // ebeveyn önce
+        void Add(Bound b)
+        {
+            if (order.Contains(b)) return;
+            if (b.info.parent != null && byName.TryGetValue(b.info.parent, out var p)) { b.parent = p; Add(p); }
+            order.Add(b);
+        }
+        foreach (var b in data.bones) Add(byName[b.name]);
+
+        var axesMatch = new Dictionary<Bound, bool>();
+        foreach (var b in order)
+        {
+            tracks.TryGetValue(b.info.name, out b.track);
+            Fk(b, 0, true);
+            if (!byNorm.TryGetValue(Norm(b.info.name), out b.t)) continue;
+            b.unityRestQ = b.t.localRotation; b.unityRestP = b.t.localPosition;
+            var r3 = V3(b.info.restP);
+            b.posRatio = r3.magnitude > 1e-4f ? b.t.localPosition.magnitude / r3.magnitude : data.unitScale;
+            if (b.posRatio < 1e-6f) b.posRatio = data.unitScale;
+        }
+        foreach (var b in order)
+        {
+            if (b.t == null) continue;
+            float worst = -1f;
+            foreach (var c in order)
+                if (c.parent == b && c.t != null && c.t.parent == b.t && c.t.localPosition.magnitude > 1e-5f && V3(c.info.restP).magnitude > 1e-5f)
+                    worst = Mathf.Max(worst, Vector3.Angle(MirrorP(V3(c.info.restP)), c.t.localPosition));
+            // uç kemik (çocuksuz): ebeveynin kararı
+            bool match = worst >= 0f ? worst < AxisMatchDeg : b.parent == null || !axesMatch.TryGetValue(b.parent, out var pm) || pm;
+            axesMatch[b] = match;
+            if (match) continue;
+            b.k = Quaternion.Inverse(Mirror(b.wg)) * (Quaternion.Inverse(root.rotation) * b.t.rotation);
+            Debug.LogWarning($"AnimRef: {b.info.name} kemik eksenleri hedefte farklı ({worst:F0}°); bu kemikte rest pozlar aynı varsayıldı");
+        }
+        // kök: model uzayında mutlak konum, hedef/kaynak yükseklik oranıyla
+        foreach (var b in order)
+            if (b.parent == null && b.t != null && b.pg.magnitude > 1e-4f)
+                b.posRatio = root.InverseTransformPoint(b.t.position).magnitude / b.pg.magnitude;
+        return order;
     }
 
     // Ana giriş. targetRoot: karakterin kökü (Animator'ın olduğu obje). Dönen: oluşturulan clip.
@@ -105,40 +171,30 @@ public static class AnimRefImporter
         {
             var byNorm = new Dictionary<string, Transform>();
             foreach (var t in inst.GetComponentsInChildren<Transform>(true)) byNorm[Norm(t.name)] = t;
-            var infos = new Dictionary<string, BoneInfo>();
-            foreach (var b in data.bones) infos[b.name] = b;
-
-            var bound = new List<Bound>();
+            var root = inst.transform;
+            var order = Bind(data, root, byNorm);
+            var bound = order.FindAll(b => b.t != null);
             var missing = new List<string>();
             foreach (var tr in data.trackList)
-            {
-                if (!byNorm.TryGetValue(Norm(tr.bone), out var t)) { missing.Add(tr.bone); continue; }
-                var info = infos[tr.bone];
-                var bd = new Bound { t = t, track = tr, info = info, unityRestQ = t.localRotation, unityRestP = t.localPosition };
-                var r3 = new Vector3(info.restP[0], info.restP[1], info.restP[2]);
-                bd.posRatio = r3.magnitude > 1e-4f ? t.localPosition.magnitude / r3.magnitude : data.unitScale;
-                if (bd.posRatio < 1e-6f) bd.posRatio = data.unitScale;
-                bound.Add(bd);
-            }
-            if (bound.Count == 0) throw new Exception("Hiçbir kemik eşleşmedi. Hedef Mixamo rigi mi?");
+                if (!bound.Exists(b => b.track == tr)) missing.Add(tr.bone);
+            if (!bound.Exists(b => b.track != null)) throw new Exception("Hiçbir kemik eşleşmedi. Hedef Mixamo rigi mi?");
 
             void Apply(float frame)
             {
-                foreach (var b in bound)
+                foreach (var b in order)
                 {
-                    if (b.track.rot != null && b.track.rot.Length >= 5)
-                    {
-                        var r3 = new Quaternion(b.info.restQ[0], b.info.restQ[1], b.info.restQ[2], b.info.restQ[3]);
-                        var q3 = EvalRot(b.track.rot, frame);
-                        b.t.localRotation = Mirror(q3 * Quaternion.Inverse(r3)) * b.unityRestQ;
-                    }
-                    if (b.track.pos != null && b.track.pos.Length >= 4)
-                    {
-                        var dp = EvalPos(b.track.pos, frame) - new Vector3(b.info.restP[0], b.info.restP[1], b.info.restP[2]);
-                        b.t.localPosition = b.unityRestP + new Vector3(-dp.x, dp.y, dp.z) * b.posRatio;
-                    }
+                    Fk(b, frame);
+                    if (b.t == null) continue;
+                    b.t.rotation = root.rotation * Mirror(b.wg) * b.k;
+                    if (b.track?.pos == null || b.track.pos.Length < 4) continue;
+                    if (b.parent == null) b.t.position = root.TransformPoint(MirrorP(b.pg) * b.posRatio);
+                    else b.t.localPosition = b.unityRestP + MirrorP(EvalPos(b.track.pos, frame) - V3(b.info.restP)) * b.posRatio;
                 }
             }
+
+            // Generic: izli kemikler ve izsiz olup hedefin rest'inden farklı duranlar (ör. T/A poz farkı) yazılır
+            Apply(0);
+            foreach (var b in bound) b.write = b.track != null || Quaternion.Angle(b.t.localRotation, b.unityRestQ) > 0.1f;
 
             var clip = new AnimationClip { frameRate = data.fps, name = string.IsNullOrEmpty(data.name) ? "AnimRef" : data.name };
             int frames = Mathf.Max(2, data.length);
@@ -155,12 +211,12 @@ public static class AnimRefImporter
                     foreach (var b in bound)
                     {
                         string path = AnimationUtility.CalculateTransformPath(b.t, inst.transform);
-                        if (b.track.rot != null && b.track.rot.Length >= 5)
+                        if (b.write)
                         {
                             var q = b.t.localRotation;
                             L(path + "|localRotation.x").Add(q.x); L(path + "|localRotation.y").Add(q.y); L(path + "|localRotation.z").Add(q.z); L(path + "|localRotation.w").Add(q.w);
                         }
-                        if (b.track.pos != null && b.track.pos.Length >= 4)
+                        if (b.track?.pos != null && b.track.pos.Length >= 4)
                         {
                             var p = b.t.localPosition;
                             L(path + "|localPosition.x").Add(p.x); L(path + "|localPosition.y").Add(p.y); L(path + "|localPosition.z").Add(p.z);
