@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } from '../public/vfx-schema.js';
 import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
-import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName } from '../lib/unreal-vfx.js';
+import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL } from '../lib/unreal-vfx.js';
+import { proceduralMesh, meshToOBJ, fitArc } from '../public/vfx-mesh.js';
 
 let fails = 0, n = 0;
 const test = (name, fn) => { n++; try { fn(); } catch (e) { fails++; console.error('BAŞARISIZ', name, '\n  ', e.message); } };
@@ -98,10 +99,104 @@ test('attach uyarısı + UE göreli konumu', () => {
   assert.ok(p.warnings.some((w) => w.startsWith('attach'))); assert.deepEqual(p.metadata.attachUE.locationCm, [46, 0, 0]);
 });
 
-// ── tüm kütüphane + tüm şablonlar + tüm şekil tipleri
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../vfx');
 const files = fs.readdirSync(dir).filter((x) => x.endsWith('.json'));
 const balanced = (s) => { let d = 0; for (const c of s) { if (c === '(') d++; else if (c === ')') d--; if (d < 0) return false; } return d === 0; };
+const lib = createMaterialLibrary();
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// ── BDO özellikleri: mesh, bükülme, ışık, ribbon, özel veri, alt emitter (docs/VFX.md, docs/UNREAL.md)
+const findP = (p, name) => p.emitters.flatMap((e) => e.steps).flatMap((s) => s.params || []).find((q) => q.name === name);
+test('mesh: yay geometrisi UV ve konum (açı 0 = +X, +Y yönüne)', () => {
+  const g = proceduralMesh({ shape: 'arc', innerRadius: 0.5, outerRadius: 1, angle: 90, segments: 2, rings: 1 });
+  assert.equal(g.positions.length / 3, 6); assert.equal(g.indices.length, 12);
+  closeV([...g.positions.slice(0, 3)], [0.5, 0, 0]); closeV([...g.uvs.slice(0, 2)], [0, 0]);
+  closeV([...g.positions.slice(15, 18)], [0, 1, 0]); closeV([...g.uvs.slice(10, 12)], [1, 1]); // son köşe: 90°, dış
+});
+test('mesh: OBJ Unity (1,0,0) m → UE y = −100 (içe aktarıcı Y aynası telafisi), cm', () => {
+  const obj = meshToOBJ({ positions: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]), normals: new Float32Array(9), uvs: new Float32Array(6), indices: new Uint32Array([0, 1, 2]) });
+  const v = obj.split('\n').filter((l) => l.startsWith('v ')).map((l) => l.slice(2).split(' ').map(Number));
+  closeV(v[0], [0, -100, 0]); closeV(v[1], [0, 0, 100]); closeV(v[2], [100, 0, 0]);
+});
+test('mesh: plan Mesh renderer + varlık + MeshOrientation', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { rotation: [30, 20, 0] })));
+  const e = p.emitters[0];
+  assert.equal(e.kind, 'mesh'); assert.equal(e.renderer.class, 'NiagaraMeshRendererProperties');
+  assert.equal(p.meshes.length, 1); assert.ok(/^SM_UPE_arc_[0-9a-f]{8}$/.test(p.meshes[0].asset)); assert.ok(p.meshes[0].obj.split('\nf ').length > 100);
+  assert.ok(findP(p, 'Particles.MeshOrientation') && findP(p, 'Particles.Scale') && findP(p, 'Particles.DynamicMaterialParameter'));
+  assert.ok(p.materials[0].mesh);
+});
+test('mesh yönü: qB ⊗ qz(−θ) = Unity Rem·Rz(−θ) (UE ekseninde)', () => {
+  const Rem = unityEulerMatrix([25, -40, 15]), th = 37;
+  const qB = quatFromMatrix(toUEMatrix(Rem)), h = (-th * Math.PI / 180) / 2, qz = [Math.sin(h), 0, 0, Math.cos(h)];
+  const mul = (a, b) => { const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b; return [aw * bx + bw * ax + (ay * bz - az * by), aw * by + bw * ay + (az * bx - ax * bz), aw * bz + bw * az + (ax * by - ay * bx), aw * bw - (ax * bx + ay * by + az * bz)]; };
+  const q = mul(qB, qz);
+  for (const v of [[1, 0, 0], [0, 1, 0], [0.3, -0.2, 0.9]]) closeV(quatRotate(q, toUEDir(v)), toUEDir(matVec(Rem, matVec(unityEulerMatrix([0, 0, -th]), v))), 1e-9);
+});
+test('mesh: dünya uzayı → Engine.Owner.Rotation ile çarpılır', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { main: { simulationSpace: 'world' } })));
+  assert.ok(findP(p, 'Particles.MeshOrientation').hlsl.includes('Engine.Owner.Rotation'));
+});
+test('bükülme: yerleşik Distortion materyali + skalerler', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('heat_haze')));
+  const m = p.materials[0];
+  assert.equal(m.blend, 'Distortion'); assert.equal(m.scalars.Mode, 1); close(m.scalars.Strength, 0.025);
+  assert.ok(/^MI_UPE_soft_Distort_[0-9a-z]+$/.test(m.instance)); assert.equal(p.emitters[0].renderer.props.SortMode, 'ViewDistance');
+  assert.ok(balanced(DISTORT_HLSL) && DISTORT_HLSL.includes('Texture2DSample(Tex, TexSampler'));
+});
+test('ışık: single → ayrı Light emitter, perParticle → kaynak adımları + UPE_Light', () => {
+  const p1 = effectToNiagaraPlan(fx(presetEmitter('fire_light')));
+  const le = p1.emitters.find((e) => e.kind === 'light');
+  assert.ok(le && le.renderer.class === 'NiagaraLightRendererProperties' && /_Isik$/.test(le.name));
+  assert.equal(le.steps.find((s) => s.alias === 'UPE_Light').params[1].hlsl, '300.0');
+  const p2 = effectToNiagaraPlan(fx(presetEmitter('embers', { light: { enabled: true, mode: 'perParticle', useParticleColor: true } })));
+  const l2 = p2.emitters.find((e) => e.kind === 'light'), src = p2.emitters[0];
+  assert.equal(l2.data.RandomSeed, src.data.RandomSeed);
+  assert.ok(l2.steps.some((s) => s.alias === 'UPE_Init') && !l2.steps.some((s) => s.alias === 'UPE_Color'));
+  assert.ok(l2.steps.at(-1).params[0].hlsl.includes('Particles.UPE_CS.rgb'));
+});
+test('ribbon: width × taper root + uvMode tile + customData', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('slash', { bladeTrail: { enabled: true, width: [[0, 1], [1, 0.2]], taper: 'root', uvMode: 'tile', tileLength: 0.5 }, customData: { enabled: true } })));
+  const e = p.emitters[0];
+  assert.ok(findP(p, 'Particles.Position').hlsl.startsWith('lerp(Particles.UPE_Root, Particles.UPE_Tip, 0.5 *'));
+  assert.ok(findP(p, 'Particles.RibbonWidth').hlsl.includes('saturate'));
+  assert.deepEqual(e.renderer.props.UV0Settings, { DistributionMode: 'TiledOverRibbonLength', TilingLength: 50 });
+  assert.ok(findP(p, 'Particles.DynamicMaterialParameter'));
+});
+test('alt emitter: hedef yayımsız + uyarı; önizleme şeması başvuruyu doğrular', () => {
+  const e = normalizeEffect({ name: 't', emitters: [{ ...presetEmitter('sparks'), name: 'a', subEmitters: { enabled: true, items: [{ emitter: 'b', trigger: 'death', count: [3, 3] }] } }, { ...presetEmitter('embers'), name: 'b' }] }).effect;
+  const p = effectToNiagaraPlan(e);
+  const b = p.emitters.find((x) => x.source === 'b');
+  assert.ok(!b.steps.some((s) => s.asset?.includes('Spawn'))); assert.ok(p.warnings.some((w) => /Event Handler/.test(w)));
+});
+test('UPE-SL: i.custom → Dynamic Parameter girdileri; bükülme → _Distort + ofset çıkışı', () => {
+  const sh = { ...lib.builtins.find((s) => s.name === 'urp_particles_unlit') };
+  sh.code = { ...sh.code, fragment: 'float4 frag(UPEInput i)\n{\n    return float4(i.custom.xy, 0.0, i.custom.w);\n}\n' };
+  const tr = translateShaderForUE(sh, { values: { _Surface: 1, _Blend: 0 }, distortion: true });
+  assert.deepEqual(checkTranslation(tr), []);
+  assert.deepEqual(tr.inputs.filter((x) => /^UPE_CUS/.test(x.name)).map((x) => x.node.output), ['Param1', 'Param2', 'Param3', 'Param4']);
+  assert.ok(tr.code.includes('upeIn.custom = float4(UPE_CUS0') && tr.code.includes('UPE_DistortStrength') && tr.blendMode === 'BLEND_Translucent');
+  assert.equal(baseMaterialName(sh, renderStateFor(sh, {}), { distortion: true }), 'M_UPE_urp_particles_unlit_Distort');
+  const mf = fs.readdirSync(path.join(root, 'materials')).find((x) => x.endsWith('.json'));
+  if (mf) { const mp = planEmitterMaterial(lib, mf.slice(0, -5), 'sprite', { distortion: 0.04, mesh: true }); assert.ok(/_Distort$/.test(mp.base.name) && /_Distort_40$/.test(mp.instance.name)); }
+});
+test('yay oturtma: bilinen çember (dönüş, yarıçap, açı, iç oran, kesir)', () => {
+  const M = unityEulerMatrix([30, -50, 20]), c = [0.2, 1.1, 0.4], tips = [], grips = [];
+  for (let i = 0; i <= 20; i++) { const a = (10 + 170 * i / 20) * Math.PI / 180, wv = (r) => matVec(M, [Math.cos(a) * r, Math.sin(a) * r, 0]).map((v, k) => v + c[k]); tips.push(wv(1.3)); grips.push(wv(0.4)); }
+  const r = fitArc(tips, grips);
+  closeV(r.center, c, 1e-3); close(r.radius, 1.3, 1e-3); close(r.angle, 170, 0.05); close(r.inner, 0.4 / 1.3, 1e-3);
+  closeV(r.rotation, [30, -50, 30], 0.01); close(r.progress[10], 0.5, 1e-3);
+});
+test('geriye uyum: eski efekt yeni alanları varsayılanla alır, normalize iki kez aynı', () => {
+  for (const file of files) {
+    const a = normalizeEffect(JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'))).effect;
+    const b = normalizeEffect(JSON.parse(JSON.stringify(a))).effect;
+    assert.equal(JSON.stringify(b), JSON.stringify(a), file); // -0 ≡ 0 (JSON)
+    for (const em of a.emitters) assert.ok(em.renderer.mesh && em.light && em.customData && em.subEmitters && em.bladeTrail.width, file);
+  }
+});
+
+// ── tüm kütüphane + tüm şablonlar + tüm şekil tipleri
 let emitters = 0, steps = 0; const warnKinds = new Map();
 const checkPlan = (p, label) => {
   for (const e of p.emitters) {
@@ -135,8 +230,6 @@ test('tüm şekil tipleri + tüm modüller', () => {
 });
 
 // ── Aşama 2: UPE-SL → UE Custom HLSL (editörsüz; gerçek derleme editörde)
-const lib = createMaterialLibrary();
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shaderFiles = fs.readdirSync(path.join(root, 'shaders')).filter((x) => x.endsWith('.json'));
 let nTr = 0;
 for (const sh of [...lib.builtins, ...shaderFiles.map((f) => lib.shader(f.slice(0, -5)))]) test(`UE çeviri ${sh.name}`, () => {
