@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } from '../public/vfx-schema.js';
+import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
 import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName } from '../lib/unreal-vfx.js';
 
 let fails = 0, n = 0;
@@ -133,6 +134,55 @@ test('tüm şekil tipleri + tüm modüller', () => {
   }
 });
 
+// ── Aşama 2: UPE-SL → UE Custom HLSL (editörsüz; gerçek derleme editörde)
+const lib = createMaterialLibrary();
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const shaderFiles = fs.readdirSync(path.join(root, 'shaders')).filter((x) => x.endsWith('.json'));
+let nTr = 0;
+for (const sh of [...lib.builtins, ...shaderFiles.map((f) => lib.shader(f.slice(0, -5)))]) test(`UE çeviri ${sh.name}`, () => {
+  assert.ok(sh, 'shader çözülemedi');
+  const variants = sh.urpSurface ? [{ _Surface: 0 }, { _Surface: 1, _Blend: 0 }, { _Surface: 1, _Blend: 1 }, { _Surface: 1, _Blend: 2, _Cull: 0 }, { _Surface: 1, _Blend: 3, _AlphaClip: true }] : [undefined];
+  for (const values of variants) {
+    const tr = translateShaderForUE(sh, { values }); nTr++;
+    const errs = checkTranslation(tr);
+    assert.deepEqual(errs, [], `${sh.name}: ${errs.join('; ')}`);
+    assert.ok(/#line 1 "upe_fragment"/.test(tr.code) && /#line 1 "upe_common"/.test(tr.code), 'bölüm işaretleri');
+    assert.ok(/^BLEND_/.test(tr.blendMode) && /^[0-9a-f]{12}$/.test(tr.hash));
+    for (const p of sh.properties) assert.ok(tr.params.some((x) => x.name === p.name), `parametre yok: ${p.name}`);
+    assert.ok(/^M_UPE_[A-Za-z0-9_]+$/.test(baseMaterialName(sh, renderStateFor(sh, values))));
+  }
+});
+const matFiles = fs.readdirSync(path.join(root, 'materials')).filter((x) => x.endsWith('.json'));
+for (const f of matFiles) test(`UE materyal planı ${f}`, () => {
+  for (const kind of ['sprite', 'ribbon']) {
+    const mp = planEmitterMaterial(lib, f.slice(0, -5), kind);
+    assert.ok(/^MI_UPE_[A-Za-z0-9_]+$/.test(mp.instance.name) && mp.instance.path.startsWith('/Game/UPE/Materials/'));
+    assert.ok(mp.base.path.startsWith('/Game/UPE/Shaders/M_UPE_'));
+    assert.equal(mp.values.scalars.find((x) => x.name === 'UPE_Ribbon').value, kind === 'ribbon' ? 1 : 0);
+    for (const v of mp.values.vectors) assert.ok(v.value.length === 4 && v.value.every(Number.isFinite), `${v.name}`);
+  }
+});
+test('SAMPLE → Texture2DSample (iç içe, LOD, TRANSFORM_TEX)', () => {
+  assert.equal(convertSampling('SAMPLE(_A, uv) + SAMPLE_LOD(_B, f(x, SAMPLE(_A, q).xy), 0.0)'),
+    'Texture2DSample(_A, _ASampler, UPE_FlipV(uv)) + Texture2DSampleLevel(_B, _BSampler, UPE_FlipV(f(x, Texture2DSample(_A, _ASampler, UPE_FlipV(q)).xy)), 0.0)');
+  const sh = lib.builtins.find((s) => s.name === 'urp_particles_unlit');
+  const tr = translateShaderForUE(sh, { values: { _Surface: 1, _Blend: 2 } });
+  assert.ok(tr.code.includes('Texture2DSample(_BaseMap, _BaseMapSampler, UPE_FlipV(((i.uv) * _BaseMap_ST.xy + _BaseMap_ST.zw)))'));
+  assert.equal(tr.blendMode, 'BLEND_Additive'); assert.ok(tr.code.includes('return float4(upeC.rgb * upeC.a, upeC.a);'));
+});
+test('derleme hatası: bölüm + satır', () => {
+  const e = parseCompileErrors(['C:/x/upe_fragment(2,183): Shader FDebugViewModePS', "	upe_fragment:2:183: error: use of undeclared identifier 'bogus'", "	upe_fragment:2:183: error: use of undeclared identifier 'bogus'", 'Internal Error!'].join(String.fromCharCode(10)));
+  assert.equal(e.length, 1); assert.equal(e[0].section, 'fragment'); assert.equal(e[0].line, 2); assert.match(e[0].message, /bogus/);
+});
+test('renk: sRGB hex → doğrusal, alfa korunur', () => { const c = colorToLinear('#ff808040'); close(c[0], 1); close(c[1], 0.2158605, 1e-5); close(c[3], 0x40 / 255); });
+test('materyalli emitter → ueMaterials (ribbon/sprite ayrı)', () => {
+  const p = effectToNiagaraPlan(normalizeEffect(JSON.parse(fs.readFileSync(path.join(dir, 'vfx_heavy_4_iz.json'), 'utf8'))).effect);
+  assert.ok(p.ueMaterials.some((m) => m.name === 'kilic_izi_agir' && m.kind === 'ribbon'));
+  assert.ok(p.ueMaterials.some((m) => m.kind === 'sprite'));
+  assert.ok(!p.warnings.some((w) => /Aşama 2/.test(w)));
+});
+
 console.log(`${n - fails}/${n} test geçti · ${files.length} efekt dosyası, ${emitters} emitter, ${steps} adım`);
+console.log(`UE materyal çevirisi: ${nTr} shader varyantı, ${matFiles.length} materyal`);
 console.log('uyarı türleri:'); for (const [k, v] of [...warnKinds].sort((a, b) => b[1] - a[1])) console.log(`  ${v}× ${k}`);
 process.exitCode = fails ? 1 : 0;
