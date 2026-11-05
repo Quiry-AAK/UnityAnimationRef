@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_normal_l3",
+ "shader": "UnityPreview/kesik_firca",
+ "values": {
+  "_InkColor": "#1e2633",
+  "_CoreColor": "#e8eef5",
+  "_BodyColor": "#9aafc7",
+  "_ShadowColor": "#5b6f8a",
+  "_Width": 0.4,
+  "_InkWidth": 0.09,
+  "_CoreBand": 0.14,
+  "_ShadowBand": 0.62,
+  "_Reveal": 0.27,
+  "_ErodeStart": 0.4,
+  "_Fiber": 40,
+  "_Dry": 0.95,
+  "_Flash": 0.35
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

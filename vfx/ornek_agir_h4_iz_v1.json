@@ -1,0 +1,504 @@
+{
+ "format": "upe-vfx-1",
+ "name": "ornek_agir_h4_iz",
+ "duration": 1.4833,
+ "loop": true,
+ "attach": {
+  "target": "prop",
+  "name": "katana",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ]
+ },
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#4a5262",
+  "bloom": 0.8,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "iz_murekkep",
+   "position": [
+    0.0,
+    0.012,
+    0.11
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.733,
+    "looping": false,
+    "startDelay": 0.0333,
+    "startLifetime": [
+     0.24,
+     0.24
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.27,
+     0.27
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#0e1424",
+     "#0e1424"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 1200
+   },
+   "emission": {
+    "rateOverTime": 1100,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.012,
+     0.02,
+     0.7
+    ],
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.6,
+      0.9
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      0.7,
+      0.85
+     ],
+     [
+      1,
+      0.45
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "iz_leke",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 1,
+    "velocityScale": 0.55,
+    "sortingOrder": 0
+   }
+  },
+  {
+   "name": "iz_govde",
+   "position": [
+    0.0,
+    0.012,
+    0.11
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.733,
+    "looping": false,
+    "startDelay": 0.0333,
+    "startLifetime": [
+     0.21,
+     0.21
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.2,
+     0.2
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#3f6bb8",
+     "#3f6bb8"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 1200
+   },
+   "emission": {
+    "rateOverTime": 1300,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.012,
+     0.02,
+     0.7
+    ],
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.6,
+      0.9
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      0.7,
+      0.8
+     ],
+     [
+      1,
+      0.35
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 1,
+    "velocityScale": 0.55,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz_cekirdek",
+   "position": [
+    0.0,
+    0.04,
+    0.33
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.733,
+    "looping": false,
+    "startDelay": 0.0333,
+    "startLifetime": [
+     0.13,
+     0.13
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.09,
+     0.09
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#d6ecff",
+     "#d6ecff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 1200
+   },
+   "emission": {
+    "rateOverTime": 800,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.01,
+     0.01,
+     0.26
+    ],
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.6,
+      0.9
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 1,
+    "velocityScale": 0.55,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "iz_kirinti",
+   "position": [
+    0.0,
+    0.012,
+    0.11
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.733,
+    "looping": false,
+    "startDelay": 0.0333,
+    "startLifetime": [
+     0.22,
+     0.36
+    ],
+    "startSpeed": [
+     1,
+     3
+    ],
+    "startSize": [
+     0.035,
+     0.08
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#3f6bb8",
+     "#6f95d4"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 80
+   },
+   "emission": {
+    "rateOverTime": 70,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.012,
+     0.02,
+     0.7
+    ],
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 1.0
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 8,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.6
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "leke_agir_kirinti",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 2.2,
+    "velocityScale": 0.035,
+    "sortingOrder": 4
+   }
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "yarik_agir",
+ "shader": "UnityPreview/yer_cizik",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#d6ecff",
+  "_BodyColor": "#6f95d4",
+  "_Width": 0.022,
+  "_InkWidth": 0.45,
+  "_CoreBand": 0.4,
+  "_Reveal": 0.12,
+  "_ErodeStart": 0.45,
+  "_Fiber": 70,
+  "_Dry": 0.75
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

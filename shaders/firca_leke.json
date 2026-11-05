@@ -1,0 +1,103 @@
+{
+ "format": "upe-shader-1",
+ "name": "firca_leke",
+ "description": "Parçacık için fırça izi: _Splat 0 = uçu sivrilen damla biçimli çizgi (stretched ile uçuş yönüne uzanır), 1 = kenarı düzensiz mürekkep lekesi. Kenar mürekkep, içi parçacık rengi (gövde), başta açık çekirdek. Parçacık alfası 1→0 doğrusal = ömür; kuyruktan eriyerek söner.",
+ "builtin": false,
+ "unityName": "UnityPreview/firca_leke",
+ "properties": [
+  {
+   "name": "_InkColor",
+   "type": "color",
+   "label": "Mürekkep kenar",
+   "default": "#1e2633"
+  },
+  {
+   "name": "_CoreColor",
+   "type": "color",
+   "label": "Çekirdek",
+   "default": "#e8eef5"
+  },
+  {
+   "name": "_Splat",
+   "type": "toggle",
+   "label": "Leke (damla yerine)",
+   "default": false
+  },
+  {
+   "name": "_FlipX",
+   "type": "toggle",
+   "label": "Başı çevir",
+   "default": false
+  },
+  {
+   "name": "_InkEdge",
+   "type": "range",
+   "label": "Mürekkep kenar oranı",
+   "min": 0,
+   "max": 0.6,
+   "default": 0.22
+  },
+  {
+   "name": "_CoreAmount",
+   "type": "range",
+   "label": "Çekirdek miktarı",
+   "min": 0,
+   "max": 1,
+   "default": 0.5
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Fırça lifi",
+   "min": 2,
+   "max": 40,
+   "default": 14
+  },
+  {
+   "name": "_Dry",
+   "type": "range",
+   "label": "Kuyrukta kuru fırça",
+   "min": 0,
+   "max": 1.5,
+   "default": 0.8
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Erime başı",
+   "min": 0,
+   "max": 0.95,
+   "default": 0.35
+  },
+  {
+   "name": "_SwapUV",
+   "type": "toggle",
+   "label": "UV eksenlerini değiştir (stretched)",
+   "default": false
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\n#define AAW(x) max(abs(ddx(x)) + abs(ddy(x)), 0.0001)\n#define AASTEP(edge, x) smoothstep((edge) - AAW(x), (edge) + AAW(x), (x))",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float life = 1.0 - i.color.a;\n    float e = saturate((life - _ErodeStart) / max(1.0 - _ErodeStart, 0.001));\n    float2 uv = lerp(i.uv, i.uv.yx, _SwapUV);\n    float x = lerp(uv.x, 1.0 - uv.x, _FlipX);\n    float y = uv.y - 0.5;\n\n    // --- damla biçimli çizgi: baş x≈0.8'de yuvarlak, kuyruk x=0'a sivrilir ---\n    float xs = saturate(x / 0.8);\n    float hx = saturate((x - 0.8) / 0.18);\n    float bodyW = 0.36 * pow(xs, 0.8);\n    float capW = 0.36 * sqrt(saturate(1.0 - hx * hx));\n    float hw = lerp(bodyW, capW, step(0.8, x));\n    float nl = vnoise(float2(x * 4.0, 2.7));\n    hw *= 0.88 + 0.24 * nl;\n    float n2 = vnoise(float2(y * _Fiber, x * 5.0));\n    float dEdge = hw - abs(y);\n    float aStreak = AASTEP(0.0, dEdge);\n    aStreak *= AASTEP((1.0 - x) * _Dry - 0.2, n2);\n    aStreak *= AASTEP(e * 1.05, x * 0.8 + n2 * 0.2);\n    float inkS = 1.0 - AASTEP(hw * _InkEdge, dEdge);\n    float coreS = AASTEP(hw * 0.5, dEdge) * smoothstep(0.4, 0.75, x);\n\n    // --- leke: kenarı loblu, içten delinerek erir ---\n    float2 q = (i.uv - 0.5) * 2.0;\n    float r = length(q);\n    float2 dir = q / max(r, 0.0001);\n    float lobe = vnoise(dir * 2.6 + float2(3.1, 7.7)) * 0.6 + vnoise(dir * 6.0 + float2(1.3, 2.9)) * 0.4;\n    float R = (0.55 + 0.32 * lobe) * (1.0 - e * 0.6);\n    float dS = R - r;\n    float aSplat = AASTEP(0.0, dS);\n    float holes = vnoise(q * 5.0 + float2(9.0, 4.0));\n    aSplat *= AASTEP(e * 1.1 - 0.05, holes * 0.6 + 0.4 * (1.0 - r));\n    float inkP = 1.0 - AASTEP(R * _InkEdge * 0.6, dS);\n    float coreP = AASTEP(R * 0.6, dS);\n\n    float a = lerp(aStreak, aSplat, _Splat);\n    float ink = lerp(inkS, inkP, _Splat);\n    float core = lerp(coreS, coreP, _Splat) * _CoreAmount;\n    float3 c = i.color.rgb;\n    c = lerp(c, _CoreColor.rgb, core);\n    c = lerp(c, _InkColor.rgb, ink);\n    return float4(c, a);\n}",
+  "outlineFragment": ""
+ }
+}

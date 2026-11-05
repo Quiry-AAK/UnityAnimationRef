@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "atilma_cizgi_ince",
+ "shader": "UnityPreview/yer_cizik",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#d6ecff",
+  "_BodyColor": "#9ab8e6",
+  "_Width": 0.009,
+  "_InkWidth": 0.5,
+  "_CoreBand": 0.35,
+  "_Reveal": 0.25,
+  "_ErodeStart": 0.3,
+  "_Fiber": 80,
+  "_Dry": 1.2
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

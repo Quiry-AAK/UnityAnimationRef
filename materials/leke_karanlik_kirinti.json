@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "leke_karanlik_kirinti",
+ "shader": "UnityPreview/firca_leke",
+ "values": {
+  "_InkColor": "#0a0c14",
+  "_CoreColor": "#5a1622",
+  "_Splat": false,
+  "_FlipX": false,
+  "_InkEdge": 0.3,
+  "_CoreAmount": 0.4,
+  "_Fiber": 22,
+  "_Dry": 0.8,
+  "_ErodeStart": 0.4,
+  "_SwapUV": true
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

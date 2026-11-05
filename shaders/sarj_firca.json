@@ -1,0 +1,189 @@
+{
+ "format": "upe-shader-1",
+ "name": "sarj_firca",
+ "description": "Ağır şarj fırçası. _Mode 0 = kılıç aurası: kare quad (local hizalı, quad Y'si bıçak boyunca), bıçağın üstünde ortası düz beyaz, dışa sönen iç parlama + _Gap'ten dışarı uca doğru akan mürekkep kenarlı fırça dilleri; _Aspect = quad boyu / en, _Grow açıksa ömürle (parçacık alfası 1→0) kabzadan uca dolar. _Mode 1 = enso: elle çekilmiş fırça halkası, ömrün _Reveal kadarında dönerek çizilir, kuyruktan eriyerek söner, ilk anda çekirdek parlar. _Mode 2 = dört köşeli fırça yıldızı (dolu anı parıltısı): beyaz çekirdek, mürekkep kenar, sonda delinerek erir.",
+ "builtin": false,
+ "unityName": "UnityPreview/sarj_firca",
+ "properties": [
+  {
+   "name": "_InkColor",
+   "type": "color",
+   "label": "Mürekkep kenar",
+   "default": "#0e1424"
+  },
+  {
+   "name": "_CoreColor",
+   "type": "color",
+   "label": "Çekirdek",
+   "default": "#d6ecff"
+  },
+  {
+   "name": "_BodyColor",
+   "type": "color",
+   "label": "Gövde",
+   "default": "#3f6bb8"
+  },
+  {
+   "name": "_ShadowColor",
+   "type": "color",
+   "label": "Gölge",
+   "default": "#284a86"
+  },
+  {
+   "name": "_Mode",
+   "type": "range",
+   "label": "Mod (0 kılıç, 1 enso, 2 yıldız)",
+   "min": 0,
+   "max": 2,
+   "default": 0
+  },
+  {
+   "name": "_Grow",
+   "type": "toggle",
+   "label": "Kabzadan uca dol (mod 0)",
+   "default": true
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Kalınlık",
+   "min": 0.02,
+   "max": 1,
+   "default": 0.42
+  },
+  {
+   "name": "_InkWidth",
+   "type": "range",
+   "label": "Mürekkep kenar payı",
+   "min": 0,
+   "max": 0.5,
+   "default": 0.18
+  },
+  {
+   "name": "_CoreWidth",
+   "type": "range",
+   "label": "Çekirdek genişliği",
+   "min": 0,
+   "max": 0.4,
+   "default": 0.09
+  },
+  {
+   "name": "_ShadowBand",
+   "type": "range",
+   "label": "Gölge bandı başı",
+   "min": 0.3,
+   "max": 1,
+   "default": 0.62
+  },
+  {
+   "name": "_Flow",
+   "type": "range",
+   "label": "Dillerin akış hızı",
+   "min": 0,
+   "max": 8,
+   "default": 2.6
+  },
+  {
+   "name": "_Tongues",
+   "type": "range",
+   "label": "Dil sıklığı",
+   "min": 1,
+   "max": 12,
+   "default": 4.5
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Fırça lifi",
+   "min": 5,
+   "max": 120,
+   "default": 40
+  },
+  {
+   "name": "_Dry",
+   "type": "range",
+   "label": "Uçlarda kuru fırça",
+   "min": 0,
+   "max": 1.5,
+   "default": 0.9
+  },
+  {
+   "name": "_Reveal",
+   "type": "range",
+   "label": "Açılma (ömür oranı, mod 1)",
+   "min": 0.01,
+   "max": 0.6,
+   "default": 0.18
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Erime başı (ömür oranı, mod 1)",
+   "min": 0,
+   "max": 0.95,
+   "default": 0.4
+  },
+  {
+   "name": "_Flash",
+   "type": "range",
+   "label": "İlk an çekirdek parlaması",
+   "min": 0,
+   "max": 1,
+   "default": 0.4
+  },
+  {
+   "name": "_FlipS",
+   "type": "toggle",
+   "label": "Kabza-uç yönünü çevir (mod 0)",
+   "default": false
+  },
+  {
+   "name": "_Aspect",
+   "type": "range",
+   "label": "Quad boy/en oranı (mod 0, kare quad'da en daralır)",
+   "min": 1,
+   "max": 8,
+   "default": 1
+  },
+  {
+   "name": "_Gap",
+   "type": "range",
+   "label": "Bıçak boşluğu (mod 0, fırça buradan başlar)",
+   "min": 0,
+   "max": 0.4,
+   "default": 0.09
+  },
+  {
+   "name": "_GlowAlpha",
+   "type": "range",
+   "label": "İç parlama örtücülüğü (mod 0)",
+   "min": 0,
+   "max": 1,
+   "default": 0.5
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\n#define AAW(x) max(abs(ddx(x)) + abs(ddy(x)), 0.0001)\n#define AASTEP(edge, x) smoothstep((edge) - AAW(x), (edge) + AAW(x), (x))",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float life = 1.0 - i.color.a;\n    float er = saturate((life - _ErodeStart) / max(1.0 - _ErodeStart, 0.001));\n\n    // ---------- mod 0: kılıç aurası (s kabzadan uca, w bıçağa dik) ----------\n    // bıçağın üstü yumuşak beyaz iç parlama (ortada düz, dışa söner); fırça dilleri _Gap'ten dışarı çıkar\n    float s = lerp(i.uv.y, 1.0 - i.uv.y, _FlipS);\n    float w = (i.uv.x - 0.5) * _Aspect;\n    float aw = abs(w);\n    float side = step(0.0, w);\n    float t = i.time * _Flow;\n    float env = sqrt(saturate(s / 0.06)) * saturate((1.0 - s) / 0.3);\n    float tg = vnoise(float2(s * _Tongues - t, side * 17.0 + 3.0));\n    float tg2 = vnoise(float2(s * _Tongues * 2.3 - t * 1.4, side * 5.0 + 11.0));\n    float tongue = pow(saturate(tg * 0.8 + tg2 * 0.4), 1.8);\n    float hw = _Gap * env + _Width * 0.5 * env * (0.06 + 0.94 * tongue);\n    float grow = lerp(1.0, saturate(life * 1.12), _Grow);\n    float front = grow * 1.08 - 0.04 + (vnoise(float2(w * 9.0, t)) - 0.5) * 0.08;\n    float shown = AASTEP(s, front);\n    float dEdge = hw - aw;\n    float aBody = AASTEP(0.0, dEdge);\n    float fib = vnoise(float2(w * _Fiber, s * 6.0 - t * 2.0));\n    aBody *= AASTEP((aw / max(hw, 0.0001)) * _Dry - 0.35, fib);\n    aBody *= smoothstep(_Gap * 0.5, _Gap * 1.5, aw) * shown;\n    float inkB = 1.0 - AASTEP(hw * _InkWidth, dEdge);\n    float shadowB = AASTEP(_ShadowBand, aw / max(hw, 0.0001));\n    float glow = (1.0 - smoothstep(_Gap * 0.45 * env, _Gap * 1.7 * env, aw)) * saturate(env * 1.6) * shown;\n    float3 cB = lerp(_BodyColor.rgb, _ShadowColor.rgb, shadowB);\n    cB = lerp(cB, _InkColor.rgb, inkB);\n    cB = lerp(cB, _CoreColor.rgb, glow);\n    float aB = max(aBody, glow * _GlowAlpha);\n\n    // ---------- mod 1: enso ----------\n    float2 q = (i.uv - 0.5) * 2.0;\n    float r = length(q);\n    float ang = atan2(q.y, q.x);\n    float u = frac((ang + PI * 0.5) / (2.0 * PI) + 0.5);\n    float arc = 0.92;\n    float ua = u / arc;\n    float inArc = step(u, arc);\n    float reveal = saturate(life / max(_Reveal, 0.001));\n    float th = _Width * 0.5 * (0.55 + 0.45 * vnoise(float2(ua * 7.0, 1.7))) * sqrt(saturate(ua / 0.06)) * pow(saturate((1.0 - ua) / 0.5), 0.7);\n    float R = 0.72 + 0.05 * vnoise(float2(ua * 3.0, 4.2));\n    float dRing = th - abs(r - R);\n    float aRing = AASTEP(0.0, dRing) * inArc;\n    float fibR = vnoise(float2((r - R) * _Fiber, ua * 9.0));\n    aRing *= AASTEP(ua, reveal);\n    aRing *= AASTEP((1.0 - ua) * _Dry * 0.6 - 0.25, fibR);\n    aRing *= AASTEP(er * 1.05, ua * 0.85 + fibR * 0.15);\n    float inkR = 1.0 - AASTEP(th * _InkWidth, dRing);\n    float shadowR = AASTEP(_ShadowBand, abs(r - R) / max(th, 0.0001)) * step(R, r);\n    float coreR = AASTEP(abs(r - R), th * (0.25 + _Flash * 0.5 * saturate(1.0 - life / 0.2)));\n    float3 cR = lerp(_BodyColor.rgb, _ShadowColor.rgb, shadowR);\n    cR = lerp(cR, _CoreColor.rgb, coreR);\n    cR = lerp(cR, _InkColor.rgb, inkR * (1.0 - coreR));\n\n    // ---------- mod 2: dört köşeli fırça yıldızı ----------\n    float2 pa = abs(q);\n    float lob = vnoise(float2(ang * 2.0, 6.1));\n    float st = sqrt(pa.x) + sqrt(pa.y);\n    float dS = (0.92 + 0.08 * lob) - st;\n    float aS = AASTEP(0.0, dS);\n    float holes = vnoise(q * 6.0 + float2(4.0, 9.0));\n    aS *= AASTEP(er * 1.1 - 0.05, holes * 0.55 + 0.45 * (1.0 - r));\n    float inkS = 1.0 - AASTEP(0.07 + 0.05 * lob, dS);\n    float coreS = AASTEP(0.16 - _Flash * 0.1 * saturate(1.0 - life / 0.25), dS);\n    float3 cS = lerp(_BodyColor.rgb, _CoreColor.rgb, coreS);\n    cS = lerp(cS, _InkColor.rgb, inkS * (1.0 - coreS));\n\n    float m1 = step(0.5, _Mode) * (1.0 - step(1.5, _Mode));\n    float m2 = step(1.5, _Mode);\n    float3 c = lerp(lerp(cB, cR, m1), cS, m2) * i.color.rgb;\n    float a = lerp(lerp(aB, aRing, m1), aS, m2);\n    return float4(c, a);\n}",
+  "outlineFragment": ""
+ }
+}

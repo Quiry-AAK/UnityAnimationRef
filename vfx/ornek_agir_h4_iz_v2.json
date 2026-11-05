@@ -1,0 +1,165 @@
+{
+ "format": "upe-vfx-1",
+ "name": "ornek_agir_h4_iz",
+ "duration": 1.4833,
+ "loop": true,
+ "attach": {
+  "target": "prop",
+  "name": "katana",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ]
+ },
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#4a5262",
+  "bloom": 0.8,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "iz_serit",
+   "position": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.733,
+    "looping": false,
+    "startDelay": 0.0333,
+    "startLifetime": [
+     0.21,
+     0.21
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.2,
+     0.2
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 1
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.012,
+     0.02,
+     0.7
+    ],
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.75,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": false,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      0.7,
+      0.8
+     ],
+     [
+      1,
+      0.35
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "kilic_izi_agir",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 1,
+    "velocityScale": 0.55,
+    "sortingOrder": 0
+   },
+   "bladeTrail": {
+    "enabled": true,
+    "from": [
+     0,
+     0.012,
+     -0.2
+    ],
+    "to": [
+     0,
+     0.012,
+     0.46
+    ],
+    "lifetime": 0.28,
+    "subdiv": 4
+   }
+  }
+ ]
+}

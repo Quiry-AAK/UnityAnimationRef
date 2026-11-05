@@ -1,7 +1,7 @@
 {
  "format": "upe-vfx-1",
  "name": "vfx_light_4_iz",
- "duration": 0.9,
+ "duration": 0.45,
  "loop": true,
  "attach": {
   "target": "prop",
@@ -19,7 +19,7 @@
  },
  "preview": {
   "withAnimation": true,
-  "startFrame": 20,
+  "startFrame": 13,
   "background": "#1b2230",
   "bloom": 0.8,
   "showHero": true,
@@ -40,10 +40,10 @@
     0
    ],
    "main": {
-    "duration": 0.6,
+    "duration": 0.15,
     "looping": false,
     "prewarm": false,
-    "startDelay": 0.0,
+    "startDelay": 0,
     "startLifetime": [
      0.26,
      0.26
@@ -191,6 +191,7 @@
    },
    "renderer": {
     "mode": "billboard",
+    "alignment": "view",
     "material": "",
     "texture": "hard",
     "blend": "alpha",
@@ -214,10 +215,10 @@
     0
    ],
    "main": {
-    "duration": 0.6,
+    "duration": 0.15,
     "looping": false,
     "prewarm": false,
-    "startDelay": 0.0,
+    "startDelay": 0,
     "startLifetime": [
      0.24,
      0.24
@@ -365,6 +366,7 @@
    },
    "renderer": {
     "mode": "billboard",
+    "alignment": "view",
     "material": "",
     "texture": "hard",
     "blend": "alpha",
@@ -388,10 +390,10 @@
     0
    ],
    "main": {
-    "duration": 0.6,
+    "duration": 0.15,
     "looping": false,
     "prewarm": false,
-    "startDelay": 0.0,
+    "startDelay": 0,
     "startLifetime": [
      0.14,
      0.14
@@ -535,6 +537,7 @@
    },
    "renderer": {
     "mode": "billboard",
+    "alignment": "view",
     "material": "",
     "texture": "hard",
     "blend": "alpha",
@@ -558,29 +561,29 @@
     0
    ],
    "main": {
-    "duration": 0.6,
+    "duration": 0.15,
     "looping": false,
     "prewarm": false,
-    "startDelay": 0.0,
+    "startDelay": 0,
     "startLifetime": [
      0.2,
      0.3
     ],
     "startSpeed": [
-     0.4,
-     1.2
+     0.8,
+     2.0
     ],
     "startSize": [
-     0.035,
-     0.07
+     0.03,
+     0.06
     ],
     "startRotation": [
      0,
-     360
+     0
     ],
     "startColor": [
      "#9aafc7",
-     "#5b6f8a"
+     "#b8c8da"
     ],
     "gravity": 0.1,
     "simulationSpace": "world",
@@ -671,10 +674,6 @@
       1
      ],
      [
-      0.6,
-      1
-     ],
-     [
       1,
       0
      ]
@@ -708,13 +707,14 @@
     "randomStart": false
    },
    "renderer": {
-    "mode": "billboard",
-    "material": "",
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "leke_kirinti",
     "texture": "boya_kirinti",
     "blend": "alpha",
     "intensity": 1,
-    "lengthScale": 2,
-    "velocityScale": 0,
+    "lengthScale": 2.2,
+    "velocityScale": 0.035,
     "sortingOrder": 3
    }
   }

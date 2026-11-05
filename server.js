@@ -131,6 +131,9 @@ async function unitySendVfx({ name, all }) {
   const scripts = fs.readdirSync(path.join(ROOT, 'unity')).filter((f) => /^UnityPreviewVfx.*\.cs$/.test(f));
   const edDir = path.join(u.project, 'Assets', 'Editor', 'UnityPreview'); fs.mkdirSync(edDir, { recursive: true });
   for (const f of scripts) copyIfChanged(path.join(ROOT, 'unity', f), path.join(edDir, f));
+  // 1b) çalışma zamanı bileşenleri (unity/Runtime: kılıç izi şeridi + asmdef) → Assets/UnityPreview/Runtime/ (importer bunlara bağlar)
+  const rtSrc = path.join(ROOT, 'unity', 'Runtime'); const rtDir = path.join(u.project, 'Assets', 'UnityPreview', 'Runtime');
+  if (fs.existsSync(rtSrc)) { fs.mkdirSync(rtDir, { recursive: true }); for (const f of fs.readdirSync(rtSrc).filter((x) => /\.(cs|asmdef)$/.test(x))) copyIfChanged(path.join(rtSrc, f), path.join(rtDir, f)); }
   // 2) gönderilecek efektler: all → kütüphanenin tamamı, name → kütüphaneden, yoksa editördeki
   const list = [];
   if (all) { for (const it of listVfx()) { try { list.push({ ...readVfx(it.name), name: it.name }); } catch { /* bozuk json atlanır */ } } if (!list.length) throw new Error('VFX kütüphanesi boş (vfx/*.json yok)'); }

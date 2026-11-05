@@ -1,0 +1,44 @@
+{
+ "format": "upe-material-1",
+ "name": "kahraman_v9_toon",
+ "shader": "Elarion/ToonCharacter",
+ "values": {
+  "_BaseMap": {
+   "tex": "@mesh",
+   "tiling": [
+    1,
+    1
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "_BaseColor": [
+   1.12,
+   1.1,
+   1.1,
+   1
+  ],
+  "_ShadowTint": "#6b739e",
+  "_LightThreshold": 0.35,
+  "_MidThreshold": -0.1,
+  "_FillColor": "#9eade6",
+  "_FillStrength": 0.9,
+  "_RimColor": "#ff6b14",
+  "_RimPower": 2.2,
+  "_RimThreshold": 0.35,
+  "_RimStrength": 1,
+  "_OutlineColor": "#08050a",
+  "_OutlineWidth": 0.012,
+  "_Fade": 1
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "hero",
+  "background": "#1a1d24",
+  "bloom": 0.3,
+  "rotate": false,
+  "showGrid": false
+ }
+}

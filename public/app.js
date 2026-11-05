@@ -1192,4 +1192,4 @@ es.addEventListener('render', async (e) => {
   let off = false; try { off = localStorage.getItem('upe-help-off') === '1' || localStorage.getItem('upe-welcomed') === '1'; localStorage.setItem('upe-welcomed', '1'); } catch { /* yok */ }
   if (!off) openHelp(true);
 })();
-window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; }, mdl }; // hata ayıklama
+window.__app = { get props() { return props; }, get anim() { return anim; }, get rig() { return rig; }, setFrame, selectBone, scene, camera, renderer, orbit, get mode() { return mode; }, mdl, vfx }; // hata ayıklama

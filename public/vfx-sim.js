@@ -73,6 +73,8 @@ void main() {
     vec3 tc = cameraPosition - wp.xyz; tc.y = 0.0; vec3 f = length(tc) > 1e-5 ? normalize(tc) : vec3(0.0, 0.0, 1.0);
     vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
     wp.xyz += (r * rc.x + vec3(0.0, 1.0, 0.0) * rc.y) * size; mv = viewMatrix * wp;
+  } else if (uMode == 5) {
+    mv = modelViewMatrix * vec4(iPos, 1.0); // kılıç izi şeridi: köşe konumu hazır (dünya), uv = iSRF.zw
   } else if (uMode == 4) {
     mv = modelViewMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0); // Local hizalama: emitter'ın XY düzlemi (Unity koordinatı, ayna modelMatrix'te)
   } else {
@@ -81,7 +83,7 @@ void main() {
   gl_Position = projectionMatrix * mv;
   float tiles = uTiles.x * uTiles.y, fr = mod(floor(iSRF.z + 0.5), tiles);
   vec2 cell = vec2(mod(fr, uTiles.x), uTiles.y - 1.0 - floor(fr / uTiles.x));
-  vUv = (cell + c + 0.5) / uTiles; vCol = iCol;
+  vUv = uMode == 5 ? iSRF.zw : (cell + c + 0.5) / uTiles; vCol = iCol;
 }`;
 const FRAG = /* glsl */`
 uniform sampler2D uMap; uniform float uIntensity;
@@ -298,6 +300,78 @@ class EmitterSim {
   }
 }
 
+// ── kılıç izi: emitter'a bağlı kök/uç noktalarının her adımdaki dünya konumu örneklenir, ömrü dolan örnek düşer;
+// örnekler Catmull-Rom ile yumuşatılıp tek şerit mesh olur. uv.x = iz yaşı (0 baş → 1 kuyruk), uv.y = 0 kök → 1 uç.
+// Renk: startColor × colorOverLifetime(yaş); sizeOverLifetime açıksa kök uca doğru daralır (kuyruk incelir).
+const _ta = new THREE.Vector3(), _tb = new THREE.Vector3();
+const crm = (p0, p1, p2, p3, t, o) => { const t2 = t * t, t3 = t2 * t; // Catmull-Rom
+  return o.set(0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+    0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+    0.5 * (2 * p1.z + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3)); };
+class TrailSim {
+  constructor(em, onTexture, upe = null) {
+    this.em = em; this.world = true; const bt = em.bladeTrail;
+    this.from = new THREE.Vector3(...bt.from); this.to = new THREE.Vector3(...bt.to);
+    this.cap = 512; this.S = []; // { t, b, p }
+    const vc = this.cap * Math.max(1, bt.subdiv) * 2 + 4; this.vcap = vc;
+    const g = new THREE.BufferGeometry(); const a = (n) => new THREE.BufferAttribute(new Float32Array(vc * n), n).setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('position', a(3)); g.setAttribute('iPos', a(3)); g.setAttribute('iVel', a(3)); g.setAttribute('iCol', a(4)); g.setAttribute('iSRF', a(4));
+    const idx = new Uint32Array((vc / 2) * 6); for (let k = 0; k < vc / 2 - 1; k++) idx.set([2 * k, 2 * k + 1, 2 * k + 2, 2 * k + 1, 2 * k + 3, 2 * k + 2], k * 6);
+    g.setIndex(new THREE.BufferAttribute(idx, 1)); g.setDrawRange(0, 0);
+    const quad = { uMode: { value: 5 }, uLengthScale: { value: 0 }, uVelScale: { value: 0 }, uTiles: { value: new THREE.Vector2(1, 1) }, uAlign: { value: new THREE.Matrix3() } };
+    if (upe) { const u = createUPEParticleMaterial(upe.shader, upe.values, quad, { onTexture }); this.mat = u.material; }
+    else this.mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      blending: em.renderer.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
+      uniforms: { uMap: { value: getTexture(em.renderer.texture, onTexture) }, uIntensity: { value: em.renderer.intensity }, ...quad } });
+    this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false;
+    this.col = parseColor(em.main.startColor[0]) || [1, 1, 1, 1];
+    this.reset();
+  }
+  get n() { return this.S.length; }
+  get P() { const a = new Float32Array(this.S.length * 3); this.S.forEach((x, i) => x.p.toArray(a, i * 3)); return a; } // kadraj için (uç noktaları)
+  get size() { return new Array(this.S.length).fill(this.from.distanceTo(this.to)); }
+  reset() { this.S.length = 0; this.now = 0; this.te = -this.em.main.startDelay; }
+  dispose() { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); this.mat.dispose(); }
+  step(dt, E) {
+    const m = this.em.main, life = this.em.bladeTrail.lifetime;
+    this.te += dt; this.now += dt;
+    const on = this.te >= 0 && (m.looping || this.te <= m.duration);
+    if (on && this.S.length < this.cap) this.S.push({ t: this.now, b: this.from.clone().applyMatrix4(E), p: this.to.clone().applyMatrix4(E) });
+    while (this.S.length && this.now - this.S[0].t > life) this.S.shift();
+  }
+  upload() {
+    const S = this.S, g = this.mesh.geometry, n = S.length;
+    if (n < 2) { g.setDrawRange(0, 0); return; }
+    const em = this.em, bt = em.bladeTrail, life = bt.lifetime, sub = Math.max(1, bt.subdiv);
+    const col = em.colorOverLifetime, sz = em.sizeOverLifetime;
+    const cs = col.enabled ? col.color.map(([t, c]) => [t, parseColor(c) || [1, 1, 1, 1]]) : null;
+    const cr = cs && [0, 1, 2].map((ch) => cs.map(([t, c]) => [t, c[ch]]));
+    const P = g.attributes.iPos.array, C = g.attributes.iCol.array, R = g.attributes.iSRF.array;
+    let v = 0;
+    const put = (b, p, age) => {
+      if (v + 2 > this.vcap) return;
+      const a = Math.min(1, Math.max(0, age)), w = sz.enabled ? evalCurve(sz.curve, a) : 1;
+      _tb.copy(p).lerp(b, w); // kök uca doğru daralır
+      P.set([_tb.x, _tb.y, _tb.z, p.x, p.y, p.z], v * 3);
+      let r = this.col[0], gg = this.col[1], bb = this.col[2], al = this.col[3];
+      if (cr) { r *= evalCurve(cr[0], a); gg *= evalCurve(cr[1], a); bb *= evalCurve(cr[2], a); al *= evalCurve(col.alpha, a); }
+      C.set([r, gg, bb, al, r, gg, bb, al], v * 4);
+      R.set([0, 0, a, 0, 0, 0, a, 1], v * 4); v += 2;
+    };
+    const cb = new THREE.Vector3(), cp = new THREE.Vector3();
+    for (let i = n - 1; i >= 1; i--) { // baştan (en yeni) kuyruğa
+      const s0 = S[Math.min(n - 1, i + 1)], s1 = S[i], s2 = S[i - 1], s3 = S[Math.max(0, i - 2)];
+      for (let k = 0; k < sub; k++) {
+        const t = k / sub; crm(s0.b, s1.b, s2.b, s3.b, t, cb); crm(s0.p, s1.p, s2.p, s3.p, t, cp);
+        put(cb, cp, (this.now - (s1.t + (s2.t - s1.t) * t)) / life);
+      }
+    }
+    put(S[0].b, S[0].p, (this.now - S[0].t) / life);
+    for (const k of ['iPos', 'iCol', 'iSRF']) g.attributes[k].needsUpdate = true;
+    g.setDrawRange(0, Math.max(0, (v / 2 - 1) * 6));
+  }
+}
+
 // ── efekt oynatıcı: emitter ağacı + zaman
 export class EffectPlayer {
   constructor(scene) {
@@ -321,7 +395,8 @@ export class EffectPlayer {
       const node = new THREE.Group(); node.position.set(...em.position); unityQuat(em.rotation, node.quaternion); this.offset.add(node); this.nodes.push(node);
       if (!em.enabled) { this.sims.push(null); return; }
       const upe = em.renderer.material ? this.materialFor?.(em.renderer.material) || null : null;
-      const sim = new EmitterSim(em, (base ^ hashStr(em.name) ^ Math.imul(i + 1, 2654435761)) >>> 0, () => this.onTexture?.(), upe);
+      const sim = em.bladeTrail?.enabled ? new TrailSim(em, () => this.onTexture?.(), upe)
+        : new EmitterSim(em, (base ^ hashStr(em.name) ^ Math.imul(i + 1, 2654435761)) >>> 0, () => this.onTexture?.(), upe);
       sim.mesh.renderOrder = 100 + em.renderer.sortingOrder * 10 + i;
       (sim.world ? this.worldRoot : node).add(sim.mesh); this.sims.push(sim);
     });

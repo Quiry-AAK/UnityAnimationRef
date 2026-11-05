@@ -1,0 +1,922 @@
+{
+ "format": "upe-vfx-1",
+ "name": "ornek_agir_h4_v1",
+ "duration": 1.4833,
+ "loop": true,
+ "attach": {
+  "target": "none",
+  "name": "",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ]
+ },
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#4a5262",
+  "bloom": 0.8,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "kesik_yatay",
+   "position": [
+    -0.11,
+    1.294,
+    3.326
+   ],
+   "rotation": [
+    -76.45,
+    -33.11,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.1,
+    "startLifetime": [
+     0.6,
+     0.6
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.723,
+     2.723
+    ],
+    "startRotation": [
+     86.5,
+     86.5
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.04
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_agir_h4a",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "kesik_yatay_serit",
+   "position": [
+    -0.11,
+    1.294,
+    3.326
+   ],
+   "rotation": [
+    -76.45,
+    -33.11,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.1167,
+    "startLifetime": [
+     0.45,
+     0.45
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.396,
+     2.396
+    ],
+    "startRotation": [
+     94.5,
+     94.5
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.04
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_agir_ince",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 4
+   }
+  },
+  {
+   "name": "donus_a",
+   "position": [
+    0.0,
+    1.0,
+    3.55
+   ],
+   "rotation": [
+    -90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.3833,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.87,
+     2.87
+    ],
+    "startRotation": [
+     0.0,
+     0.0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.85
+     ],
+     [
+      0.25,
+      1
+     ],
+     [
+      1,
+      1.08
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "halka_donus",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 2
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     600.0,
+     600.0
+    ]
+   }
+  },
+  {
+   "name": "donus_b",
+   "position": [
+    0.0,
+    1.0,
+    3.55
+   ],
+   "rotation": [
+    -90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.4333,
+    "startLifetime": [
+     0.45,
+     0.45
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.6,
+     2.6
+    ],
+    "startRotation": [
+     180.0,
+     180.0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.85
+     ],
+     [
+      0.25,
+      1
+     ],
+     [
+      1,
+      1.08
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "halka_donus",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 2
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     600.0,
+     600.0
+    ]
+   }
+  },
+  {
+   "name": "bitis_kesik",
+   "position": [
+    0.106,
+    0.98,
+    4.858
+   ],
+   "rotation": [
+    -32.5,
+    -89.69,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.77,
+    "startLifetime": [
+     0.55,
+     0.55
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     3.053,
+     3.053
+    ],
+    "startRotation": [
+     62,
+     62
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.95
+     ],
+     [
+      0.25,
+      1
+     ],
+     [
+      1,
+      1.06
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_agir_h4c",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "bitis_serit",
+   "position": [
+    0.106,
+    0.98,
+    4.858
+   ],
+   "rotation": [
+    -32.5,
+    -89.69,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.7767,
+    "startLifetime": [
+     0.4,
+     0.4
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.626,
+     2.626
+    ],
+    "startRotation": [
+     70,
+     70
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.04
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_agir_ince",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "yatay_kirinti",
+   "position": [
+    -0.11,
+    1.294,
+    3.326
+   ],
+   "rotation": [
+    -76.45,
+    -33.11,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2333,
+    "startLifetime": [
+     0.22,
+     0.36
+    ],
+    "startSpeed": [
+     2,
+     5
+    ],
+    "startSize": [
+     0.035,
+     0.09
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#3f6bb8",
+     "#6f95d4"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 40
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       8,
+       11
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.28,
+    "radiusThickness": 0.05,
+    "arc": 110,
+    "rotation": [
+     0,
+     0,
+     -75
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 10,
+    "limit": 16,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.7
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "leke_agir_kirinti",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 2.2,
+    "velocityScale": 0.04,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "bitis_saclim",
+   "position": [
+    0.106,
+    0.98,
+    4.858
+   ],
+   "rotation": [
+    -32.5,
+    -89.69,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.8,
+    "startLifetime": [
+     0.2,
+     0.38
+    ],
+    "startSpeed": [
+     5,
+     10
+    ],
+    "startSize": [
+     0.04,
+     0.11
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#3f6bb8",
+     "#6f95d4"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 40
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       18,
+       24
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.435,
+    "radiusThickness": 0.05,
+    "arc": 140,
+    "rotation": [
+     0,
+     0,
+     -50
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 10,
+    "limit": 16,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.7
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "leke_agir_kirinti",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 3.0,
+    "velocityScale": 0.04,
+    "sortingOrder": 7
+   }
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "leke_sarj_cizgi",
+ "shader": "UnityPreview/firca_leke",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#ffffff",
+  "_Splat": false,
+  "_FlipX": false,
+  "_InkEdge": 0.22,
+  "_CoreAmount": 0.85,
+  "_Fiber": 22,
+  "_Dry": 0.9,
+  "_ErodeStart": 0.3,
+  "_SwapUV": true
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

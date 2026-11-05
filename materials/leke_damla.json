@@ -1,0 +1,24 @@
+{
+ "format": "upe-material-1",
+ "name": "leke_damla",
+ "shader": "UnityPreview/firca_leke",
+ "values": {
+  "_InkColor": "#0e1218",
+  "_CoreColor": "#5b6f8a",
+  "_Splat": true,
+  "_FlipX": false,
+  "_InkEdge": 0.3,
+  "_CoreAmount": 0,
+  "_Fiber": 14,
+  "_Dry": 0.8,
+  "_ErodeStart": 0.4
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

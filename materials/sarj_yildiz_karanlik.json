@@ -1,0 +1,36 @@
+{
+ "format": "upe-material-1",
+ "name": "sarj_yildiz_karanlik",
+ "shader": "UnityPreview/sarj_firca",
+ "values": {
+  "_InkColor": "#0a0c14",
+  "_CoreColor": "#6e1a28",
+  "_BodyColor": "#161a2a",
+  "_ShadowColor": "#0a0c14",
+  "_Mode": 2,
+  "_Grow": false,
+  "_Width": 0.42,
+  "_InkWidth": 0.18,
+  "_CoreWidth": 0.09,
+  "_ShadowBand": 0.62,
+  "_Flow": 2.6,
+  "_Tongues": 4.5,
+  "_Fiber": 40,
+  "_Dry": 0.9,
+  "_Reveal": 0.18,
+  "_ErodeStart": 0.45,
+  "_Flash": 0,
+  "_FlipS": false,
+  "_Aspect": 1,
+  "_Gap": 0.09,
+  "_GlowAlpha": 0.5
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

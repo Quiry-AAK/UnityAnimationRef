@@ -1,0 +1,36 @@
+{
+ "format": "upe-material-1",
+ "name": "aoe_yer_enso_karanlik",
+ "shader": "UnityPreview/sarj_firca",
+ "values": {
+  "_InkColor": "#3d0f1a",
+  "_CoreColor": "#5a1622",
+  "_BodyColor": "#0a0c14",
+  "_ShadowColor": "#07080e",
+  "_Mode": 1,
+  "_Grow": false,
+  "_Width": 0.22,
+  "_InkWidth": 0.25,
+  "_CoreWidth": 0.05,
+  "_ShadowBand": 0.55,
+  "_Flow": 2.6,
+  "_Tongues": 4.5,
+  "_Fiber": 55,
+  "_Dry": 1.2,
+  "_Reveal": 0.1,
+  "_ErodeStart": 0.55,
+  "_Flash": 0,
+  "_FlipS": false,
+  "_Aspect": 1,
+  "_Gap": 0.09,
+  "_GlowAlpha": 0.5
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

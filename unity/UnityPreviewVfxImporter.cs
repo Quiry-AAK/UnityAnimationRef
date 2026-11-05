@@ -483,7 +483,59 @@ public static class UnityPreviewVfxImporter
             pr.sharedMaterial = BuildMaterial(fxFile, name, Str(r, "texture", "soft"), additive, Mathf.Max(0f, Num(r, "intensity", 1f)), matPaths);
         }
 
+        // ── kılıç izi (bladeTrail): parçacık değil şerit mesh (UnityPreviewBladeTrail); ParticleSystem yalnız saat olarak kalır
+        var bt = Obj(em, "bladeTrail");
+        var trail = go.GetComponent<UnityPreviewBladeTrail>();
+        if (Bool(bt, "enabled", false))
+        {
+            if (trail == null) trail = go.AddComponent<UnityPreviewBladeTrail>();
+            BuildBladeTrail(ps, pr, trail, em, bt, ca);
+        }
+        else if (trail != null) Object.DestroyImmediate(trail, true);
+
         go.SetActive(Bool(em, "enabled", true));
+    }
+
+    // Saat: tek görünmez parçacık (renderer kapalı) gecikme + süre + iz ömrü boyunca yaşar; kökte IsAlive(true) kuyruk sönene kadar
+    // true kalır. Zamanlama (startDelay, duration, looping, simulationSpeed) bileşen tarafından bu sistemden okunur.
+    static void BuildBladeTrail(ParticleSystem ps, ParticleSystemRenderer pr, UnityPreviewBladeTrail trail, Dictionary<string, object> em,
+        Dictionary<string, object> bt, Color startColor)
+    {
+        string name = trail.gameObject.name;
+        trail.from = V3(bt, "from", Vector3.zero);
+        trail.to = V3(bt, "to", Vector3.forward);
+        trail.lifetime = Mathf.Clamp(Num(bt, "lifetime", 0.25f), 0.02f, 3f);
+        trail.subdiv = Mathf.Clamp(Int(bt, "subdiv", 4), 1, 12);
+        trail.startColor = startColor;
+        var c = Obj(em, "colorOverLifetime");
+        trail.colorOverLifetimeEnabled = Bool(c, "enabled", false);
+        trail.colorOverLifetime = BuildGradient(c, name);
+        var so = Obj(em, "sizeOverLifetime");
+        trail.sizeOverLifetimeEnabled = Bool(so, "enabled", false);
+        trail.sizeOverLifetime = LinearCurve(Arr(so, "curve"));
+        trail.material = pr.sharedMaterial;
+
+        var main = ps.main;
+        main.startLifetime = main.startDelay.constant + main.duration + trail.lifetime;
+        main.startSpeed = 0f;
+        main.startSize = 0f;
+        main.maxParticles = 1;
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
+        main.gravityModifier = 0f;
+        var emission = ps.emission;
+        emission.enabled = true;
+        emission.rateOverTime = 0f;
+        emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
+        var shape = ps.shape; shape.enabled = false;
+        var v = ps.velocityOverLifetime; v.enabled = false;
+        var lv = ps.limitVelocityOverLifetime; lv.enabled = false;
+        var f = ps.forceOverLifetime; f.enabled = false;
+        var n = ps.noise; n.enabled = false;
+        var col = ps.colorOverLifetime; col.enabled = false;
+        var sol = ps.sizeOverLifetime; sol.enabled = false;
+        var rol = ps.rotationOverLifetime; rol.enabled = false;
+        var tsa = ps.textureSheetAnimation; tsa.enabled = false;
+        pr.enabled = false;
     }
 
     static void DisableUnmapped(ParticleSystem ps)

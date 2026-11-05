@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_agir_karanlik",
+ "shader": "UnityPreview/kesik_firca",
+ "values": {
+  "_InkColor": "#5a1622",
+  "_CoreColor": "#3d0f1a",
+  "_BodyColor": "#161a2a",
+  "_ShadowColor": "#0a0c14",
+  "_Width": 0.5,
+  "_InkWidth": 0.12,
+  "_CoreBand": 0.1,
+  "_ShadowBand": 0.5,
+  "_Reveal": 0.13,
+  "_ErodeStart": 0.5,
+  "_Fiber": 30,
+  "_Dry": 1.15,
+  "_Flash": 0
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

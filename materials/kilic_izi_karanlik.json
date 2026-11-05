@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "kilic_izi_karanlik",
+ "shader": "UnityPreview/kilic_izi",
+ "values": {
+  "_InkColor": "#5a1622",
+  "_ShadeColor": "#0a0c14",
+  "_BodyColor": "#161a2a",
+  "_CoreColor": "#6e1a28",
+  "_RootCut": 0.08,
+  "_TailThin": 0.55,
+  "_InkWidth": 0.1,
+  "_ShadeBand": 0.3,
+  "_CoreBand": 0.18,
+  "_CoreLen": 0.45,
+  "_ErodeStart": 0.35,
+  "_Fiber": 40
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

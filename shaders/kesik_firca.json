@@ -1,0 +1,129 @@
+{
+ "format": "upe-shader-1",
+ "name": "kesik_firca",
+ "description": "Fırça kesiği: hilali prosedürel çizer; ömürle (parçacık alfası) kuyruktan başa açılır, sonra fırça lifleriyle kuyruktan eriyerek söner. Renk bantları: mürekkep kenar, çekirdek, gövde, gölge. Parçacık alfası 1→0 doğrusal = ömür.",
+ "builtin": false,
+ "unityName": "UnityPreview/kesik_firca",
+ "properties": [
+  {
+   "name": "_InkColor",
+   "type": "color",
+   "label": "Mürekkep kenar",
+   "default": "#1e2633"
+  },
+  {
+   "name": "_CoreColor",
+   "type": "color",
+   "label": "Çekirdek",
+   "default": "#e8eef5"
+  },
+  {
+   "name": "_BodyColor",
+   "type": "color",
+   "label": "Gövde",
+   "default": "#9aafc7"
+  },
+  {
+   "name": "_ShadowColor",
+   "type": "color",
+   "label": "Gölge",
+   "default": "#5b6f8a"
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Kalınlık",
+   "min": 0.02,
+   "max": 0.5,
+   "default": 0.2
+  },
+  {
+   "name": "_InkWidth",
+   "type": "range",
+   "label": "Mürekkep kenar payı",
+   "min": 0,
+   "max": 0.4,
+   "default": 0.14
+  },
+  {
+   "name": "_CoreBand",
+   "type": "range",
+   "label": "Çekirdek bandı",
+   "min": 0,
+   "max": 0.6,
+   "default": 0.2
+  },
+  {
+   "name": "_ShadowBand",
+   "type": "range",
+   "label": "Gölge bandı başı",
+   "min": 0.3,
+   "max": 1,
+   "default": 0.68
+  },
+  {
+   "name": "_Reveal",
+   "type": "range",
+   "label": "Açılma (ömür oranı)",
+   "min": 0.01,
+   "max": 0.6,
+   "default": 0.16
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Erime başı (ömür oranı)",
+   "min": 0,
+   "max": 0.95,
+   "default": 0.4
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Fırça lifi sıklığı",
+   "min": 5,
+   "max": 120,
+   "default": 46
+  },
+  {
+   "name": "_Dry",
+   "type": "range",
+   "label": "Kuyrukta kuru fırça",
+   "min": 0,
+   "max": 1.5,
+   "default": 0.95
+  },
+  {
+   "name": "_Flash",
+   "type": "range",
+   "label": "İlk an çekirdek parlaması",
+   "min": 0,
+   "max": 1,
+   "default": 0.35
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\n// Türeve göre yumuşatılmış eşik (yalnız fragment'ta açılır): kenar net, tırtık yok.\n#define AAW(x) max(abs(ddx(x)) + abs(ddy(x)), 0.0001)\n#define AASTEP(edge, x) smoothstep((edge) - AAW(x), (edge) + AAW(x), (x))",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float life = 1.0 - i.color.a;\n    float2 p = i.uv - 0.5;\n    float r = length(p) * 2.0;\n    float th = atan2(p.y, p.x) * 57.29578;\n    th = th + step(th, -90.0) * 360.0;\n    // yay boyunca konum: 0 kuyruk (165°), 1 baş (15°); firca_hilal ile aynı yerleşim\n    float s = (165.0 - th) / 150.0;\n    float sc = saturate(s);\n    // yay dışı sert kesilir (açı dikişinde türev patlar)\n    float inArc = step(0.0, s) * step(s, 1.0);\n\n    float w = _Width * pow(sc, 1.1) * (1.0 - smoothstep(0.82, 1.0, sc));\n    float R0 = 0.94;\n\n    float fib = vnoise(float2(r * _Fiber, sc * 2.0));\n    float fib2 = vnoise(float2(r * _Fiber * 2.3 + 7.0, sc * 6.0));\n    float clump = vnoise(float2(sc * 9.0, 3.0));\n    float brush = fib * 0.65 + fib2 * 0.35;\n\n    float rev = saturate(life / _Reveal);\n    float e = saturate((life - _ErodeStart) / max(1.0 - _ErodeStart, 0.001));\n\n    // kenarlar yarıçap uzayında: köşelerde (w→0) türev patlamaz\n    float innerK = (1.0 + (brush - 0.5) * 0.55 + (clump - 0.5) * 0.35) * (1.0 - e * 0.55);\n    float outerR = R0 + _InkWidth * w;\n    float innerR = R0 - innerK * w;\n    float shp = (1.0 - AASTEP(outerR, r)) * AASTEP(innerR, r);\n    shp *= inArc;\n    shp *= 1.0 - AASTEP(rev * 1.04, s);\n    shp *= AASTEP((1.0 - sc) * _Dry - 0.12, brush);\n    shp *= AASTEP(e * 1.08, sc * 0.75 + brush * 0.25);\n\n    float coreIn = 1.0 - AASTEP(R0, r);\n    float bodyIn = 1.0 - AASTEP(R0 - (_CoreBand + (brush - 0.5) * 0.12) * w, r);\n    float shadowIn = 1.0 - AASTEP(R0 - (_ShadowBand + (brush - 0.5) * 0.18) * w, r);\n    float3 c = _InkColor.rgb;\n    c = lerp(c, _CoreColor.rgb, coreIn);\n    c = lerp(c, _BodyColor.rgb, bodyIn);\n    c = lerp(c, _ShadowColor.rgb, shadowIn);\n    c += _CoreColor.rgb * coreIn * (1.0 - bodyIn) * _Flash * (1.0 - saturate(life / 0.25));\n    c *= i.color.rgb;\n    return float4(c, shp);\n}",
+  "outlineFragment": ""
+ }
+}

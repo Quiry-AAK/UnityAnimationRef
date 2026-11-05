@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "leke_karanlik_damla",
+ "shader": "UnityPreview/firca_leke",
+ "values": {
+  "_InkColor": "#0a0c14",
+  "_CoreColor": "#3d0f1a",
+  "_Splat": true,
+  "_FlipX": false,
+  "_InkEdge": 0.35,
+  "_CoreAmount": 0.2,
+  "_Fiber": 14,
+  "_Dry": 0.8,
+  "_ErodeStart": 0.45,
+  "_SwapUV": false
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

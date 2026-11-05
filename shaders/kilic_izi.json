@@ -1,0 +1,121 @@
+{
+ "format": "upe-shader-1",
+ "name": "kilic_izi",
+ "description": "Kılıç izi şeridi (bladeTrail): uv.x = iz yaşı (0 baş/kılıç → 1 kuyruk), uv.y = 0 kök → 1 uç. Düz fırça darbesi: uçta mürekkep kenar + açık çekirdek bandı, gövde, köke yakın gölge bandı; kuyrukta kökten uca kuru fırça lifleriyle erir ve incelir. Köşe rengi × renk; alfa = köşe alfası.",
+ "builtin": false,
+ "unityName": "UnityPreview/kilic_izi",
+ "properties": [
+  {
+   "name": "_InkColor",
+   "type": "color",
+   "label": "Mürekkep kenar",
+   "default": "#0e1424"
+  },
+  {
+   "name": "_ShadeColor",
+   "type": "color",
+   "label": "Gölge bandı (köke yakın)",
+   "default": "#27457f"
+  },
+  {
+   "name": "_BodyColor",
+   "type": "color",
+   "label": "Gövde",
+   "default": "#3f6bb8"
+  },
+  {
+   "name": "_CoreColor",
+   "type": "color",
+   "label": "Çekirdek (uç yakını)",
+   "default": "#d6ecff"
+  },
+  {
+   "name": "_RootCut",
+   "type": "range",
+   "label": "Kök kesimi (uv)",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.08
+  },
+  {
+   "name": "_TailThin",
+   "type": "range",
+   "label": "Kuyrukta incelme",
+   "min": 0,
+   "max": 1,
+   "default": 0.55
+  },
+  {
+   "name": "_InkWidth",
+   "type": "range",
+   "label": "Mürekkep kenar payı",
+   "min": 0,
+   "max": 0.4,
+   "default": 0.1
+  },
+  {
+   "name": "_ShadeBand",
+   "type": "range",
+   "label": "Gölge bandı sınırı",
+   "min": 0,
+   "max": 1,
+   "default": 0.3
+  },
+  {
+   "name": "_CoreBand",
+   "type": "range",
+   "label": "Çekirdek bandı",
+   "min": 0,
+   "max": 0.6,
+   "default": 0.18
+  },
+  {
+   "name": "_CoreLen",
+   "type": "range",
+   "label": "Çekirdek boyu (yaş)",
+   "min": 0.01,
+   "max": 1,
+   "default": 0.45
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Erime başı (yaş)",
+   "min": 0,
+   "max": 0.95,
+   "default": 0.35
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Fırça lifi sıklığı",
+   "min": 5,
+   "max": 200,
+   "default": 40
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\n// Türeve göre yumuşatılmış eşik (yalnız fragment'ta açılır): kenar net, tırtık yok.\n#define AAW(x) max(abs(ddx(x)) + abs(ddy(x)), 0.0001)\n#define AASTEP(edge, x) smoothstep((edge) - AAW(x), (edge) + AAW(x), (x))",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float a = saturate(i.uv.x);   // iz yaşı: 0 baş (kılıç) → 1 kuyruk\n    float v = saturate(i.uv.y);   // 0 kök → 1 uç\n    // lifler iz boyunca uzanır: enine sık, boyuna uzun gürültü\n    float fib = vnoise(float2(a * _Fiber * 0.08, v * _Fiber));\n    float fib2 = vnoise(float2(a * _Fiber * 0.03 + 7.3, v * _Fiber * 0.35));\n    // kökten uca kalınlık: kök kenarı tırtıklı fırça kenarı, kuyruğa doğru kök kenarı uca çekilir (iz incelir)\n    float rootEdge = _RootCut + a * _TailThin + (fib2 - 0.5) * 0.12;\n    float shp = AASTEP(rootEdge, v);\n    // uç kenar: başta tam, kuyrukta hafif içeri\n    float tipEdge = 1.0 - a * 0.08 - (vnoise(float2(a * _Fiber * 0.2, 3.1)) - 0.5) * 0.04;\n    shp *= 1.0 - AASTEP(tipEdge, v);\n    // kuru fırça erimesi: yaş arttıkça lif boşlukları açılır, kökten uca doğru\n    float e = smoothstep(_ErodeStart, 1.0, a);\n    float thr = e * (1.15 - 0.35 * v);\n    shp *= AASTEP(thr, fib * 0.65 + fib2 * 0.35);\n    // baş: kılıcın hemen arkası temiz ve dolu\n    shp *= AASTEP(0.004, a);\n    // renk bantları (enine): uçta mürekkep kenarı, altında açık çekirdek bandı, gövde\n    float vn = (v - rootEdge) / max(tipEdge - rootEdge, 0.001);\n    float ink = AASTEP(1.0 - _InkWidth * (1.0 + (fib2 - 0.5) * 0.8), vn);\n    float rootInk = 1.0 - AASTEP(_InkWidth * 0.6 * (1.0 + (fib - 0.5)), vn);\n    float coreW = _CoreBand * (1.0 - smoothstep(0.0, _CoreLen, a));\n    float core = AASTEP(1.0 - _InkWidth - coreW, vn) * (1.0 - ink) * AASTEP(0.35, fib + 0.3 * (1.0 - a));\n    float3 c = _BodyColor.rgb;\n    // gövdede ikinci (gölge) bant: köke yakın koyu\n    c = lerp(_ShadeColor.rgb, c, AASTEP(_ShadeBand, vn + (fib - 0.5) * 0.15));\n    c = lerp(c, _CoreColor.rgb, core);\n    c = lerp(c, _InkColor.rgb, max(ink, rootInk));\n    c *= i.color.rgb;\n    return float4(c, shp * i.color.a);\n}\n",
+  "outlineFragment": ""
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "halka_karanlik",
+ "shader": "UnityPreview/kesik_firca",
+ "values": {
+  "_InkColor": "#5a1622",
+  "_CoreColor": "#3d0f1a",
+  "_BodyColor": "#161a2a",
+  "_ShadowColor": "#0a0c14",
+  "_Width": 0.2,
+  "_InkWidth": 0.15,
+  "_CoreBand": 0.15,
+  "_ShadowBand": 0.6,
+  "_Reveal": 0.08,
+  "_ErodeStart": 0.4,
+  "_Fiber": 40,
+  "_Dry": 1.2,
+  "_Flash": 0
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

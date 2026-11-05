@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_agir_ince",
+ "shader": "UnityPreview/kesik_firca",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#d6ecff",
+  "_BodyColor": "#6f95d4",
+  "_ShadowColor": "#3f6bb8",
+  "_Width": 0.06,
+  "_InkWidth": 0.25,
+  "_CoreBand": 0.45,
+  "_ShadowBand": 0.9,
+  "_Reveal": 0.2,
+  "_ErodeStart": 0.2,
+  "_Fiber": 70,
+  "_Dry": 1.5,
+  "_Flash": 0.2
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

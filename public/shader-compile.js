@@ -248,6 +248,8 @@ void main() {
     vec3 tc = cameraPosition - p; tc.y = 0.0; vec3 f = length(tc) > 1e-5 ? normalize(tc) : vec3(0.0, 0.0, 1.0);
     vec3 r = normalize(cross(vec3(0.0, 1.0, 0.0), f));
     wp = p + (r * rc.x + vec3(0.0, 1.0, 0.0) * rc.y) * size; nW = f;
+  } else if (uMode == 5) {
+    wp = (modelMatrix * vec4(iPos, 1.0)).xyz; nW = vec3(0.0, 1.0, 0.0); // kılıç izi şeridi (uv = iSRF.zw)
   } else if (uMode == 4) {
     wp = (modelMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0)).xyz; nW = normalize(mat3(modelMatrix) * (uAlign * vec3(0.0, 0.0, -1.0)));
   } else {
@@ -256,7 +258,7 @@ void main() {
   }
   float tiles = uTiles.x * uTiles.y, fr = mod(floor(iSRF.z + 0.5), tiles);
   vec2 cell = vec2(mod(fr, uTiles.x), uTiles.y - 1.0 - floor(fr / uTiles.x));
-  UPEVertex v; v.positionOS = upeToU(wp); v.normalOS = upeToU(nW); v.uv = (cell + c + 0.5) / uTiles; v.color = vec4(upeLinear(iCol.rgb), iCol.a);
+  UPEVertex v; v.positionOS = upeToU(wp); v.normalOS = upeToU(nW); v.uv = uMode == 5 ? iSRF.zw : (cell + c + 0.5) / uTiles; v.color = vec4(upeLinear(iCol.rgb), iCol.a);
   #ifdef UPE_HAS_VERT
   vert(v);
   #endif

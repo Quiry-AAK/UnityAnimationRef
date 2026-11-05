@@ -45,6 +45,8 @@ export function defaultEmitter() {
     sizeOverLifetime: { enabled: false, curve: [[0, 1], [1, 1]] },
     rotationOverLifetime: { enabled: false, angularVelocity: [0, 0] },
     textureSheet: { enabled: false, tilesX: 1, tilesY: 1, cycles: 1, randomStart: false },
+    // kılıç izi (şerit): parçacık yerine emitter'a bağlı iki noktanın (kök → uç) taradığı yüzey; Unity'de çalışma zamanı bileşeni
+    bladeTrail: { enabled: false, from: v3(0, 0, 0), to: v3(0, 0, 1), lifetime: 0.25, subdiv: 4 },
     renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
   };
 }
@@ -125,6 +127,12 @@ export const MODULES = [
     ['tilesY', 'int', 'Satır', { min: 1, max: 16, step: 1 }],
     ['cycles', 'int', 'Ömürde tur', { min: 1, max: 20, step: 1 }],
     ['randomStart', 'bool', 'Rastgele başlangıç karesi'],
+  ] },
+  { key: 'bladeTrail', label: 'Kılıç izi (şerit)', fields: [
+    ['from', 'vec3', 'Kök (emitter yereli, m)', { step: 0.01 }],
+    ['to', 'vec3', 'Uç (emitter yereli, m)', { step: 0.01 }],
+    ['lifetime', 'num', 'İz ömrü (sn)', { min: 0.02, max: 3, step: 0.01 }],
+    ['subdiv', 'int', 'Örnek arası yumuşatma', { min: 1, max: 12, step: 1 }],
   ] },
   { key: 'renderer', label: 'Görünüm', always: true, fields: [
     ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)']] }],

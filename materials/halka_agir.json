@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "halka_agir",
+ "shader": "UnityPreview/kesik_firca",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#d6ecff",
+  "_BodyColor": "#6f95d4",
+  "_ShadowColor": "#3f6bb8",
+  "_Width": 0.16,
+  "_InkWidth": 0.15,
+  "_CoreBand": 0.25,
+  "_ShadowBand": 0.75,
+  "_Reveal": 0.08,
+  "_ErodeStart": 0.3,
+  "_Fiber": 50,
+  "_Dry": 1.2,
+  "_Flash": 0.3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

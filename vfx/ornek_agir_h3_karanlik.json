@@ -1,0 +1,840 @@
+{
+ "format": "upe-vfx-1",
+ "name": "ornek_agir_h3_karanlik",
+ "duration": 1.0833,
+ "loop": true,
+ "attach": {
+  "target": "none",
+  "name": "",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ]
+ },
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#4a5262",
+  "bloom": 0.8,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "serit_dikey",
+   "position": [
+    -0.05,
+    1.0,
+    2.75
+   ],
+   "rotation": [
+    0,
+    -90,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.4417,
+    "startLifetime": [
+     0.65,
+     0.65
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     3.2,
+     3.2
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "atilma_serit_karanlik",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "serit_yatay",
+   "position": [
+    -0.05,
+    1.0,
+    2.75
+   ],
+   "rotation": [
+    90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.4417,
+    "startLifetime": [
+     0.65,
+     0.65
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     3.2,
+     3.2
+    ],
+    "startRotation": [
+     -90,
+     -90
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "atilma_serit_karanlik",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "hiz_cizgileri",
+   "position": [
+    -0.05,
+    1.0,
+    2.75
+   ],
+   "rotation": [
+    0,
+    -90,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.45,
+    "startLifetime": [
+     0.32,
+     0.5
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1.6,
+     2.8
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       6,
+       8
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.9,
+     0.9,
+     0.5
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "atilma_cizgi_karanlik",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 4
+   }
+  },
+  {
+   "name": "varis_halka_1",
+   "position": [
+    -0.05,
+    1.0,
+    3.05
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.5083,
+    "startLifetime": [
+     0.3,
+     0.3
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1.5,
+     1.5
+    ],
+    "startRotation": [
+     15,
+     15
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.45
+     ],
+     [
+      0.35,
+      1
+     ],
+     [
+      1,
+      1.25
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "halka_karanlik",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "varis_halka_2",
+   "position": [
+    -0.05,
+    1.0,
+    3.05
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.5167,
+    "startLifetime": [
+     0.28,
+     0.28
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1.62,
+     1.62
+    ],
+    "startRotation": [
+     195,
+     195
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.45
+     ],
+     [
+      0.35,
+      1
+     ],
+     [
+      1,
+      1.25
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "halka_karanlik",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "position": [
+    -0.05,
+    1.0,
+    2.75
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.35,
+     0.35,
+     2.6
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 1.0
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 8,
+    "limit": 14,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "velocity": {
+    "enabled": true,
+    "linear": [
+     0,
+     0,
+     -1.2
+    ],
+    "orbital": [
+     0,
+     0,
+     0
+    ],
+    "radial": 0,
+    "space": "world",
+    "speedModifier": 1
+   },
+   "name": "serit_kirinti",
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.4667,
+    "startLifetime": [
+     0.25,
+     0.45
+    ],
+    "startSpeed": [
+     1.2,
+     4.5
+    ],
+    "startSize": [
+     0.035,
+     0.1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#161a2a",
+     "#22283c"
+    ],
+    "gravity": 0.3,
+    "simulationSpace": "world",
+    "maxParticles": 40
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       20,
+       26
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.65
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "leke_karanlik_kirinti",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 2.4,
+    "velocityScale": 0.04,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "position": [
+    -0.05,
+    1.0,
+    2.75
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "shape": {
+    "enabled": true,
+    "type": "box",
+    "boxSize": [
+     0.35,
+     0.35,
+     2.6
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 1.0
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 8,
+    "limit": 14,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "velocity": {
+    "enabled": true,
+    "linear": [
+     0,
+     0,
+     -1.2
+    ],
+    "orbital": [
+     0,
+     0,
+     0
+    ],
+    "radial": 0,
+    "space": "world",
+    "speedModifier": 1
+   },
+   "name": "serit_damla",
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.475,
+    "startLifetime": [
+     0.65,
+     0.65
+    ],
+    "startSpeed": [
+     0.6,
+     2.2
+    ],
+    "startSize": [
+     0.06,
+     0.15
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#0e111b",
+     "#1a1e2e"
+    ],
+    "gravity": 0.5,
+    "simulationSpace": "world",
+    "maxParticles": 24
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       12,
+       16
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      0.15,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "leke_karanlik_damla",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  }
+ ]
+}

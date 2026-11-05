@@ -1,0 +1,25 @@
+{
+ "format": "upe-material-1",
+ "name": "iz_leke",
+ "shader": "UnityPreview/firca_leke",
+ "values": {
+  "_InkColor": "#0e1424",
+  "_CoreColor": "#d6ecff",
+  "_Splat": true,
+  "_FlipX": false,
+  "_InkEdge": 0,
+  "_CoreAmount": 0,
+  "_Fiber": 14,
+  "_Dry": 0.6,
+  "_ErodeStart": 0.55,
+  "_SwapUV": false
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}
