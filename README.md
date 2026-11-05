@@ -48,7 +48,7 @@ Efekt `<içerik yolu>/NS_<ad>` (varsayılan `/Game/UPE/VFX`) olur; editöre ekle
 ## MCP araçları
 - Genel: `get_status`, `set_editor_mode`
 - Animasyon: `set_keys`, `set_animation`, `get_animation`, `clear_keys`, `sample_pose`, `get_user_edits`, `render_frame`, `list/save/load/delete_animation`, `list_props`, `attach/update/detach_prop`, `list_models`, `load_model`, `export_gif`, `export_for_unity`, `send_to_unity`
-- VFX: `vfx_reference` (önce bu), `get_vfx`, `set_vfx`, `update_vfx`, `add_emitter`, `remove_emitter`, `get_vfx_user_edits`, `render_vfx`, `list/save/load/delete_vfx`, `list_vfx_textures`, `send_vfx_to_unity`, `send_vfx_to_unreal`
+- VFX: `vfx_reference` (önce bu), `get_vfx`, `set_vfx`, `update_vfx`, `add_emitter`, `remove_emitter`, `get_vfx_user_edits`, `render_vfx`, `fit_arc_from_animation`, `list/save/load/delete_vfx`, `list_vfx_textures`, `send_vfx_to_unity`, `send_vfx_to_unreal`
 - Materyal/Shader: `material_reference` (önce bu), `list/get/new/set/update/save/load/delete_material`, `list/get/new/set/update/save/load/delete_shader`
   (set/update shader editörün GLSL derleme sonucunu döner), `assign_material` (kahramana/eşyaya giydir), `get/set_lighting`, `render_material`,
   `get_material_user_edits`, `get_shader_user_edits`, `list_material_textures`, `send_material_to_unity`, `send_shader_to_unity`

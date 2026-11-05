@@ -79,6 +79,7 @@ Mevcut animasyon araçları aynen kalır. `get_status` ayrıca `mode` ve `vfx` �
 | `remove_emitter` | `emitter` | |
 | `get_vfx_user_edits` | `acknowledge?` | `diffEffects(vfxBaseline, vfx)` + `mode:'vfx'` notları; acknowledge → notları temizle + baseline |
 | `render_vfx` | `times?, count?=6, cols?, size?=320, camera?{ preset?: front|side|top|threequarter, position?, target? }, showHero?, bg?` | kontak sayfası (görsel) |
+| `fit_arc_from_animation` | `target?: prop|bone, name?, tip?, root?, rootBone?, startFrame?, endFrame?, threshold?, emitter?, apply?, outerExtend?` | animasyondaki uç yolundan yay oturtur (`public/vfx-mesh.js` `fitArc`); `emitter` verilirse mesh yayına çevirir (aşağıda) |
 | `list_vfx` / `save_vfx {name, effect?}` / `load_vfx {name}` / `delete_vfx {name}` | | kütüphane |
 | `list_vfx_textures` | | dokular + yerleşik açıklamaları |
 | `set_editor_mode` | `mode: anim|vfx` | kullanıcının ekranındaki modu değiştirir |
@@ -102,3 +103,28 @@ Importer önce (yansımayla) `UnityPreviewMaterialImporter.ProcessPending`'i ça
 Önizleme (`shader-compile.js` `buildParticlePrograms`): UPE-SL shader'ı aynı instanced quad'la çizilir; `v.positionOS` köşenin
 dünya konumu (Unity'de parçacık köşeleri dünyada), `v.color` parçacık rengi (doğrusal), `v.uv` flipbook karesi. Unity şablonu
 POSITION/NORMAL/TEXCOORD0/COLOR okur — ParticleSystemRenderer'ın varsayılan akışları; ek ayar gerekmez.
+
+## BDO seviyesi katmanlar (2026-11)
+Hepsi şemada (`VFX_REFERENCE`), önizlemede, MCP'de ve Niagara dönüştürücüsünde; eski efektler değişmeden çalışır (yeni alanlar varsayılanla dolar).
+- **Mesh parçacıkları** — `renderer.mode: 'mesh'`, `renderer.mesh { shape: arc|cylinder|plane|file, file, innerRadius, outerRadius, angle,
+  height, segments, rings, rotation }`. Geometri `public/vfx-mesh.js` (`proceduralMesh`, `transformMesh`; tarayıcı + Node ortak). Önizleme:
+  `vfx-sim.js` `uMode 6` (instanced mesh; konum `iPos + uAlign · Rz(açı) · mesh × boyut`), UPE-SL'de `v.uv` = mesh UV, `v.normalOS` = mesh normali.
+  Dosya mesh'i `meshes/` (GLB/GLTF/OBJ/FBX) tarayıcıda yüklenir (`player.meshFor`), Unity eksenine çevrilir; render bekler.
+- **Animasyondan yay** — MCP `fit_arc_from_animation` → `POST /api/claude/render { kind: 'vfx-fit-arc', ... }` (render kanalı; editör
+  `vfx.fitArcFromAnimation` sonucu JSON metni olarak döner). Uç/tutuş: eşyanın yerel sınır kutusunun en uzun ekseninin uçları (elden uzak
+  olan uç). Kareler 0,5 adımla örneklenir, efekt kökü çerçevesine (Unity) çevrilir; pencere verilmezse uç hızı tepe bölümü. `fitArc`: PCA düzlemi +
+  cebirsel çember (Elarion `arc_fit.py`). Uygulanınca: position/rotation, mesh iç = tutuş yarıçapı, dış = uç × (1+outerExtend), açı, startSize 1,
+  startDelay = pencere başı, ömür ≥ savuruş + 0,15 sn, `customData.x` = açılma eğrisi (uç yolunun yay kesri; UPE-SL'de `i.uv.x < i.custom.x`).
+- **Bükülme** — `renderer.blend: 'distortion'`, `renderer.distortion { mode: radial|noise|normal, strength, frequency, scroll }`. Önizleme:
+  `vfx.js` sahneyi (bükülme parçacıkları gizli) yarım-float bir hedefe çizer (`player.shared.uScene`), bükülme materyali o dokuyu
+  `gl_FragCoord/çözünürlük + yön × maske × güç` noktasında örnekler (maske kenarında ofset 0 → dikişsiz). UPE-SL materyalinde `frag()` rg = yön, a = maske.
+- **Işık** — `light { enabled, mode: single|perParticle, color, useParticleColor, intensity, radius, curve, maxLights, shadows:false }`;
+  three.js PointLight havuzu (efekt kurulunca sabit sayı, kullanılmayan 0 yoğunluk). `preview.showGround` koyu zemin diski (ışığı görmek için).
+- **İz** — `bladeTrail.width` (yaş eğrisi), `taper: tip|center|root`, `uvMode: stretch|tile` + `tileLength` (döşenen doku ayrı RepeatWrapping önbelleği).
+- **Özel veri** — `customData { x, y, z, w }` ömür eğrileri → UPE-SL `i.custom` (`UPEInput.custom`; Unity şablonunda 0).
+- **Alt emitter** — `subEmitters { enabled, items: [{ emitter, trigger: death|birth, count, inheritColor, inheritSize, inheritVelocity }] }`.
+  Hedef kendi yayımını yapmaz; kaynak adımlandıktan sonra olaylar hedefe verilir (hedef sırada önceyse bir sonraki adımda).
+- Unity dönüştürücüsü bunları henüz bilmez: mesh → billboard, distortion → additive, ışık/alt emitter/özel veri yok sayılır.
+- Örnekler: `vfx/_ornek_mesh_yay.json`, `_ornek_bukulme_isik.json`, `_ornek_iz_alt_emitter.json`, `_ornek_yay_animasyondan.json`.
+- Ertelenen: Niagara alt emitter olayları (yukarıda), hareket bulanıklığı (stretched + velocityScale hıza göre uzatmayı zaten veriyor; gerçek
+  motion blur UE post-process işi), flipbook kare karışımı (BDO kesikleri flipbook'tan çok mesh + kayan doku kullanıyor; gerekirse sonra).
