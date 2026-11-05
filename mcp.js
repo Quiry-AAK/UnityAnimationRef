@@ -420,6 +420,8 @@ ${presetList()}
 - Sıfırdan: set_vfx { effect } (emitter'da { preset:'fire', ...üzerineYaz } kısayolu geçerli) ya da add_emitter + update_vfx ile adım adım.
 - İnce ayar: update_vfx changes=[{ emitter:'alev', path:'main.startSize', value:[0.2,0.4] }, { path:'preview.bloom', value:1.2 }].
 - Görsel kontrol: render_vfx (editör tarayıcıda açık olmalı) → zaman karelerinden kontak sayfası.
+- Kesik yayı (mesh): karakter + animasyon + katana yüklüyken fit_arc_from_animation { emitter:'yay' } → yay uç yolundan oturur; preview.withAnimation:true ile render_vfx.
+- BDO katmanları: mesh yay (renderer.mode mesh) + bükülme (blend distortion) + ışık (light) + iz (bladeTrail width/taper/uvMode) + alt emitter (isabet kıvılcımı ölümde).
 - Kullanıcı editörde düzeltince: get_vfx_user_edits (fark + notlar), farkı öğren; acknowledge:true ile referansı yenile.
 - Özel görünüm (dissolve, kayan doku, fresnel…): material_reference → new_shader/set_shader (UPE-SL) → new_material/set_material + save_material
   → update_vfx [{ emitter:'alev', path:'renderer.material', value:'<materyal>' }] ('' kaldırır) → render_vfx ile kontrol.
@@ -527,6 +529,59 @@ server.registerTool('render_vfx', {
   const r = await post('/api/claude/render', { kind: 'vfx', ...args });
   if (!r.png) throw new Error('Editör görüntü döndürmedi (VFX modunu destekleyen editör sürümü açık mı?).');
   return { content: [{ type: 'image', data: r.png.replace(/^data:image\/png;base64,/, ''), mimeType: 'image/png' }] };
+});
+
+server.registerTool('fit_arc_from_animation', {
+  description: 'Animasyondaki kılıç ucu yolundan kesik YAYI oturtur (Elarion arc_fit.py yöntemi): editörde yüklü animasyon kareler boyunca oynatılır, takılı eşyanın (katana) ucu ve tutuşu (ya da bir kemik) efekt kökü çerçevesinde (Unity ekseni, m) örneklenir, '
+    + 'en küçük varyans düzlemi + çember oturtulur. Pencere verilmezse uç hızının tepe yaptığı savuruş bölümü otomatik seçilir (hız ≥ threshold × maks). '
+    + 'Dönüş: { center, rotation (emitter Euler: yerel +X merkezden ilk uca, yay +X→+Y), radius, angle (°), inner (tutuş/uç yarıçap oranı), error (m), window (kare/sn), samples (t, yay kesri) }. '
+    + 'emitter verilirse (apply varsayılan true) o emitter (yoksa arc_slash şablonuyla oluşturulur) mesh yayına çevrilir: position/rotation, renderer.mode mesh + mesh (iç = tutuş yarıçapı, dış = uç × (1+outerExtend), açı), startSize 1, startDelay = pencere başı, '
+    + 'ömür ≥ savuruş süresi, customData.x = açılma eğrisi (uç yolunun yay kesri; materyalde i.uv.x < i.custom.x). Editör tarayıcıda açık, karakter + animasyon (+ eşya) yüklü olmalı; efekt preview.startFrame animasyonun başlangıç karesi sayılır.',
+  inputSchema: {
+    target: z.enum(['prop', 'bone']).default('prop').describe('prop: takılı eşya (kılıç), bone: kemik'),
+    name: z.string().optional().describe('Eşya id/adı (varsayılan ilk takılı eşya) ya da kemik adı (ör. RightHand)'),
+    tip: vec3.optional().describe('Uç noktası nesnenin yerel ekseninde (verilmezse eşyanın en uzun ekseninin elden uzak ucu)'),
+    root: vec3.optional().describe('Tutuş noktası nesnenin yerel ekseninde (eşyada verilmezse yakın uç)'),
+    rootBone: z.string().optional().describe('target bone iken tutuş kemiği (varsayılan ebeveyn kemik)'),
+    startFrame: z.number().min(0).optional(), endFrame: z.number().min(0).optional(),
+    threshold: z.number().min(0.05).max(0.95).default(0.35).describe('Otomatik pencere: hız eşiği (maks hızın oranı)'),
+    emitter: z.string().optional().describe('Sonucun yazılacağı emitter adı (yoksa arc_slash şablonuyla eklenir)'),
+    apply: z.boolean().default(true),
+    outerExtend: z.number().min(0).max(1).default(0.06).describe('Dış yarıçap = uç yarıçapı × (1 + outerExtend)'),
+  },
+}, async (args) => {
+  await ensureServer();
+  const ping = await get('/api/ping');
+  if (!ping.clients) throw new Error(`Editör tarayıcıda açık değil (http://localhost:${PORT}).`);
+  const r = await post('/api/claude/render', { ...args, kind: 'vfx-fit-arc' });
+  let res; try { res = JSON.parse(r.png || '{}'); } catch { throw new Error('Editör sonucu okunamadı (editörü yenile).'); }
+  if (!res.ok) throw new Error(res.error || 'yay oturtulamadı');
+  const fit = res.fit; const out = { fit: { ...fit, progress: undefined } };
+  if (args.emitter && args.apply) {
+    const st = await get('/api/state'); const base = curVfx(st) || { ...defaultEffect(), emitters: [] };
+    if (!findEmitter(base, args.emitter)) base.emitters.push(presetEmitter('arc_slash', { name: args.emitter }));
+    const em = findEmitter(base, args.emitter);
+    const R = fit.radius, sweepDur = Math.max(0.02, fit.window.endTime - fit.window.startTime);
+    const L = Math.max(em.main.startLifetime[1], +(sweepDur + 0.15).toFixed(3));
+    const t0 = fit.window.startTime;
+    let keys = fit.samples.map((s) => [+(Math.max(0, (s.t - t0) / L)).toFixed(4), s.progress]).filter((k) => k[0] <= 1);
+    if (keys.length > 12) keys = Array.from({ length: 12 }, (_, i) => keys[Math.round((i * (keys.length - 1)) / 11)]);
+    if (keys.at(-1)[0] < 1) keys.push([1, 1]);
+    const inner = fit.inner > 0.05 && fit.inner < 0.98 ? R * fit.inner : R * 0.45;
+    const changes = [
+      { path: 'position', value: fit.center }, { path: 'rotation', value: fit.rotation },
+      { path: 'renderer.mode', value: 'mesh' },
+      { path: 'renderer.mesh', value: { ...em.renderer.mesh, shape: 'arc', innerRadius: +inner.toFixed(4), outerRadius: +(R * (1 + args.outerExtend)).toFixed(4), angle: Math.max(1, Math.min(360, fit.angle)), rotation: [0, 0, 0] } },
+      { path: 'main.startSize', value: [1, 1] }, { path: 'main.startDelay', value: Math.max(0, +t0.toFixed(4)) },
+      { path: 'main.startLifetime', value: [L, L] },
+      { path: 'customData.enabled', value: true }, { path: 'customData.x', value: keys },
+    ].map((c) => ({ ...c, emitter: em.name }));
+    const { effect: e, errors, warnings } = applyChanges(base, changes);
+    out.applied = { emitter: em.name, errors, warnings, lifetime: L, revealCurve: keys };
+    out.browserConnected = await pushVfx(e);
+    out.note = 'Yay emitter\'a yazıldı. Görmek için preview.withAnimation:true ile render_vfx; açılmayı materyalde i.custom.x ile maskele (yerleşik görünümde yay tümden görünür).';
+  }
+  return text(out);
 });
 
 server.registerTool('list_vfx', {

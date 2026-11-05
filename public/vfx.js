@@ -5,11 +5,16 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { EffectPlayer, clearTextureCache, texturesLoaded } from './vfx-sim.js';
+import { fitArc } from './vfx-mesh.js';
 import { materialTexturesLoaded } from './shader-compile.js';
 import { MODULES, TEXTURES, defaultEffect, defaultEmitter, normalizeEffect, presetEmitter, evalGradient, evalCurve, clone } from './vfx-schema.js';
 
-const PRESET_LABELS = { sparks: 'Kıvılcım', embers: 'Kor', fire: 'Alev', smoke: 'Duman', flash: 'Parlama', shockwave: 'Şok dalgası', glow: 'Hale', slash: 'Kılıç kesiği' };
+const PRESET_LABELS = { sparks: 'Kıvılcım', embers: 'Kor', fire: 'Alev', smoke: 'Duman', flash: 'Parlama', shockwave: 'Şok dalgası', glow: 'Hale', slash: 'Kılıç kesiği',
+  arc_slash: 'Yay kesiği (mesh)', heat_haze: 'Sıcak hava bükülmesi', shock_distort: 'Şok bükülmesi', fire_light: 'Ateş ışığı' };
 // kaydırıcı aralıkları (yazarak sınırların dışına çıkılabilir)
 const SLIDER = {
   'main.duration': [0.1, 10], 'main.startDelay': [0, 3], 'main.gravity': [-3, 3], 'main.maxParticles': [1, 2000],
@@ -20,6 +25,9 @@ const SLIDER = {
   'textureSheet.tilesX': [1, 8], 'textureSheet.tilesY': [1, 8], 'textureSheet.cycles': [1, 8],
   'renderer.intensity': [0, 8], 'renderer.lengthScale': [0, 6], 'renderer.velocityScale': [0, 0.5], 'renderer.sortingOrder': [-10, 10],
   'effect.duration': [0.1, 10], 'effect.bloom': [0, 3],
+  'renderer.mesh.innerRadius': [0, 3], 'renderer.mesh.outerRadius': [0, 3], 'renderer.mesh.angle': [1, 360], 'renderer.mesh.height': [0, 3],
+  'renderer.mesh.segments': [1, 128], 'renderer.mesh.rings': [1, 16], 'renderer.distortion.strength': [0, 0.15], 'renderer.distortion.frequency': [0.5, 20],
+  'light.intensity': [0, 40], 'light.radius': [0.1, 10], 'bladeTrail.tileLength': [0.05, 5],
 };
 const fmt = (v) => String(+(+v).toFixed(3));
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -40,10 +48,24 @@ export function initVfx(ctx) {
   composer.addPass(new OutputPass());
   let csz = '', fixedSize = false; // kontak sayfası çizilirken boyut denetimi kapalı
   const resize = () => { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(viewport.clientWidth, viewport.clientHeight); csz = viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio(); };
+  // bükülme: sahne (bükülme parçacıkları gizli) ayrı hedefe çizilir; bükülme malzemeleri onu ekran konumu + ofsetle örnekler
+  const sceneRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType }); const _dsz = new THREE.Vector2();
+  function renderSceneTarget() {
+    if (!player.hasDistortion) return;
+    renderer.getDrawingBufferSize(_dsz); if (sceneRT.width !== _dsz.x || sceneRT.height !== _dsz.y) sceneRT.setSize(_dsz.x, _dsz.y);
+    const ms = player.distortionMeshes; for (const m of ms) m.visible = false;
+    const prev = renderer.getRenderTarget(); renderer.setRenderTarget(sceneRT); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(prev);
+    for (const m of ms) m.visible = true;
+    player.shared.uScene.value = sceneRT.texture; player.shared.uSceneRes.value.copy(_dsz);
+  }
   function render() { // boyut her karede denetlenir (açılışta düzen oturmadan etkinleşince sıfır boyut kalmasın)
     if (!fixedSize && csz !== viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio()) resize();
+    renderSceneTarget();
     bloom.enabled = effect.preview.bloom > 0; bloom.strength = effect.preview.bloom; composer.render();
   }
+  // zemin (preview.showGround): ışıklı efektlerde yere vuran ışığı görmek için koyu, pürüzlü disk
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(6, 64), new THREE.MeshStandardMaterial({ color: 0x30343c, roughness: 0.92, metalness: 0 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.002; ground.visible = false; ground.name = 'vfx-ground'; scene.add(ground);
 
   // ── bağlama (kemik / eşya), kahraman görünürlüğü, animasyonla eşleme
   const pivots = new Map();
@@ -90,6 +112,42 @@ export function initVfx(ctx) {
   player.materialFor = (name) => { if (matRes.has(name)) return matRes.get(name); loadMat(name); return null; };
   const matStatus = (name) => (!matRes.has(name) ? 'Yükleniyor…' : matRes.get(name) ? `Shader: ${matRes.get(name).shader.unityName} · doku, karışım ve parlaklık materyalden gelir` : 'Kütüphanede yok ya da shader\'ı bulunamadı — önizleme yerleşik görünümle çizer, Unity\'ye gönderilemez');
 
+  // ── mesh dosyaları (renderer.mesh.shape = 'file'): meshes/<dosya> → tek geometri (tüm parçalar, düğüm dönüşümleriyle), Unity eksenine
+  // (x aynası, sarım çevrilir); Model modundaki "Otomatik" birim kuralı: en büyük boyut 20'yi aşarsa santimetre sayılır (×0,01)
+  const meshCache = new Map(), meshLoading = new Map(); let meshFiles = [];
+  async function loadMeshFiles() { meshFiles = await fetch('/api/model-files').then((r) => r.json()).then((x) => x.meshes || []).catch(() => meshFiles); return meshFiles; }
+  function meshToData(root) {
+    root.updateMatrixWorld(true);
+    const P = [], N = [], UV = [], I = []; const v = new THREE.Vector3(), nm = new THREE.Matrix3();
+    root.traverse((o) => {
+      if (!o.isMesh || !o.geometry?.attributes.position) return;
+      const g = o.geometry; if (!g.attributes.normal) g.computeVertexNormals();
+      const base = P.length / 3, pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv;
+      nm.getNormalMatrix(o.matrixWorld);
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); P.push(-v.x, v.y, v.z);
+        v.fromBufferAttribute(nor, i).applyMatrix3(nm).normalize(); N.push(-v.x, v.y, v.z);
+        UV.push(uv ? uv.getX(i) : 0, uv ? uv.getY(i) : 0);
+      }
+      const idx = g.index ? g.index.array : Array.from({ length: pos.count }, (_, i) => i);
+      for (let i = 0; i + 2 < idx.length; i += 3) I.push(base + idx[i], base + idx[i + 2], base + idx[i + 1]); // ayna → sarım çevrilir
+    });
+    if (!P.length) return null;
+    let mx = 0; for (let i = 0; i < P.length; i++) mx = Math.max(mx, Math.abs(P[i]));
+    if (mx > 20) for (let i = 0; i < P.length; i++) P[i] *= 0.01;
+    return { positions: new Float32Array(P), normals: new Float32Array(N), uvs: new Float32Array(UV), indices: new Uint32Array(I) };
+  }
+  function loadMeshFile(file) {
+    if (meshCache.has(file) || meshLoading.has(file) || !file) return;
+    const url = '/meshes/' + encodeURIComponent(file), ext = file.split('.').pop().toLowerCase();
+    const loader = ext === 'obj' ? new OBJLoader() : ext === 'fbx' ? new FBXLoader() : new GLTFLoader();
+    meshLoading.set(file, loader.loadAsync(url).then((r) => meshToData(r.scene || r)).catch((e) => { console.warn('VFX mesh yüklenemedi', file, e); return null; }).then((d) => {
+      meshCache.set(file, d); meshLoading.delete(file); if (active) rebuildPlayer(true);
+      if (!d) toast('Mesh yüklenemedi: ' + file);
+    }));
+  }
+  player.meshFor = (file) => { if (meshCache.has(file)) return meshCache.get(file); loadMeshFile(file); return null; };
+
   // ── veri akışı
   let syncTimer = null;
   const scheduleSync = () => { clearTimeout(syncTimer); syncTimer = setTimeout(() => api('/api/vfx', effect).catch(() => {}), 250); };
@@ -116,7 +174,7 @@ export function initVfx(ctx) {
   function applyPreviewSettings() {
     if (!active) return;
     const p = effect.preview;
-    scene.background = new THREE.Color(p.background); ctx.grid.visible = p.showGrid; applyHeroVisibility(p.showHero);
+    scene.background = new THREE.Color(p.background); ctx.grid.visible = p.showGrid; applyHeroVisibility(p.showHero); ground.visible = p.showGround;
     $('#vfxName').value = document.activeElement === $('#vfxName') ? $('#vfxName').value : effect.name;
   }
 
@@ -215,8 +273,8 @@ export function initVfx(ctx) {
         scrubLabel(lab, ni, type === 'int' ? 0.25 : step, (v) => { v = type === 'int' ? Math.round(v) : v; if (rg) rg.value = v; set(v); });
         break;
       }
-      case 'range': case 'vec3': {
-        const n = type === 'range' ? 2 : 3, names = type === 'range' ? ['min', 'maks'] : ['X', 'Y', 'Z'];
+      case 'range': case 'vec3': case 'vec2': {
+        const n = type === 'vec3' ? 3 : 2, names = type === 'range' ? ['min', 'maks'] : type === 'vec2' ? ['U', 'V'] : ['X', 'Y', 'Z'];
         const row = el('div', 'vrow multi');
         for (let k = 0; k < n; k++) {
           const cell = el('label', 'vsub'); const span = el('span', '', names[k]); cell.appendChild(span);
@@ -226,6 +284,20 @@ export function initVfx(ctx) {
         }
         wrap.appendChild(row); break;
       }
+      case 'color': { const c = el('input'); c.type = 'color'; c.value = String(ref.get()).slice(0, 7); c.onfocus = () => pushUndo(); c.oninput = () => set(c.value); wrap.appendChild(c); break; }
+      case 'meshfile': {
+        const s = el('select'); const cur = ref.get(); s.add(new Option('— seç (meshes/) —', ''));
+        for (const f of meshFiles) s.add(new Option(f, f)); if (cur && !meshFiles.includes(cur)) s.add(new Option(cur + ' (yok)', cur));
+        s.value = cur; s.onchange = () => { pushUndo(); set(s.value, true); }; wrap.appendChild(s);
+        wrap.appendChild(el('div', 'hint-s', 'GLB/GLTF/OBJ/FBX; Model modunda ya da meshes/ klasörüne yükle. Unreal\'e OBJ ise aynen, değilse uyarıyla gider.'));
+        break;
+      }
+      case 'group': { // alt nesne (renderer.mesh, renderer.distortion): alanlar aynı bileşenlerle, yol sliderKey.alan
+        lab.classList.add('vgroup'); const G = () => ref.get(); const body = el('div', 'vbody sub');
+        for (const [k, t, l, oo] of o.fields) { if (o.hide?.(k, G())) continue; body.appendChild(field(t, l, R(G, k), oo, `${sliderKey}.${k}`)); }
+        wrap.appendChild(body); break;
+      }
+      case 'subList': wrap.appendChild(subListUI(ref)); break;
       case 'bool': { lab.classList.add('chk'); lab.textContent = ''; const c = el('input'); c.type = 'checkbox'; c.checked = ref.get(); c.onchange = () => { pushUndo(); set(c.checked); }; lab.append(c, ' ' + label); break; }
       case 'enum': {
         const s = el('select'); for (const [v, t] of o.options) s.add(new Option(t, v)); s.value = ref.get();
@@ -317,6 +389,28 @@ export function initVfx(ctx) {
     fit(); draw(); return box;
   }
 
+  function subListUI(ref) { // alt emitter listesi: hedef · tetik · adet min/maks · renk/boyut mirası · hız mirası
+    const box = el('div', 'bursts'); const names = effect.emitters.map((x) => x.name).filter((n) => n !== em()?.name);
+    box.appendChild(el('div', 'vl', 'hedef · tetik · min · maks · renk · boyut · hız'));
+    ref.get().forEach((it, idx) => {
+      const r = el('div', 'vrow'); const I = () => ref.get()[idx];
+      const t = el('select'); for (const n of names) t.add(new Option(n, n)); if (!names.includes(it.emitter)) t.add(new Option(it.emitter + ' (yok)', it.emitter));
+      t.value = it.emitter; t.onchange = () => { pushUndo(); I().emitter = t.value; edited(); };
+      const tr = el('select'); tr.add(new Option('ölüm', 'death')); tr.add(new Option('doğum', 'birth')); tr.value = it.trigger; tr.onchange = () => { pushUndo(); I().trigger = tr.value; edited(); };
+      r.append(t, tr);
+      r.appendChild(numInput(it.count[0], 1, (v) => { I().count = [Math.round(v), Math.max(Math.round(v), I().count[1])]; edited(); }));
+      r.appendChild(numInput(it.count[1], 1, (v) => { I().count = [Math.min(I().count[0], Math.round(v)), Math.round(v)]; edited(); }));
+      for (const k of ['inheritColor', 'inheritSize']) { const c = el('input'); c.type = 'checkbox'; c.checked = it[k]; c.title = k === 'inheritColor' ? 'Rengi miras al' : 'Boyutu miras al'; c.onchange = () => { pushUndo(); I()[k] = c.checked; edited(); }; r.appendChild(c); }
+      const hv = numInput(it.inheritVelocity, 0.05, (v) => { I().inheritVelocity = Math.min(1, Math.max(0, v)); edited(); }); hv.title = 'Hız mirası 0..1'; r.appendChild(hv);
+      const del = el('button', '', '✕'); del.onclick = () => { pushUndo(); ref.get().splice(idx, 1); edited({ structure: true }); }; r.appendChild(del);
+      box.appendChild(r);
+    });
+    const add = el('button', 'small', '+ alt emitter'); add.onclick = () => { if (ref.get().length >= 4 || !names.length) return toast(names.length ? 'En çok 4' : 'Önce başka bir emitter ekle'); pushUndo(); ref.get().push({ emitter: names[0], trigger: 'death', count: [5, 5], inheritColor: false, inheritSize: false, inheritVelocity: 0 }); edited({ structure: true }); };
+    box.appendChild(add);
+    box.appendChild(el('div', 'hint-s', 'Hedef emitter kendi yayımını yapmaz; yalnız bu olaylarla, olayın konumunda doğar (Unity sub-emitter gibi).'));
+    return box;
+  }
+
   function burstsUI(ref) {
     const box = el('div', 'bursts');
     box.appendChild(el('div', 'vl', 'zaman · min · maks · tekrar · aralık'));
@@ -362,7 +456,7 @@ export function initVfx(ctx) {
       field('bool', 'Animasyonla birlikte oynat', R(P, 'withAnimation')),
       field('int', 'Animasyon başlangıç karesi', R(P, 'startFrame'), { min: 0, max: Math.max(1, (ctx.getAnim()?.length || 2) - 1), step: 1 }),
       field('num', 'Bloom', R(P, 'bloom'), { min: 0, max: 5, step: 0.05 }, 'effect.bloom'),
-      field('bool', 'Kahramanı göster', R(P, 'showHero')), field('bool', 'Zemin ızgarası', R(P, 'showGrid')),
+      field('bool', 'Kahramanı göster', R(P, 'showHero')), field('bool', 'Zemin ızgarası', R(P, 'showGrid')), field('bool', 'Zemin (ışığı görmek için)', R(P, 'showGround')),
     );
     { const w = el('div', 'vf'); w.appendChild(el('label', 'vl', 'Arka plan')); const c = el('input'); c.type = 'color'; c.value = effect.preview.background; c.onfocus = () => pushUndo(); c.oninput = () => { effect.preview.background = c.value; edited(); }; w.appendChild(c); se.appendChild(w); }
     box.appendChild(se);
@@ -388,7 +482,13 @@ export function initVfx(ctx) {
         for (const [key, type, label, o] of mod.fields) {
           if (mod.key === 'shape') { const ty = M().type; if ((key === 'angle' && ty !== 'cone') || (key === 'boxSize' && ty !== 'box') || (key === 'donutRadius' && ty !== 'donut') || (['radius', 'radiusThickness'].includes(key) && ty === 'box') || (key === 'arc' && !['cone', 'circle', 'donut'].includes(ty))) continue; }
           if (mod.key === 'renderer' && ['lengthScale', 'velocityScale'].includes(key) && M().mode !== 'stretched') continue;
-          if (mod.key === 'renderer' && ['texture', 'blend', 'intensity'].includes(key) && M().material) continue; // materyalden gelir
+          if (mod.key === 'renderer' && key === 'alignment' && M().mode !== 'billboard') continue;
+          if (mod.key === 'renderer' && ['texture', 'intensity'].includes(key) && M().material) continue; // materyalden gelir (blend: yalnız distortion etkili)
+          if (o?.when && !Object.entries(o.when).every(([k, vals]) => vals.includes(M()[k]))) continue;
+          if (mod.key === 'light' && ['maxLights', 'useParticleColor'].includes(key) && M().mode !== 'perParticle') continue;
+          if (mod.key === 'bladeTrail' && key === 'tileLength' && M().uvMode !== 'tile') continue;
+          if (key === 'mesh') { body.appendChild(field('group', label, R(M, key), { ...o, hide: (k, g) => (k === 'file' && g.shape !== 'file') || (['innerRadius', 'outerRadius', 'angle', 'segments', 'rings'].includes(k) && g.shape === 'file') || (k === 'height' && g.shape !== 'cylinder') || (['innerRadius', 'outerRadius', 'angle'].includes(k) && g.shape === 'plane') }, 'renderer.mesh')); continue; }
+          if (key === 'distortion') { body.appendChild(field('group', label, R(M, key), { ...o, hide: (k, g) => (k === 'frequency' && g.mode !== 'noise') || (k === 'scroll' && g.mode === 'radial') }, 'renderer.distortion')); continue; }
           body.appendChild(type === 'gradient' ? field('gradient', label, { get: M, set: () => {} }) : field(type, label, R(M, key), o, `${mod.key}.${key}`));
         }
         d.appendChild(body); box.appendChild(d);
@@ -473,7 +573,7 @@ export function initVfx(ctx) {
     const size = Math.max(128, Math.min(1024, d.size || 320));
     const keep = { pos: camera.position.clone(), target: orbit.target.clone(), aspect: camera.aspect, time: dispTime, playing, bg: effect.preview.background, hero: effect.preview.showHero };
     playing = false;
-    const loads = async () => { await Promise.all(matLoading.values()); await Promise.all([texturesLoaded(), materialTexturesLoaded()]); };
+    const loads = async () => { await Promise.all([...matLoading.values(), ...meshLoading.values()]); await Promise.all([texturesLoaded(), materialTexturesLoaded()]); };
     await Promise.race([loads(), new Promise((r) => setTimeout(r, 5000))]); // dokular ve emitter materyalleri yüklenmeden çizme
     if (d.bg) effect.preview.background = d.bg; if (typeof d.showHero === 'boolean') effect.preview.showHero = d.showHero; applyPreviewSettings();
     const f = frameBox(times);
@@ -502,22 +602,85 @@ export function initVfx(ctx) {
     return sheet.toDataURL('image/png');
   }
 
+  // ── animasyondan yay oturtma (MCP fit_arc_from_animation): kılıç ucu (+ tutuş) yolu kareler boyunca örneklenir, efekt kökü
+  // çerçevesinde (Unity ekseni, metre) düzlem + çember oturtulur (vfx-mesh.js fitArc; Elarion arc_fit.py ile aynı yöntem).
+  // d: { target: 'prop'|'bone', name, tip?, root? (nesnenin yerel ekseninde, three birimi), rootBone?, startFrame?, endFrame?, threshold? }
+  function fitArcFromAnimation(d = {}) {
+    const anim = ctx.getAnim(), rig = ctx.getRig();
+    if (!anim || !rig) throw new Error('Animasyon ya da karakter yüklü değil');
+    const kind = d.target === 'bone' ? 'bone' : 'prop';
+    let obj, rootObj = null;
+    if (kind === 'bone') {
+      const b = findBone(rig, d.name || 'RightHand'); if (!b) throw new Error('kemik yok: ' + d.name); obj = b.obj;
+      rootObj = d.rootBone ? findBone(rig, d.rootBone)?.obj : obj.parent;
+    } else {
+      const props = ctx.getProps(); const p = d.name ? props.find((x) => x.id === d.name || x.prop === d.name) : props[0];
+      if (!p?.obj) throw new Error('eşya yok: ' + (d.name || '(takılı eşya yok)') + ' — attach_prop ile tak ya da target:"bone" kullan'); obj = p.obj;
+    }
+    const f0 = Math.max(0, d.startFrame ?? effect.preview.startFrame), fEnd = Math.min(anim.length - 1, d.endFrame ?? anim.length - 1);
+    if (fEnd - f0 < 2) throw new Error('kare aralığı çok kısa');
+    const was = active; if (!was) ctx.setMode('vfx', { notify: false });
+    const keepTime = dispTime, keepPlaying = playing; playing = false;
+    try {
+      // eşya: yerel sınır kutusunun en uzun ekseninin iki ucu; kabzadan (eşyanın bağlı olduğu kemik) uzak olan uç = kılıç ucu
+      ctx.poseAt(f0); ctx.stage.updateWorldMatrix(true, true);
+      let tipL = d.tip ? new THREE.Vector3(...d.tip) : null, rootL = d.root ? new THREE.Vector3(...d.root) : null;
+      if (kind === 'prop' && (!tipL || !rootL)) {
+        const inv = new THREE.Matrix4().copy(obj.matrixWorld).invert(), box = new THREE.Box3(), m = new THREE.Matrix4();
+        obj.traverse((o) => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld))); } });
+        if (box.isEmpty()) throw new Error('eşyanın mesh\'i yok');
+        const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3()); const ax = sz.x >= sz.y && sz.x >= sz.z ? 'x' : sz.y >= sz.z ? 'y' : 'z';
+        const e0 = c.clone(), e1 = c.clone(); e0[ax] = box.min[ax]; e1[ax] = box.max[ax];
+        const hand = obj.parent.getWorldPosition(new THREE.Vector3());
+        const far = e0.clone().applyMatrix4(obj.matrixWorld).distanceTo(hand) > e1.clone().applyMatrix4(obj.matrixWorld).distanceTo(hand);
+        tipL ??= far ? e0 : e1; rootL ??= far ? e1 : e0;
+      }
+      tipL ??= new THREE.Vector3();
+      const frame = new THREE.Matrix4(), w = new THREE.Vector3();
+      const toFx = (v) => { w.copy(v).applyMatrix4(frame); return [w.x, w.y, w.z]; }; // three dünyası → efekt kökü (Unity, ayna offset'te)
+      const S = [];
+      const step = Math.max(0.25, Math.min(1, d.step ?? 0.5));
+      for (let f = f0; f <= fEnd + 1e-6; f += step) {
+        ctx.poseAt(f); ctx.stage.updateWorldMatrix(true, true); player.attachTo(attachParent()); player.root.updateWorldMatrix(true, true);
+        frame.copy(player.offset.matrixWorld).invert();
+        const tip = toFx(tipL.clone().applyMatrix4(obj.matrixWorld));
+        const root = kind === 'prop' ? toFx(rootL.clone().applyMatrix4(obj.matrixWorld)) : rootObj ? toFx(rootObj.getWorldPosition(new THREE.Vector3())) : null;
+        S.push({ f, t: (f - effect.preview.startFrame) / anim.fps, tip, root });
+      }
+      // pencere: verilmediyse uç hızının en yüksek olduğu yerin çevresinde hız ≥ eşik × maks olan kesintisiz bölüm (savuruş)
+      const sp = S.map((s, i) => (i ? Math.hypot(...s.tip.map((v, k) => v - S[i - 1].tip[k])) / ((s.f - S[i - 1].f) / anim.fps) : 0)); sp[0] = sp[1] ?? 0;
+      let a = 0, b = S.length - 1;
+      if (d.startFrame === undefined || d.endFrame === undefined) {
+        const th = (d.threshold ?? 0.35) * Math.max(...sp), im = sp.indexOf(Math.max(...sp));
+        a = im; while (a > 0 && sp[a - 1] >= th) a--; b = im; while (b < S.length - 1 && sp[b + 1] >= th) b++;
+        if (b - a < 2) { a = Math.max(0, im - 2); b = Math.min(S.length - 1, im + 2); }
+      }
+      const W = S.slice(a, b + 1);
+      const fit = fitArc(W.map((s) => s.tip), W.map((s) => s.root).filter(Boolean));
+      return { ...fit, window: { startFrame: W[0].f, endFrame: W.at(-1).f, startTime: +W[0].t.toFixed(4), endTime: +W.at(-1).t.toFixed(4) },
+        samples: W.map((s, i) => ({ t: +s.t.toFixed(4), progress: fit.progress[i] })), fps: anim.fps, tipLocal: tipL.toArray().map((v) => +v.toFixed(4)), maxTipSpeed: +Math.max(...sp).toFixed(3) };
+    } finally {
+      seekTo(keepTime); playing = keepPlaying; if (!effect.preview.withAnimation) ctx.restorePose?.();
+      if (!was) ctx.setMode('anim', { notify: false });
+    }
+  }
+
   // ── mod geçişi
   function activate() {
     active = true; player.setVisible(true); resize(); ctx.overlay.visible = false;
     matRes.clear(); ctx.forgetLibMaterials?.(); // Materyal/Shader modunda kaydedilen son hâller
     loadTextures(); rebuildPlayer(true); refreshLeft(); buildRight(); applyPreviewSettings();
-    loadMatList().then(() => { if (active) buildRight(); });
+    Promise.all([loadMatList(), loadMeshFiles()]).then(() => { if (active) buildRight(); });
   }
   function deactivate() {
-    active = false; player.setVisible(false); ctx.overlay.visible = true; ctx.grid.visible = true; scene.background = new THREE.Color(ctx.BG); applyHeroVisibility(true);
+    active = false; player.setVisible(false); ground.visible = false; ctx.overlay.visible = true; ctx.grid.visible = true; scene.background = new THREE.Color(ctx.BG); applyHeroVisibility(true);
   }
   function onRemoteEffect(e) { replaceEffect(e); toast('Claude efekti güncelledi (Ctrl+Z ile geri al)'); }
   function setFromState(e) { effect = normalizeEffect(e || defaultEffect()).effect; sel = 0; rebuildPlayer(false); }
   function nudge(dt) { playing = false; seekTo(Math.max(0, dispTime + dt)); syncTransport(); }
 
   return {
-    activate, deactivate, get active() { return active; }, tick, render, onRemoteEffect, setFromState, renderSheet, undo, redo, togglePlay, restart, nudge,
+    activate, deactivate, get active() { return active; }, tick, render, onRemoteEffect, setFromState, renderSheet, fitArcFromAnimation, undo, redo, togglePlay, restart, nudge,
     sendUnity: () => sendUnity({}), sendUnreal: (o) => sendUnreal(o || {}), frame: focus, get effect() { return effect; }, player,
     noteContext: () => { const t = player.allLooping ? dispTime % effect.duration : Math.min(dispTime, effect.duration); // ekranda görünen zaman
       return { label: `VFX · ${effect.name}${em() ? ' · emitter ' + em().name : ''} · ${t.toFixed(2)} sn`, data: { mode: 'vfx', emitter: em()?.name || null, effectTime: +t.toFixed(2) } }; },

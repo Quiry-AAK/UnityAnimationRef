@@ -259,6 +259,7 @@ struct UPEInput {
   float3 cameraRightWS; float3 cameraUpWS; float3 cameraPosWS;
   float time;                         // sn (_Time.y; _Time float4 de var)
   float facing;                       // ön yüz 1, arka yüz -1
+  float4 custom;                      // VFX emitter customData eğrileri (x,y,z,w; ömür boyu); yoksa 0 · Unity'de 0
 };
 
 ## Makrolar / yardımcılar

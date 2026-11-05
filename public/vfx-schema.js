@@ -46,8 +46,16 @@ export function defaultEmitter() {
     rotationOverLifetime: { enabled: false, angularVelocity: [0, 0] },
     textureSheet: { enabled: false, tilesX: 1, tilesY: 1, cycles: 1, randomStart: false },
     // kılıç izi (şerit): parçacık yerine emitter'a bağlı iki noktanın (kök → uç) taradığı yüzey; Unity'de çalışma zamanı bileşeni
-    bladeTrail: { enabled: false, from: v3(0, 0, 0), to: v3(0, 0, 1), lifetime: 0.25, subdiv: 4 },
-    renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0 },
+    bladeTrail: { enabled: false, from: v3(0, 0, 0), to: v3(0, 0, 1), lifetime: 0.25, subdiv: 4, width: [[0, 1], [1, 1]], taper: 'tip', uvMode: 'stretch', tileLength: 1 },
+    // ömür boyu özel veri (Unity Custom Data / Niagara Dynamic Material Parameter): UPE-SL materyalinde i.custom (x,y,z,w)
+    customData: { enabled: false, x: [[0, 0], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] },
+    // ışık: single = emitter konumunda tek nokta ışığı (eğri: emitter döngüsü), perParticle = parçacık başına (eğri: parçacık ömrü)
+    light: { enabled: false, mode: 'single', color: '#ffb060', useParticleColor: false, intensity: 4, radius: 3, curve: [[0, 1], [1, 1]], maxLights: 4, shadows: false },
+    // alt emitter'lar: bu emitter'ın parçacığı doğunca/ölünce hedef emitter o noktada count parçacık doğurur (hedefin kendi yayımı kapanır)
+    subEmitters: { enabled: false, items: [] }, // item: { emitter, trigger: 'death'|'birth', count:[min,max], inheritColor, inheritSize, inheritVelocity }
+    renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0,
+      mesh: { shape: 'arc', file: '', innerRadius: 0.4, outerRadius: 1, angle: 180, height: 0.5, segments: 64, rings: 4, rotation: v3() },
+      distortion: { mode: 'radial', strength: 0.03, frequency: 4, scroll: [0, 0.5] } },
   };
 }
 
@@ -58,13 +66,14 @@ export function defaultEffect() {
     duration: 2, // önizleme döngüsü (sn); Unity'de kök ParticleSystem'in süresi
     loop: true, // önizlemede tekrar oynat
     attach: { target: 'none', name: '', position: v3(), rotation: v3() }, // target: none | bone | prop
-    preview: { withAnimation: false, startFrame: 0, background: '#0d1018', bloom: 0.8, showHero: true, showGrid: true },
+    preview: { withAnimation: false, startFrame: 0, background: '#0d1018', bloom: 0.8, showHero: true, showGrid: true, showGround: false },
     emitters: [{ ...defaultEmitter(), name: 'emitter' }],
   };
 }
 
 // ── UI + doğrulama için alan tanımları: [anahtar, tip, etiket, seçenekler]
-// tipler: num, int, range ([min,max]), vec3, bool, enum, color2, gradient, curve, bursts, texture
+// tipler: num, int, range ([min,max]), vec2, vec3, bool, enum, color, color2, gradient, curve, bursts, texture, material, meshfile,
+// group (alt nesne: o.fields), subList (alt emitter listesi). o.when: { alan: [değerler] } → UI yalnız o durumda gösterir
 const SPACE = [['local', 'Yerel'], ['world', 'Dünya']];
 export const MODULES = [
   { key: 'main', label: 'Ana', always: true, fields: [
@@ -133,17 +142,52 @@ export const MODULES = [
     ['to', 'vec3', 'Uç (emitter yereli, m)', { step: 0.01 }],
     ['lifetime', 'num', 'İz ömrü (sn)', { min: 0.02, max: 3, step: 0.01 }],
     ['subdiv', 'int', 'Örnek arası yumuşatma', { min: 1, max: 12, step: 1 }],
+    ['width', 'curve', 'Genişlik eğrisi (iz yaşı boyunca, kök–uç çarpanı)'],
+    ['taper', 'enum', 'Daralma yönü', { options: [['tip', 'Uca doğru (kök kısalır)'], ['center', 'Ortaya doğru'], ['root', 'Köke doğru (uç kısalır)']] }],
+    ['uvMode', 'enum', 'Doku U düzeni', { options: [['stretch', 'Esnet (U = iz yaşı 0→1)'], ['tile', 'Döşe (U = iz uzunluğu / döşeme boyu)']] }],
+    ['tileLength', 'num', 'Döşeme boyu (m, uç yolu)', { min: 0.01, max: 20, step: 0.05 }],
   ] },
+  { key: 'customData', label: 'Özel veri (materyale, i.custom)', fields: [
+    ['x', 'curve', 'x (ömür boyu)'], ['y', 'curve', 'y (ömür boyu)'], ['z', 'curve', 'z (ömür boyu)'], ['w', 'curve', 'w (ömür boyu)'],
+  ] },
+  { key: 'light', label: 'Işık', fields: [
+    ['mode', 'enum', 'Tür', { options: [['single', 'Tek ışık (emitter konumunda)'], ['perParticle', 'Parçacık başına']] }],
+    ['color', 'color', 'Renk'],
+    ['useParticleColor', 'bool', 'Parçacık rengini kullan (perParticle)'],
+    ['intensity', 'num', 'Yoğunluk', { min: 0, max: 200, step: 0.1 }],
+    ['radius', 'num', 'Yarıçap (m)', { min: 0.05, max: 50, step: 0.05 }],
+    ['curve', 'curve', 'Yoğunluk eğrisi (tek: emitter döngüsü, parçacık: ömür)'],
+    ['maxLights', 'int', 'En çok ışık (perParticle)', { min: 1, max: 8, step: 1 }],
+    ['shadows', 'bool', 'Gölge (desteklenmez; hep kapalı)'],
+  ] },
+  { key: 'subEmitters', label: 'Alt emitter (doğum/ölüm)', fields: [['items', 'subList', "Tetiklenecek emitter'lar"]] },
   { key: 'renderer', label: 'Görünüm', always: true, fields: [
-    ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)']] }],
+    ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)'], ['mesh', 'Mesh (yay, silindir, düzlem, dosya)']] }],
     ['alignment', 'enum', 'Hizalama (billboard)', { options: [['view', 'Kameraya bakar (View)'], ['local', 'Emitter dönüşüne göre (Local, 3B)']] }],
     ['material', 'material', 'Materyal (kütüphaneden)'],
     ['texture', 'texture', 'Doku'],
-    ['blend', 'enum', 'Karışım', { options: [['additive', 'Toplamalı (ışık)'], ['alpha', 'Alfa (duman)']] }],
+    ['blend', 'enum', 'Karışım', { options: [['additive', 'Toplamalı (ışık)'], ['alpha', 'Alfa (duman)'], ['distortion', 'Bükülme (sıcak hava, şok)']] }],
     ['intensity', 'num', 'Parlaklık (HDR, bloom)', { min: 0, max: 20, step: 0.05 }],
     ['lengthScale', 'num', 'Uzama: boyut çarpanı', { min: 0, max: 20, step: 0.05 }],
     ['velocityScale', 'num', 'Uzama: hız çarpanı', { min: 0, max: 5, step: 0.01 }],
     ['sortingOrder', 'int', 'Çizim sırası', { min: -100, max: 100, step: 1 }],
+    ['mesh', 'group', 'Mesh', { when: { mode: ['mesh'] }, fields: [
+      ['shape', 'enum', 'Şekil', { options: [['arc', 'Yay / halka dilimi (kesik)'], ['cylinder', 'Silindir / koni kesiti'], ['plane', 'Düzlem (1×1)'], ['file', 'Dosya (meshes/ GLB/OBJ)']] }],
+      ['file', 'meshfile', 'Dosya (meshes/)'],
+      ['innerRadius', 'num', 'İç yarıçap (m) · silindirde üst', { min: 0, max: 50, step: 0.01 }],
+      ['outerRadius', 'num', 'Dış yarıçap (m) · silindirde alt', { min: 0, max: 50, step: 0.01 }],
+      ['angle', 'num', 'Açı (°)', { min: 1, max: 360, step: 1 }],
+      ['height', 'num', 'Yükseklik (m, silindir)', { min: 0, max: 50, step: 0.01 }],
+      ['segments', 'int', 'Bölüm (açı / X)', { min: 1, max: 256, step: 1 }],
+      ['rings', 'int', 'Halka (yarıçap / Y)', { min: 1, max: 64, step: 1 }],
+      ['rotation', 'vec3', 'Mesh dönüşü (°)', { step: 1 }],
+    ] }],
+    ['distortion', 'group', 'Bükülme', { when: { blend: ['distortion'] }, fields: [
+      ['mode', 'enum', 'Yön kaynağı', { options: [['radial', 'Merkezden dışa (doku alfası maske)'], ['noise', 'Kayan gürültü (sıcak hava)'], ['normal', 'Doku RG = yön (normal haritası)']] }],
+      ['strength', 'num', 'Güç (ekran kesri)', { min: 0, max: 0.5, step: 0.001 }],
+      ['frequency', 'num', 'Gürültü frekansı', { min: 0.1, max: 40, step: 0.1 }],
+      ['scroll', 'vec2', 'Kayma hızı (UV/sn)', { step: 0.05 }],
+    ] }],
   ] },
 ];
 
@@ -195,6 +239,21 @@ function normField(type, v, d, o = {}, warn, where) {
     case 'bool': return typeof v === 'boolean' ? v : d;
     case 'range': return normRange(v, d, o);
     case 'vec3': return normVec3(v, d, o);
+    case 'vec2': return Array.isArray(v) ? [0, 1].map((i) => clampN(num(v[i], d[i]), o)) : d;
+    case 'color': return normColor(Array.isArray(v) ? v[0] : v, d);
+    case 'meshfile': return typeof v === 'string' ? v.trim().replace(/^.*[\\/]/, '') : d; // meshes/<dosya> (uzantılı)
+    case 'group': {
+      const s = isObj(v) ? v : {}; const out = {};
+      for (const [k, t, , oo] of o.fields) out[k] = normField(t, s[k], d[k], oo, warn, `${where}.${k}`);
+      for (const k of Object.keys(s)) if (!(k in d)) warn(`bilinmeyen alan atıldı: ${where}.${k}`);
+      return out;
+    }
+    case 'subList': {
+      if (!Array.isArray(v)) return d;
+      return v.filter(isObj).slice(0, 4).map((x) => ({ emitter: String(x.emitter ?? ''), trigger: ['death', 'birth'].includes(x.trigger) ? x.trigger : 'death',
+        count: normRange(x.count, [5, 5], { min: 0, max: 1000 }).map(Math.round), inheritColor: !!x.inheritColor, inheritSize: !!x.inheritSize,
+        inheritVelocity: unit(num(x.inheritVelocity, 0)) }));
+    }
     case 'enum': { const ok = o.options.map((x) => x[0]); if (v !== undefined && !ok.includes(v)) warn(`${where}: "${v}" geçersiz (${ok.join('|')})`); return ok.includes(v) ? v : d; }
     case 'texture': return typeof v === 'string' && v ? v : d; // yerleşik ya da vfx/textures içindeki özel png adı
     case 'material': return typeof v === 'string' ? v.trim().replace(/\.json$/i, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') : d; // materials/<ad>.json; '' = yok
@@ -242,6 +301,7 @@ export function normalizeEffect(input) {
     e.preview.bloom = clampN(num(p.bloom, def.preview.bloom), { min: 0, max: 5 });
     e.preview.showHero = typeof p.showHero === 'boolean' ? p.showHero : def.preview.showHero;
     e.preview.showGrid = typeof p.showGrid === 'boolean' ? p.showGrid : def.preview.showGrid;
+    e.preview.showGround = typeof p.showGround === 'boolean' ? p.showGround : def.preview.showGround;
   }
   const list = Array.isArray(src.emitters) ? src.emitters : src.emitters === undefined ? def.emitters : [];
   const used = new Set();
@@ -251,6 +311,16 @@ export function normalizeEffect(input) {
     if (n !== out.name) warn(`emitter adı çakıştı: "${out.name}" → "${n}"`);
     out.name = n; used.add(n); e.emitters.push(out);
   });
+  // alt emitter başvuruları: hedef var olmalı, kendisi olmamalı (ad ya da sıra)
+  for (const em of e.emitters) {
+    if (!em.subEmitters.enabled) continue;
+    em.subEmitters.items = em.subEmitters.items.filter((it) => {
+      const t = e.emitters.find((x) => x.name === it.emitter) || (/^\d+$/.test(it.emitter) ? e.emitters[+it.emitter] : null);
+      if (!t) { warn(`${em.name}.subEmitters: hedef emitter yok: "${it.emitter}"`); return false; }
+      if (t === em) { warn(`${em.name}.subEmitters: emitter kendisini tetikleyemez`); return false; }
+      it.emitter = t.name; return true;
+    });
+  }
   for (const k of Object.keys(src)) if (!(k in def)) warn(`bilinmeyen alan atıldı: ${k}`);
   return { effect: e, warnings };
 }
@@ -277,6 +347,8 @@ export function normalizeEmitter(input, warn = () => {}, index = 0) {
     for (const k of Object.keys(s)) if (!(k in d)) warn(`bilinmeyen alan atıldı: ${out.name}.${mod.key}.${k}`);
     out[mod.key] = m;
   }
+  if (out.light.enabled && out.light.shadows) { warn(`${out.name}.light.shadows: parçacık ışıklarında gölge desteklenmez (kapatıldı)`); out.light.shadows = false; }
+  if (out.renderer.mode === 'mesh' && out.renderer.mesh.shape === 'file' && !out.renderer.mesh.file) warn(`${out.name}.renderer.mesh.file: dosya seçilmedi (meshes/<ad>.glb|obj)`);
   out.renderer.texture = out.renderer.texture.replace(/\.png$/i, '').replace(/[\\/:]+/g, '_').replace(/^\.+/, '') || 'soft'; // yalnız dosya adı
   if (!(out.renderer.texture in TEXTURES)) warn(`${out.name}.renderer.texture: "${out.renderer.texture}" yerleşik değil; vfx/textures/${out.renderer.texture}.png olmalı`);
   for (const k of Object.keys(src)) if (!(k in def)) warn(`bilinmeyen alan atıldı: ${out.name}.${k}`);
@@ -373,6 +445,23 @@ export const PRESETS = {
     sizeOverLifetime: { enabled: true, curve: [[0, 0.8], [1, 1.1]] },
     rotationOverLifetime: { enabled: true, angularVelocity: [-180, -180] },
     renderer: { texture: 'slash', blend: 'additive', intensity: 3 } },
+  // yay mesh'i: 'soft' doku yay UV'sinde iki ucu incelen hilal bant verir; customData.x = açılma (0→1), y = silinme (materyalde i.custom)
+  arc_slash: { name: 'yay kesiği', main: { duration: 0.6, looping: false, startLifetime: [0.32, 0.32], startSpeed: [0, 0], startSize: [1, 1], startColor: ['#a8d4ff', '#a8d4ff'], maxParticles: 2 },
+    emission: { rateOverTime: 0, bursts: [{ time: 0, count: [1, 1], cycles: 1, interval: 0.1 }] }, shape: { enabled: false },
+    colorOverLifetime: { enabled: true, color: [[0, '#ffffff'], [0.4, '#cfe6ff'], [1, '#4a8cff']], alpha: [[0, 1], [0.55, 0.85], [1, 0]] },
+    sizeOverLifetime: { enabled: true, curve: [[0, 0.92], [1, 1.06]] },
+    customData: { enabled: true, x: [[0, 0], [0.35, 1], [1, 1]], y: [[0, 0], [0.45, 0], [1, 1]] },
+    renderer: { mode: 'mesh', texture: 'soft', blend: 'additive', intensity: 3, mesh: { shape: 'arc', innerRadius: 0.55, outerRadius: 1.1, angle: 200, segments: 72, rings: 6 } } },
+  heat_haze: { name: 'sıcak hava', main: { startLifetime: [1, 1.6], startSpeed: [0.3, 0.6], startSize: [0.6, 1], startRotation: [0, 360] },
+    emission: { rateOverTime: 8 }, shape: { type: 'cone', radius: 0.25, angle: 10 },
+    colorOverLifetime: { enabled: true, alpha: [[0, 0], [0.25, 1], [0.7, 0.8], [1, 0]] }, sizeOverLifetime: { enabled: true, curve: [[0, 0.6], [1, 1.3]] },
+    renderer: { texture: 'soft', blend: 'distortion', distortion: { mode: 'noise', strength: 0.025, frequency: 5, scroll: [0, 0.8] } } },
+  shock_distort: { name: 'şok bükülmesi', main: { duration: 1, looping: false, startLifetime: [0.45, 0.45], startSpeed: [0, 0], startSize: [3, 3], maxParticles: 2 },
+    emission: { rateOverTime: 0, bursts: [{ time: 0, count: [1, 1], cycles: 1, interval: 0.1 }] }, shape: { enabled: false },
+    colorOverLifetime: { enabled: true, alpha: [[0, 1], [1, 0]] }, sizeOverLifetime: { enabled: true, curve: [[0, 0.1], [1, 1]] },
+    renderer: { texture: 'ring', blend: 'distortion', distortion: { mode: 'radial', strength: 0.06 } } },
+  fire_light: { name: 'ateş ışığı', main: { startLifetime: [0.5, 0.5], startSpeed: [0, 0], maxParticles: 1 }, emission: { rateOverTime: 0 }, shape: { enabled: false },
+    light: { enabled: true, mode: 'single', color: '#ff8a3c', intensity: 6, radius: 3, curve: [[0, 1], [0.15, 0.75], [0.35, 1], [0.55, 0.8], [0.75, 1], [1, 0.85]] } },
 };
 
 function deepMerge(base, over) {
@@ -397,7 +486,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - attach: { target: none|bone|prop, name: kemik kısa adı ("RightHand") ya da eşya id ("katana"), position, rotation }
   Konum/dönüş, kemiğin REST (T-pose) dünya eksenlerinde ya da eşyanın kendi ekseninde (eşya modeli ortalanır: orijin = modelin
   merkezi; Elarion katanası ±Z boyunca ~0.92 m). Ölçek iptal edilir, birim hep metre. Önizleme + oyuna bağlama bilgisi.
-- preview: { withAnimation (animasyonla birlikte oynat), startFrame (efekt animasyonun bu karesinde başlar), background, bloom (0 kapalı), showHero, showGrid }
+- preview: { withAnimation (animasyonla birlikte oynat), startFrame (efekt animasyonun bu karesinde başlar), background, bloom (0 kapalı), showHero, showGrid, showGround (ışığı görmek için zemin) }
 - emitters: [...]
 
 ## Emitter (her modül Unity'deki aynı adlı modül)
@@ -422,13 +511,51 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - renderer.alignment: view|local (yalnız billboard). local = Unity ParticleSystemRenderSpace.Local: quad emitter'ın yerel XY
   düzleminde durur (doku +X sağ, +Y yukarı; -Z tarafından bakınca aynasız, startRotation yerel Z etrafında saat yönü); kesik gibi
   3B düzlemi olan şekiller için. Düzlemi emitter rotation belirler.
-- renderer: mode billboard|stretched|horizontal|vertical, texture (${Object.keys(TEXTURES).join(', ')} ya da vfx/textures/<ad>.png için <ad>),
-  blend additive|alpha, intensity (HDR çarpanı, >1 bloom verir), lengthScale + velocityScale (stretched uzunluğu = boyut·lengthScale + hız·velocityScale), sortingOrder
+- renderer: mode billboard|stretched|horizontal|vertical|mesh, texture (${Object.keys(TEXTURES).join(', ')} ya da vfx/textures/<ad>.png için <ad>),
+  blend additive|alpha|distortion, intensity (HDR çarpanı, >1 bloom verir), lengthScale + velocityScale (stretched uzunluğu = boyut·lengthScale + hız·velocityScale), sortingOrder
 - renderer.material: kütüphaneden materyal adı (materials/<ad>.json, list_materials; '' = yok). Doluysa parçacık o materyalin
   shader'ı ve değerleriyle çizilir; texture/blend/intensity YOK SAYILIR (doku, karışım, parlaklık materyalden gelir). Shader'da
   i.color = parçacık rengi (startColor × colorOverLifetime, doğrusal), i.uv = quad UV'si (flipbook açıksa o anki kare),
   vert()'teki v.positionOS = köşenin DÜNYA konumu (Unity'de parçacık köşeleri dünyada, nesne matrisi birim), v.normalOS = quad normali.
   Hazır URP Particles/Unlit (urp_particles_unlit) ya da özel UPE-SL shader olabilir; send_vfx_to_unity materyali (ve özel shader'ını) da gönderir.
+  i.custom = customData eğrileri (aşağıda). Mesh modunda i.uv = mesh UV'si, v.normalOS = mesh normali (dünya).
+
+## Mesh parçacıkları (renderer.mode = 'mesh')
+- renderer.mesh: { shape: arc|cylinder|plane|file, file (meshes/<dosya>.glb|gltf|obj|fbx), innerRadius, outerRadius, angle (°),
+  height, segments, rings, rotation (° Unity Euler, mesh'in parçacığa göre sabit dönüşü) }. Birim metre; parçacık boyutu
+  (startSize × sizeOverLifetime) mesh'i düzgün ölçekler (kesik için startSize 1 → yarıçaplar gerçek metre).
+  arc: emitter'ın yerel XY düzleminde halka dilimi; açı 0 = yerel +X, +Y'ye doğru angle derece. UV: U yay boyunca 0→1, V iç→dış 0→1.
+  cylinder: yerel Y ekseni etrafında, taban y=0, tepe y=height; alt yarıçap outerRadius, üst innerRadius (koni/hortum); U açı, V alttan üste.
+  plane: XY'de 1×1 kare. Mesh'in yönü = emitter dönüşü (Local hizalama gibi) × mesh.rotation; startRotation/rotationOverLifetime
+  yerel Z etrafında döndürür. Doku mesh UV'siyle örneklenir (flipbook da). 'soft' doku yayda iki ucu incelen hilal bant verir.
+- Animasyondan yay: fit_arc_from_animation aracı kılıç ucu (+ tutuş) yolunu örnekler, düzlem + çember oturtur; emitter position/rotation,
+  mesh innerRadius/outerRadius/angle ve customData.x (açılma eğrisi, uç yolunun yay kesri) yazabilir.
+
+## Bükülme (renderer.blend = 'distortion')
+- Parçacık arkasındaki sahneyi büker (sıcak hava, şok dalgası, kesik arkası). Işık eklemez; renk kullanılmaz, alfa = maske.
+- renderer.distortion: { mode: radial (doku alfası maske, UV merkezinden dışa) | noise (kayan gradyan gürültü; frequency, scroll) |
+  normal (doku RG = yön ×2−1, scroll ile kayar), strength (ekran kesri, 0.01–0.08 tipik) }.
+- renderer.material ile: shader frag() çıkışı rg = ofset yönü (-1..1), a = maske; ofset = rg × a × strength.
+- Unreal: Translucent materyal, Emissive = SceneColor(ekran UV + ofset), Opacity = maske (aynı formül).
+
+## Işık (emitter.light)
+- { enabled, mode: single (emitter konumunda tek nokta ışığı; curve emitter döngüsü boyunca) | perParticle (ilk maxLights parçacıkta;
+  curve parçacık ömrü boyunca), color, useParticleColor (perParticle), intensity (önizlemede three.js kandela; Unreal'de yaklaşık),
+  radius (m), curve [[t, çarpan]], maxLights (1–8), shadows (hep false) }. Kahraman ve preview.showGround zemini aydınlanır.
+  Işık-yalnız emitter: emission.rateOverTime 0 + light.mode single (şablon fire_light).
+
+## Kılıç izi ek alanları (bladeTrail)
+- width [[iz yaşı 0..1, kök–uç çarpanı]] (sizeOverLifetime ile çarpılır), taper: tip (kök uca doğru kısalır) | center | root,
+  uvMode: stretch (U = iz yaşı) | tile (U = uç yolu metre / tileLength; doku döşenir). renderer.material izde de çalışır.
+
+## Özel veri (customData)
+- { enabled, x, y, z, w: her biri [[t, değer]] ömür eğrisi (değer ≥ 0) } → UPE-SL'de i.custom (float4). Unreal: Dynamic Material
+  Parameter (Particles.DynamicMaterialParameter). Örnek: x = yay açılması (i.uv.x < i.custom.x görünür), y = silinme.
+
+## Alt emitter (subEmitters)
+- { enabled, items: [{ emitter: hedef ad, trigger: death|birth, count:[min,max], inheritColor, inheritSize, inheritVelocity (0..1) }] } (en çok 4).
+  Hedef emitter kendi yayımını yapmaz; olay başına count parçacığı olayın konumunda (şekli emitter dönüşüyle çevresinde) doğurur.
+  Unreal: olay işleyicisi MCP ile kurulamıyor → uyarı (aşağıda, docs/UNREAL.md).
 
 ## İpuçları
 - Tek atımlık efekt: main.looping=false, emission.rateOverTime=0, bursts=[{time:0,count:[n,n]}], efekt duration ≈ en uzun ömür.

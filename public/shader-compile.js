@@ -65,7 +65,7 @@ struct UPEVertex { float3 positionOS; float3 normalOS; float2 uv; float4 color; 
 struct UPEInput {
   float2 uv; float4 color; float3 positionWS; float3 normalWS; float3 viewDirWS; float4 positionCS; float2 screenUV;
   float3 lightDir; float3 lightColor; float shadow; float3 ambient; float3 cameraRightWS; float3 cameraUpWS; float3 cameraPosWS;
-  float time; float facing;
+  float time; float facing; float4 custom;
 };
 `;
 
@@ -153,14 +153,17 @@ function programParts(shader, outline) {
   const common = `${defs}\n${PRELUDE}\n${uniforms}\nuniform vec4 _Time;\n${STRUCTS}`;
   return { secs, user, common, warnings: secs.flatMap((s) => s.warnings.map((w) => `${s.name}: ${w}`)) };
 }
-const fragmentSource = (common, userCode) => `${common}${PRELUDE_FRAG}
+const fragmentSource = (common, userCode, distortion = false) => `${distortion ? '#define UPE_DISTORT\n' : ''}${common}${PRELUDE_FRAG}
 uniform vec3 upeLightDir; uniform vec3 upeLightColor; uniform vec3 upeAmbient; uniform vec2 upeResolution;
 ${userCode}
 #line 10000 0
-varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
+varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS; varying vec4 vCustom;
+#ifdef UPE_DISTORT
+uniform sampler2D uScene; uniform vec2 uSceneRes; uniform float uStrength;
+#endif
 void main() {
   UPEInput i;
-  i.uv = vUv; i.color = vColor;
+  i.uv = vUv; i.color = vColor; i.custom = vCustom;
   i.positionWS = upeToU(vPosWS);
   i.normalWS = upeToU(normalize(vNormalWS));
   i.viewDirWS = upeToU(normalize(cameraPosition - vPosWS));
@@ -175,6 +178,10 @@ void main() {
     #else
     gl_FragColor = vec4(UPE_OUTLINE_COLOR.rgb, 1.0);
     #endif
+  #elif defined(UPE_DISTORT)
+  vec4 upeD = frag(i); // bükülme: rg = ekran ofseti yönü (-1..1), a = maske; ofset = rg × a × güç
+  if (upeD.a < 0.002) discard;
+  gl_FragColor = vec4(texture(uScene, gl_FragCoord.xy / uSceneRes + upeD.rg * upeD.a * uStrength).rgb, 1.0);
   #else
   gl_FragColor = frag(i);
   #endif
@@ -188,8 +195,9 @@ export function buildPrograms(shader, { outline = false } = {}) {
 #include <skinning_pars_vertex>
 ${user([1, 2])}
 #line 10000 0
-varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
+varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS; varying vec4 vCustom;
 void main() {
+  vCustom = vec4(0.0);
   #include <skinbase_vertex>
   #include <beginnormal_vertex>
   #include <skinnormal_vertex>
@@ -219,15 +227,16 @@ void main() {
 
 // VFX emitter'ı için: quad'ı Unity ParticleSystemRenderer gibi açar (vfx-sim.js ile aynı instanced girdiler). Unity'de parçacık
 // köşeleri dünya uzayındadır (nesne matrisi birim): v.positionOS = köşenin dünya konumu, v.color = parçacık rengi (Linear projede
-// doğrusala çevrilir), v.uv = quad UV'si (flipbook açıksa o anki kare). Kullanıcının vert/frag'ı aynen çalışır; outline yok.
-export function buildParticlePrograms(shader) {
+// doğrusala çevrilir), v.uv = quad UV'si (flipbook açıksa o anki kare; mesh modunda mesh UV'si), i.custom = customData eğrileri.
+// Kullanıcının vert/frag'ı aynen çalışır; outline yok. distortion: frag() çıkışı bükülme ofseti (rg) + maske (a) olarak yorumlanır.
+export function buildParticlePrograms(shader, { distortion = false } = {}) {
   const { user, common, warnings } = programParts(shader, false);
   const vertexShader = `${common}${PRELUDE_VERT}
 ${user([1, 2])}
 #line 10000 0
-attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF;
+attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF; attribute vec4 iCus;
 uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles; uniform mat3 uAlign;
-varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS;
+varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS; varying vec4 vCustom;
 vec3 upeLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
   vec2 c = position.xy; float size = iSRF.x, rot = iSRF.y;
@@ -252,13 +261,18 @@ void main() {
     wp = (modelMatrix * vec4(iPos, 1.0)).xyz; nW = vec3(0.0, 1.0, 0.0); // kılıç izi şeridi (uv = iSRF.zw)
   } else if (uMode == 4) {
     wp = (modelMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0)).xyz; nW = normalize(mat3(modelMatrix) * (uAlign * vec3(0.0, 0.0, -1.0)));
+  } else if (uMode == 6) { // mesh (vfx-sim.js ile aynı): yerel mesh × boyut, yerel Z etrafında dönüş, emitter dönüşü
+    vec3 lp = position * size; lp.xy = vec2(lp.x * cs + lp.y * sn, -lp.x * sn + lp.y * cs);
+    vec3 ln = normal; ln.xy = vec2(ln.x * cs + ln.y * sn, -ln.x * sn + ln.y * cs);
+    wp = (modelMatrix * vec4(iPos + uAlign * lp, 1.0)).xyz; nW = normalize(mat3(modelMatrix) * (uAlign * ln));
   } else {
     vec4 mv = modelViewMatrix * vec4(iPos, 1.0); mv.xy += rc * size;
     wp = (iv * mv).xyz; nW = mat3(iv) * vec3(0.0, 0.0, 1.0);
   }
   float tiles = uTiles.x * uTiles.y, fr = mod(floor(iSRF.z + 0.5), tiles);
   vec2 cell = vec2(mod(fr, uTiles.x), uTiles.y - 1.0 - floor(fr / uTiles.x));
-  UPEVertex v; v.positionOS = upeToU(wp); v.normalOS = upeToU(nW); v.uv = uMode == 5 ? iSRF.zw : (cell + c + 0.5) / uTiles; v.color = vec4(upeLinear(iCol.rgb), iCol.a);
+  UPEVertex v; v.positionOS = upeToU(wp); v.normalOS = upeToU(nW); v.uv = uMode == 5 ? iSRF.zw : uMode == 6 ? (cell + uv) / uTiles : (cell + c + 0.5) / uTiles; v.color = vec4(upeLinear(iCol.rgb), iCol.a);
+  vCustom = iCus;
   #ifdef UPE_HAS_VERT
   vert(v);
   #endif
@@ -266,7 +280,7 @@ void main() {
   vPosWS = w; vNormalWS = normalize(upeToU(v.normalOS)); vUv = v.uv; vColor = v.color;
   gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
 }`;
-  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3])), warnings };
+  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3]), distortion), warnings };
 }
 
 // ── derleme hatalarını yakala ("ERROR: 3:12: ..." → bölüm fragment, satır 12)
@@ -378,15 +392,16 @@ export function createUPEMaterial(shader, values, { meshMap = null, vertexColors
   return { main, outline, uniforms, warnings: main.userData.upeWarnings };
 }
 // VFX emitter materyali: parçacık programı + materyal değerleri + emitter'ın quad uniform'ları (uMode, uTiles…). blend: sıralama için
-export function createUPEParticleMaterial(shader, values, particleUniforms, { onTexture } = {}) {
+export function createUPEParticleMaterial(shader, values, particleUniforms, { onTexture, distortion = false } = {}) {
   const uniforms = { ...shared, ...particleUniforms };
   for (const p of shader.properties) {
     const u = propUniformValue(p, values?.[p.name], null, onTexture);
     if (p.type === 'texture') { uniforms[p.name] = { value: u.tex }; uniforms[p.name + '_ST'] = { value: u.st }; } else uniforms[p.name] = { value: u };
   }
-  const pr = buildParticlePrograms(shader);
+  const pr = buildParticlePrograms(shader, { distortion });
   const m = new THREE.ShaderMaterial({ vertexShader: pr.vertexShader, fragmentShader: pr.fragmentShader, uniforms });
   const rs = renderStateOf(shader, values); applyState(m, rs);
+  if (distortion) { m.transparent = true; m.depthWrite = false; m.blending = THREE.NormalBlending; } // sahne rengini yerine yazar
   m.userData.upeWarnings = pr.warnings;
   return { material: m, blend: rs.blend, warnings: pr.warnings };
 }

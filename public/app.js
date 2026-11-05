@@ -1198,6 +1198,10 @@ es.addEventListener('render', async (e) => {
   const d = JSON.parse(e.data); await ready;
   if (d.kind === 'vfx') { let png = ''; try { png = await vfx.renderSheet(d); } catch (er) { toast('VFX render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   if (d.kind === 'material') { let png = ''; try { png = await mats.renderSheet(d); } catch (er) { toast('Materyal render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
+  if (d.kind === 'vfx-fit-arc') { // MCP fit_arc_from_animation: hesap tarayıcıda (poz + eşya), sonuç JSON metni olarak render kanalından döner
+    let out; try { out = JSON.stringify({ ok: true, fit: vfx.fitArcFromAnimation(d) }); } catch (er) { out = JSON.stringify({ ok: false, error: er.message }); }
+    return api('/api/render-result', { id: d.id, png: out });
+  }
   if (d.kind === 'model') { let png = ''; try { png = await mdl.renderSheet(d); } catch (er) { toast('Model render hatası: ' + er.message); } return api('/api/render-result', { id: d.id, png }); }
   const size = d.size || 512; let png = '';
   const camBackup = [camera.position.clone(), orbit.target.clone()];
