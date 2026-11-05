@@ -1,0 +1,107 @@
+{
+ "format": "upe-shader-1",
+ "name": "kesik_bdo_simsek",
+ "description": "Kesik yayı üzerinde titreyen elektrik telleri (additive): yay boyunca kırıklı ince çizgiler, kare kare ( _Rate/sn) yeniden şekillenir, kopuk segmentler, açılma/aşınma kesikle aynı. Yerleşim kesik_firca ile aynı.",
+ "builtin": false,
+ "unityName": "UnityPreview/kesik_bdo_simsek",
+ "properties": [
+  {
+   "name": "_Color",
+   "type": "hdrColor",
+   "label": "Tel rengi",
+   "default": {
+    "color": "#bfe6ff",
+    "intensity": 3
+   }
+  },
+  {
+   "name": "_Halo",
+   "type": "hdrColor",
+   "label": "Tel ışıması",
+   "default": {
+    "color": "#3d7bff",
+    "intensity": 1
+   }
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Bant kalınlığı",
+   "min": 0.02,
+   "max": 0.7,
+   "default": 0.4
+  },
+  {
+   "name": "_Amp",
+   "type": "range",
+   "label": "Kırıklık",
+   "min": 0,
+   "max": 1,
+   "default": 0.55
+  },
+  {
+   "name": "_Rate",
+   "type": "range",
+   "label": "Titreme (kare/sn)",
+   "min": 1,
+   "max": 60,
+   "default": 24
+  },
+  {
+   "name": "_Thick",
+   "type": "range",
+   "label": "Tel kalınlığı",
+   "min": 0.001,
+   "max": 0.02,
+   "default": 0.004
+  },
+  {
+   "name": "_Count",
+   "type": "range",
+   "label": "Tel sayısı (1-3)",
+   "min": 1,
+   "max": 3,
+   "default": 2
+  },
+  {
+   "name": "_Reveal",
+   "type": "range",
+   "label": "Açılma (ömür oranı)",
+   "min": 0.02,
+   "max": 0.6,
+   "default": 0.12
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Aşınma başı",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.2
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat2 arcRS(float2 uv)\n{\n    float2 p = uv - 0.5;\n    float r = length(p) * 2.0;\n    float th = atan2(p.y, p.x) * 57.29578;\n    th = th + step(th, -90.0) * 360.0;\n    return float2(r, (165.0 - th) / 150.0);\n}\n\nfloat arcProfile(float sc)\n{\n    return pow(sc, 0.9) * (1.0 - smoothstep(0.86, 1.0, sc));\n}\n\n// kırıklı tel: yay boyunca doğrusal parçalı sapma (keskin köşeler) + ince detay\nfloat bolt(float s, float seed)\n{\n    float x = s * 16.0;\n    float i0 = floor(x);\n    float f = frac(x);\n    float a = hash21(float2(i0, seed)) - 0.5;\n    float b = hash21(float2(i0 + 1.0, seed)) - 0.5;\n    float fine = (vnoise(float2(s * 70.0, seed * 3.1)) - 0.5) * 0.35;\n    return lerp(a, b, f) + fine;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float life = 1.0 - i.color.a;\n    float2 a = arcRS(i.uv);\n    float r = a.x;\n    float s = a.y;\n    float sc = saturate(s);\n    float inArc = step(0.0, s) * step(s, 1.0);\n    float R0 = 0.94;\n    float w = _Width * arcProfile(sc);\n    float frame = floor(i.time * _Rate);\n\n    float lines = 0.0;\n    float halo = 0.0;\n    for (int k = 0; k < 3; k++)\n    {\n        float on = step(float(k) + 0.5, _Count);\n        float seed = frame * 7.13 + float(k) * 31.7;\n        float c = R0 - w * (0.25 + 0.3 * float(k)) + bolt(s, seed) * w * _Amp;\n        float seg = step(0.35, hash21(float2(floor(s * 6.0 + float(k) * 0.37), seed)));\n        float dd = abs(r - c);\n        lines += on * seg * (1.0 - smoothstep(0.0, _Thick, dd));\n        halo += on * seg * exp(-dd / max(_Thick * 6.0, 0.0001)) * 0.35;\n    }\n\n    float rev = saturate(life / _Reveal);\n    float revealM = 1.0 - smoothstep(rev * 1.04 - 0.04, rev * 1.04, s);\n    float e = saturate((life - _ErodeStart) / max(1.0 - _ErodeStart, 0.001));\n    float er = hash21(float2(floor(s * 10.0), frame));\n    float erodeM = step(e * 1.1, er) * (1.0 - e * 0.5);\n    float m = inArc * revealM * erodeM * step(0.001, w);\n    float3 col = (_Color.rgb * saturate(lines) + _Halo.rgb * halo) * m * i.color.rgb;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

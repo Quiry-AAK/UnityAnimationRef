@@ -1,0 +1,1666 @@
+{
+ "name": "kesik_bdo2",
+ "duration": 0.9833333333333333,
+ "loop": true,
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#141a26",
+  "bloom": 0.75,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "golge",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2583,
+    "startLifetime": [
+     0.3,
+     0.3
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.42,
+     2.42
+    ],
+    "startRotation": [
+     95,
+     95
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_golge",
+    "texture": "hard",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  },
+  {
+   "name": "hayalet2",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.24629999999999996,
+    "startLifetime": [
+     0.14,
+     0.14
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.34,
+     2.34
+    ],
+    "startRotation": [
+     113,
+     113
+    ],
+    "startColor": [
+     "#6f7f99",
+     "#6f7f99"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_hayalet",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "hayalet1",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.25229999999999997,
+    "startLifetime": [
+     0.17,
+     0.17
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.37,
+     2.37
+    ],
+    "startRotation": [
+     104,
+     104
+    ],
+    "startColor": [
+     "#a3b4cc",
+     "#a3b4cc"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_hayalet",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "ic",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2623,
+    "startLifetime": [
+     0.3,
+     0.3
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.28,
+     2.28
+    ],
+    "startRotation": [
+     98,
+     98
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_ic",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "ana",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2583,
+    "startLifetime": [
+     0.26,
+     0.26
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.404,
+     2.404
+    ],
+    "startRotation": [
+     95,
+     95
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_ana",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 4
+   }
+  },
+  {
+   "name": "dis",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2663,
+    "startLifetime": [
+     0.22,
+     0.22
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.53,
+     2.53
+    ],
+    "startRotation": [
+     91,
+     91
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_dis",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "simsek",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2603,
+    "startLifetime": [
+     0.24,
+     0.24
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     2.39,
+     2.39
+    ],
+    "startRotation": [
+     95,
+     95
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.97
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      1,
+      1.035
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "local",
+    "material": "kesik_bdo2_simsek",
+    "texture": "hard",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "cakma",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2883,
+    "startLifetime": [
+     0.09,
+     0.09
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.8,
+     0.8
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#d4ebff",
+     "#d4ebff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0,
+    "arc": 18,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -40
+    ]
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.5
+     ],
+     [
+      0.25,
+      1
+     ],
+     [
+      1,
+      1.15
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_cakma",
+    "blend": "additive",
+    "intensity": 1.1,
+    "lengthScale": 2,
+    "velocityScale": 0,
+    "sortingOrder": 9
+   }
+  },
+  {
+   "name": "yildiz",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2903,
+    "startLifetime": [
+     0.13,
+     0.13
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.75,
+     0.75
+    ],
+    "startRotation": [
+     10,
+     10
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0,
+    "arc": 18,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -40
+    ]
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.3
+     ],
+     [
+      0.2,
+      1
+     ],
+     [
+      1,
+      0.6
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_parilti",
+    "blend": "additive",
+    "intensity": 4,
+    "lengthScale": 2,
+    "velocityScale": 0,
+    "sortingOrder": 10
+   }
+  },
+  {
+   "name": "parcalar",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2843,
+    "startLifetime": [
+     0.14,
+     0.34
+    ],
+    "startSpeed": [
+     4,
+     10
+    ],
+    "startSize": [
+     0.02,
+     0.05
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#e6f2ff",
+     "#7fb0ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 120
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       70,
+       90
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0.05,
+    "arc": 120,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -85
+    ],
+    "randomDirection": 0.25
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 18,
+    "limit": 20,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#8fb4ff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.7,
+      0.8
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_cizgi",
+    "blend": "additive",
+    "intensity": 1.8,
+    "lengthScale": 4,
+    "velocityScale": 0.04,
+    "sortingOrder": 8
+   }
+  },
+  {
+   "name": "parilti",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2883,
+    "startLifetime": [
+     0.4,
+     0.9
+    ],
+    "startSpeed": [
+     0.3,
+     1.5
+    ],
+    "startSize": [
+     0.03,
+     0.08
+    ],
+    "startRotation": [
+     0,
+     45
+    ],
+    "startColor": [
+     "#cfe8ff",
+     "#8ab4ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 120
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       30,
+       45
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0.05,
+    "arc": 120,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -85
+    ]
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 3,
+    "limit": 20,
+    "dampen": 0
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.4,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.08,
+      1
+     ],
+     [
+      0.35,
+      0.5
+     ],
+     [
+      0.45,
+      1
+     ],
+     [
+      0.7,
+      0.4
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_parilti",
+    "blend": "additive",
+    "intensity": 3,
+    "lengthScale": 2,
+    "velocityScale": 0,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "duman",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2883,
+    "startLifetime": [
+     0.45,
+     0.8
+    ],
+    "startSpeed": [
+     0.3,
+     0.9
+    ],
+    "startSize": [
+     0.35,
+     0.7
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#1b2c5c",
+     "#2a3f80"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 20
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       10,
+       14
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0.05,
+    "arc": 120,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -85
+    ]
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.4,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.15,
+      0.55
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.7
+     ],
+     [
+      1,
+      1.5
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -40,
+     40
+    ]
+   },
+   "textureSheet": {
+    "enabled": true,
+    "tilesX": 4,
+    "tilesY": 4,
+    "cycles": 1,
+    "randomStart": false
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_duman",
+    "blend": "alpha",
+    "intensity": 1,
+    "lengthScale": 2,
+    "velocityScale": 0,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "duman_isik",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2863,
+    "startLifetime": [
+     0.35,
+     0.6
+    ],
+    "startSpeed": [
+     0.4,
+     1.1
+    ],
+    "startSize": [
+     0.3,
+     0.6
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#3a6dff",
+     "#5a3dff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 16
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       8,
+       10
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0.05,
+    "arc": 120,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -85
+    ]
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.35,
+    "frequency": 1.4,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.12,
+      0.45
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -60,
+     60
+    ]
+   },
+   "textureSheet": {
+    "enabled": true,
+    "tilesX": 4,
+    "tilesY": 4,
+    "cycles": 1,
+    "randomStart": false
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_duman",
+    "blend": "additive",
+    "intensity": 1.2,
+    "lengthScale": 2,
+    "velocityScale": 0,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "kivrim",
+   "position": [
+    0.065,
+    1.26,
+    0.523
+   ],
+   "rotation": [
+    -42.79,
+    -88.25,
+    0
+   ],
+   "main": {
+    "duration": 0.5,
+    "looping": false,
+    "startDelay": 0.2863,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     1.5,
+     3
+    ],
+    "startSize": [
+     0.25,
+     0.5
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#6aa0ff",
+     "#8a6dff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       6,
+       9
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.13,
+    "radiusThickness": 0.05,
+    "arc": 120,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     -85
+    ]
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 6,
+    "limit": 20,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.1,
+      0.8
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "stretched",
+    "alignment": "view",
+    "material": "",
+    "texture": "bdo_kivrim",
+    "blend": "additive",
+    "intensity": 1.5,
+    "lengthScale": 2.2,
+    "velocityScale": 0.08,
+    "sortingOrder": 5
+   }
+  }
+ ]
+}

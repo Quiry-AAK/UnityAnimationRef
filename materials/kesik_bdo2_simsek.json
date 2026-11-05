@@ -1,0 +1,30 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo2_simsek",
+ "shader": "UnityPreview/kesik_bdo_simsek",
+ "values": {
+  "_Color": {
+   "color": "#bfe6ff",
+   "intensity": 3
+  },
+  "_Halo": {
+   "color": "#3d7bff",
+   "intensity": 1
+  },
+  "_Width": 0.4,
+  "_Amp": 0.55,
+  "_Rate": 24,
+  "_Thick": 0.004,
+  "_Count": 2,
+  "_Reveal": 0.12,
+  "_ErodeStart": 0.2
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

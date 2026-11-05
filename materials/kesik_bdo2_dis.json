@@ -1,0 +1,38 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo2_dis",
+ "shader": "UnityPreview/kesik_bdo_katman",
+ "values": {
+  "_Core": {
+   "color": "#e8f6ff",
+   "intensity": 1.6
+  },
+  "_ColA": {
+   "color": "#6fd8ff",
+   "intensity": 1.3
+  },
+  "_ColB": {
+   "color": "#3d6dff",
+   "intensity": 1
+  },
+  "_ColC": {
+   "color": "#8a4dff",
+   "intensity": 0.9
+  },
+  "_Width": 0.14,
+  "_CoreW": 0.01,
+  "_Fiber": 70,
+  "_Scroll": 6.5,
+  "_Reveal": 0.12,
+  "_ErodeStart": 0.3,
+  "_Gain": 0.7
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

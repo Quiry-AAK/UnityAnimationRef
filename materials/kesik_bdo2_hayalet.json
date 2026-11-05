@@ -1,0 +1,29 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo2_hayalet",
+ "shader": "UnityPreview/kesik_bdo_kenar",
+ "values": {
+  "_EdgeColor": {
+   "color": "#8fc0ff",
+   "intensity": 0.9
+  },
+  "_GlowColor": {
+   "color": "#2f5cff",
+   "intensity": 0.5
+  },
+  "_Width": 0.4,
+  "_EdgeW": 0.012,
+  "_Streaks": 0.4,
+  "_Glow": 0.15,
+  "_Reveal": 0.14,
+  "_ErodeStart": 0.1
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

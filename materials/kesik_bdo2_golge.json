@@ -1,0 +1,26 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo2_golge",
+ "shader": "UnityPreview/kesik_bdo_govde",
+ "values": {
+  "_Navy": "#02061a",
+  "_Mid": "#0c2270",
+  "_Hi": {
+   "color": "#2a5cd0",
+   "intensity": 1
+  },
+  "_Width": 0.58,
+  "_Reveal": 0.14,
+  "_ErodeStart": 0.22,
+  "_Fiber": 26,
+  "_Opacity": 0.75
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}
