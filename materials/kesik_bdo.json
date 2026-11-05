@@ -1,0 +1,26 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo",
+ "shader": "UnityPreview/kesik_bdo_govde",
+ "values": {
+  "_Navy": "#050d2a",
+  "_Mid": "#1d4fd6",
+  "_Hi": {
+   "color": "#6aa8ff",
+   "intensity": 1.3
+  },
+  "_Width": 0.5,
+  "_Reveal": 0.14,
+  "_ErodeStart": 0.3,
+  "_Fiber": 34,
+  "_Opacity": 0.95
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

@@ -1,0 +1,99 @@
+{
+ "format": "upe-shader-1",
+ "name": "kesik_bdo_kenar",
+ "description": "BDO kesik ışığı (additive): uç yolunda beyaz-sıcak ince kenar, bant içinde kopuk ikincil kesik çizgileri, dış kenara yakın mavi ışıma. Geniş kenar + düşük yoğunlukla hale olarak da kullanılır. Yerleşim kesik_bdo_govde ile aynı.",
+ "builtin": false,
+ "unityName": "UnityPreview/kesik_bdo_kenar",
+ "properties": [
+  {
+   "name": "_EdgeColor",
+   "type": "hdrColor",
+   "label": "Kenar",
+   "default": {
+    "color": "#eaf3ff",
+    "intensity": 3
+   }
+  },
+  {
+   "name": "_GlowColor",
+   "type": "hdrColor",
+   "label": "Işıma",
+   "default": {
+    "color": "#4d8dff",
+    "intensity": 1.5
+   }
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Bant kalınlığı",
+   "min": 0.05,
+   "max": 0.6,
+   "default": 0.32
+  },
+  {
+   "name": "_EdgeW",
+   "type": "range",
+   "label": "Kenar kalınlığı",
+   "min": 0.002,
+   "max": 0.2,
+   "default": 0.012
+  },
+  {
+   "name": "_Streaks",
+   "type": "range",
+   "label": "İkincil çizgiler",
+   "min": 0,
+   "max": 1,
+   "default": 0.6
+  },
+  {
+   "name": "_Glow",
+   "type": "range",
+   "label": "İç ışıma",
+   "min": 0,
+   "max": 2,
+   "default": 0.5
+  },
+  {
+   "name": "_Reveal",
+   "type": "range",
+   "label": "Açılma (ömür oranı)",
+   "min": 0.02,
+   "max": 0.6,
+   "default": 0.14
+  },
+  {
+   "name": "_ErodeStart",
+   "type": "range",
+   "label": "Aşınma başı",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.3
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 1
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n\nfloat2 arcRS(float2 uv)\n{\n    float2 p = uv - 0.5;\n    float r = length(p) * 2.0;\n    float th = atan2(p.y, p.x) * 57.29578;\n    th = th + step(th, -90.0) * 360.0;\n    return float2(r, (165.0 - th) / 150.0);\n}\n\nfloat arcProfile(float sc)\n{\n    return pow(sc, 0.9) * (1.0 - smoothstep(0.86, 1.0, sc));\n}\n\n// ince çizgi: merkez c, yarı kalınlık h\nfloat lineAt(float r, float c, float h)\n{\n    return 1.0 - smoothstep(0.0, max(h, 0.0005), abs(r - c));\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float life = 1.0 - i.color.a;\n    float2 a = arcRS(i.uv);\n    float r = a.x;\n    float s = a.y;\n    float sc = saturate(s);\n    float inArc = step(0.0, s) * step(s, 1.0);\n    float R0 = 0.94;\n    float prof = arcProfile(sc);\n    float w = _Width * prof;\n\n    float rev = saturate(life / _Reveal);\n    float revealM = 1.0 - smoothstep(rev * 1.04 - 0.05, rev * 1.04, s);\n    float e = saturate((life - _ErodeStart) / max(1.0 - _ErodeStart, 0.001));\n    float er = fbm(float2(s * 7.0, r * 9.0));\n    float erodeM = saturate((er + 0.5 - e * 1.35 - (1.0 - sc) * e * 0.6) * 6.0);\n    // başın hemen arkası daha parlak (bıçağın az önce geçtiği yer)\n    float headHot = 1.0 + 1.5 * (1.0 - smoothstep(0.0, 0.25, rev * 1.04 - s)) * (1.0 - e);\n\n    float edge = lineAt(r, R0 - _EdgeW * 0.6 * prof, _EdgeW * (0.35 + prof)) * smoothstep(0.0, 0.15, sc);\n    float br = step(0.42, vnoise(float2(s * 14.0, 3.0)));\n    float br2 = step(0.5, vnoise(float2(s * 9.0, 11.0)));\n    float streak = (lineAt(r, R0 - w * 0.38, 0.0035) * br + lineAt(r, R0 - w * 0.72, 0.003) * br2 * 0.7) * _Streaks * step(0.001, w);\n    float innerR = R0 - w;\n    float d = saturate((r - innerR) / max(w, 0.001));\n    float bandM = step(innerR, r) * step(r, R0);\n    float glow = bandM * pow(d, 2.5) * _Glow;\n\n    float3 col = _EdgeColor.rgb * edge * headHot + _GlowColor.rgb * (streak + glow);\n    float m = inArc * revealM * erodeM;\n    col *= i.color.rgb * m;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

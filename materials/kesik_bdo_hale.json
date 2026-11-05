@@ -1,0 +1,29 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo_hale",
+ "shader": "UnityPreview/kesik_bdo_kenar",
+ "values": {
+  "_EdgeColor": {
+   "color": "#4f8dff",
+   "intensity": 0.18
+  },
+  "_GlowColor": {
+   "color": "#2f6cff",
+   "intensity": 0.2
+  },
+  "_Width": 0.55,
+  "_EdgeW": 0.05,
+  "_Streaks": 0,
+  "_Glow": 0.1,
+  "_Reveal": 0.14,
+  "_ErodeStart": 0.3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_bdo_kenar",
+ "shader": "UnityPreview/kesik_bdo_kenar",
+ "values": {
+  "_EdgeColor": {
+   "color": "#eaf3ff",
+   "intensity": 1.6
+  },
+  "_GlowColor": {
+   "color": "#3f7dff",
+   "intensity": 1
+  },
+  "_Width": 0.5,
+  "_EdgeW": 0.008,
+  "_Streaks": 0.8,
+  "_Glow": 0.06,
+  "_Reveal": 0.14,
+  "_ErodeStart": 0.3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}
