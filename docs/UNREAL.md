@@ -96,7 +96,7 @@ Kendi parçacık öznitelikleri `Particles.UPE_*` (R, R2, Col0, Size0, Rot0, Ang
 | `renderer.blend` | `M_UPE_Particle_Additive` (Additive, emissive = renk·alfa) / `M_UPE_Particle_Alpha` (Translucent, emissive = renk, opacity = alfa); Unlit, iki yüzlü | |
 | `renderer.intensity` | renk çarpanı (HDR) | |
 | `renderer.sortingOrder` | renderer `SortOrderHint`; alfa karışımda `SortMode=ViewDistance` | |
-| `renderer.material` (UPE-SL) | — | **Aşama 2**; şimdilik doku + blend yerleşik materyalle, intensity 1 (uyarı) |
+| `renderer.material` (UPE-SL) | `MI_UPE_<materyal>` (ribbon'da `_Ribbon`) ← `M_UPE_<shader>` (Custom HLSL) | **Aşama 2** (aşağıda); intensity 1 (renk materyalde) |
 | `attach` | — | oyunda bağlanır (SpawnSystemAttached); plan `metadata.attachUE` (UE göreli konum cm) + uyarı; sisteme gömülmez |
 | `duration`, `loop`, `preview.*` (efekt) | — | yalnız önizleme |
 
@@ -108,3 +108,73 @@ uyarıları. HLSL derleme hatası efekt hatası olarak döner.
 Araçlar: `tools/ue-vfx-plan-test.mjs` (editörsüz plan testi), `tools/ue-vfx-send.mjs [--content yol] [--preset a,b] <efekt…>`
 (uçtan uca gönderim), `tools/ue-vfx-capture.mjs <sistem>` (Niagara editörünü açıp editör görüntüsünü
 `exports/ue_vfx/`'e yazar; `CaptureAssetImage` Niagara sistemlerini desteklemiyor), keşif: `ue-vfx-explore/show/topo/probe.mjs`.
+
+## Aşama 2: materyaller (`lib/ue-material.js`)
+Emitter'ın `renderer.material` alanı doluysa materyal `materials/<ad>.json`'dan, shader'ı `shaders/<ad>.json` ya da hazırlardan
+(`public/shader-builtins.js`; server.js `resolveShader` ile aynı kural) çözülür ve UE'de kurulur. Materyal kütüphanede yoksa ya da
+shader derlenmezse efekt hata ile döner (Unity gönderimi gibi). `sendVfxToUnreal(..., { materialsDir, shadersDir })` ile klasör
+değiştirilebilir (varsayılan depo `materials/`, `shaders/`).
+
+Varlıklar:
+- `/Game/UPE/Shaders/M_UPE_<shader>`: shader başına bir UE Material (Unlit). URP yüzey modlu hazırlarda blend materyal değerinden
+  geldiği için `M_UPE_<shader>_<Blend>[_2S]`. Gövde tek **Custom** düğümü; Custom'ın `Description`'ı çeviri özeti (`UPE <hash>`):
+  aynı özetle yeniden gönderimde dokunulmaz, farklıysa grafik silinip yeniden kurulur (yol/başvurular korunur). Özet yalnız başarılı
+  derlemeden sonra yazılır.
+- `/Game/UPE/Materials/MI_UPE_<materyal>` (sprite) ve `MI_UPE_<materyal>_Ribbon` (ribbon; UV düzeni farklı, `UPE_Ribbon` = 1):
+  parametre değerleri materyal json'undan.
+- `/Game/UPE/Materials/Textures/T_UPE_<doku>`: `materials/textures/<doku>.png` (sRGB; `linear:true` özellikte SRGB kapalı, TC_Masks).
+
+Çeviri (Custom HLSL): UPE-SL kodu Custom düğümünde yerel bir `struct UPEShader`'ın içine girer (UE Custom düğümüne global fonksiyon
+yazılamaz; struct üye fonksiyonları bilinen yol). Özellikler struct üyesi, `common` yardımcıları ve `frag()` üye fonksiyon; şablon
+`UPEInput`'u doldurup `S.frag(upeIn)`'i çağırır. Kullanıcı bölümlerinin önüne `#line 1 "upe_common"` / `"upe_fragment"` konur:
+UE derleyici hatası `upe_fragment:12:5: error: ...` olarak gelir ve efekt hatasında `fragment satır 12:5: ...` diye döner.
+
+| UPE-SL | UE | Not |
+|---|---|---|
+| `i.uv` | TexCoord0 → `(u, 1−v)` (sprite) | UE v aşağı, Unity v yukarı; flipbook karesi UE SubUV'den (kare 0 sol üst, Unity ile aynı) — debug shader'ıyla doğrulandı |
+| `i.uv` (ribbon) | TexCoord0 `(u, v)` | **doğrulanmadı** (iz hareket ister); UPE: x = iz yaşı 0 baş→1 kuyruk, y = kök→uç |
+| `i.color` | ParticleColor (RGBA) | Aşama 1'in `Particles.Color`'ı: doğrusal renk, alfa = ömür eğrisi |
+| `i.positionWS`, `i.cameraPosWS` | WorldPosition / CameraPositionWS `.yzx × 0.01` | Unity ekseni + metre |
+| `i.normalWS`, `i.viewDirWS` | VertexNormalWS / CameraVectorWS `.yzx` | yalnız kodda geçerse bağlanır |
+| `i.screenUV` | ScreenPosition.ViewportUV `(x, 1−y)` | |
+| `i.positionCS` | `Parameters.SvPosition` | piksel, sol üst köken (yaklaşık) |
+| `i.cameraRightWS/UpWS` | `ResolvedView.ViewToTranslatedWorld[0/1]` `.yzx` | |
+| `i.time`, `_Time` | Time | `_Time = (t/20, t, 2t, 3t)` |
+| `i.facing` | TwoSidedSign | |
+| `i.lightDir/lightColor/shadow/ambient` | sabit (yukarıdan beyaz, gölge 1, ortam 0) | Unlit; Lit/Toon hazırları yaklaşık (uyarı) |
+| float/range/toggle | ScalarParameter (toggle 0/1) | |
+| color | VectorParameter (RGBA çıkışı), değer sRGB → doğrusal | Unity Linear proje gibi; alfa çevrilmez |
+| hdrColor | VectorParameter = doğrusal(renk) × intensity | |
+| vector | VectorParameter | MI aracı negatif bileşeni kabul etmeyebilir → 0'a kırpılır (uyarı) |
+| texture | TextureObjectParameter `<ad>` + Custom'da `<ad>Sampler`; `<ad>_ST` VectorParameter | white/black/gray/bump → motor dokuları; `@mesh` → white (uyarı) |
+| `SAMPLE(t, uv)` / `SAMPLE_LOD` | `Texture2DSample(t, tSampler, UPE_FlipV(uv))` / `Texture2DSampleLevel` | iç içe çağrılar çevrilir |
+| `TRANSFORM_TEX(uv, t)` | `((uv) * t_ST.xy + t_ST.zw)` | |
+| `splat2/3/4`, `clip`, `ddx/ddy`, `#define` | aynen (struct üyesi / HLSL yerlisi) | |
+
+Render durumu (`renderState`, URP hazırlarında `_Surface/_Blend/_Cull`):
+
+| UPE | UE BlendMode | Çıkış |
+|---|---|---|
+| alpha (SrcAlpha, 1−SrcAlpha) | Translucent | Emissive = rgb, Opacity = a |
+| additive (SrcAlpha, One) | Additive | Emissive = rgb × a |
+| premultiply (One, 1−SrcAlpha) | AlphaComposite | Emissive = rgb, Opacity = a |
+| multiply (DstColor, Zero) | Modulate | Emissive = rgb |
+| opaque (+ `clip` varsa Masked) | Opaque / Masked | Emissive = rgb (kesme Custom'daki clip ile) |
+
+`cull off` → TwoSided, `back` → tek yüz, `front` → iki yüzlü (uyarı). `ztest always` → saydamda DisableDepthTest. zwrite/queue yok sayılır.
+Her ana materyal `bUsedWithNiagaraSprites`, `bUsedWithNiagaraRibbons`.
+
+Desteklenmeyen / yaklaşık: `code.vertex` (vert; World Position Offset karşılığı yok, uyarı), outline pass, ışık girdileri (Unlit),
+`static const` (struct üyesi olarak derlenir), ribbon UV yönü (görsel doğrulama bekliyor).
+
+Hazır shader'lar: hepsi aynı Custom yoluyla UPE-SL'den çevrilir (URP Particles/Unlit ve Unlit birebir, blend materyal değerinden;
+Lit ve ToonCharacter ışıksız yaklaşık + uyarı). Aşama 1 ortak materyali kullanılmaz: `_BaseColor` ve `_ST` de taşınsın diye.
+
+Araçlar: `tools/ue-vfx-plan-test.mjs` tüm `shaders/*.json` + hazırları (URP yüzey varyantlarıyla) çevirip yapısal denetler
+(çevrilmemiş SAMPLE/TRANSFORM_TEX, parantez dengesi, eksik girdi) ve tüm `materials/*.json`'u planlar; gerçek derleme editörde.
+`tools/ue-vfx-send.mjs` görsel kontrol seçenekleri: `--freeze T` (efektin T. saniyedeki hâli donmuş; arka planda editör çok yavaş
+tick'lediği ve burst'ler güvenilir yakalanmadığı için), `--nomat` (Aşama 1 materyaliyle karşılaştırma), `--mat <ad>`
+(materyali değiştir), `--materials/--shaders <klasör>` (test kütüphanesi); bunlar `/Game/UPE/VFX_Test`'e gider.
+`tools/ue-vfx-cap.mjs [--dir x,y,z] [--target x,y,z] [--dist cm] [--times ..] <NS>`: Simulate'te sahneye geçici koyup
+`exports/ue_vfx/cap_<tag>_<t>.png` yazar (harita kaydedilmez, aktör kaldırılır).
+Not: yeni bir materyal ilk gönderimde arka planda Niagara köşe fabrikaları için derlenir; birkaç saniye görünmeyebilir.
