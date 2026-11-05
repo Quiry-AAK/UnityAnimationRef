@@ -1,9 +1,11 @@
 // MCP uçtan uca duman testi: `node mcp.js`'i ayrı portta (UPE_PORT, varsayılan 5291) başlatır, tarayıcı gerektirmeyen
 // VFX + materyal/shader araçlarını + eski animasyon araçlarından birkaçını dener (sahte Unity yanıtı dahil). Her adım PASS/FAIL/SKIP; hata varsa çıkış kodu 1.
-// Sahte Unity projesi: UPE_SMOKE_UNITY (yoksa %TEMP%/upe_smoke_fakeunity); klasörde .upe-smoke işareti yoksa dokunulmaz.
+// Sahte Unity projesi: UPE_SMOKE_UNITY (yoksa %TEMP%/upe_smoke_fakeunity), sahte Unreal projesi: UPE_SMOKE_UNREAL (yoksa %TEMP%/upe_smoke_fakeunreal);
+// klasörde .upe-smoke işareti yoksa dokunulmaz. Unreal adımları MCP adresini boş bir porta ayarlar (gerçek UE editörüne gönderilmez).
 // Çalıştır: node tools/mcp-smoke.mjs
 import fs from 'node:fs';
 import os from 'node:os';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -28,6 +30,14 @@ if (fs.existsSync(FAKE) && !fs.existsSync(path.join(FAKE, '.upe-smoke'))) { cons
 fs.rmSync(FAKE, { recursive: true, force: true });
 for (const d of ['Assets', 'ProjectSettings']) fs.mkdirSync(path.join(FAKE, d), { recursive: true });
 fs.writeFileSync(path.join(FAKE, '.upe-smoke'), 'mcp-smoke');
+// sahte Unreal projesi (.uproject'li klasör; yalnız işaretliyse temizlenir)
+const FAKE_UE = path.resolve(process.env.UPE_SMOKE_UNREAL || path.join(os.tmpdir(), 'upe_smoke_fakeunreal'));
+if (fs.existsSync(FAKE_UE) && !fs.existsSync(path.join(FAKE_UE, '.upe-smoke'))) { console.error('Sahte Unreal klasörü işaretsiz, dokunulmuyor: ' + FAKE_UE); process.exit(1); }
+fs.rmSync(FAKE_UE, { recursive: true, force: true }); fs.mkdirSync(FAKE_UE, { recursive: true });
+fs.writeFileSync(path.join(FAKE_UE, 'SmokeUE.uproject'), JSON.stringify({ FileVersion: 3, EngineAssociation: '5.8' }));
+fs.writeFileSync(path.join(FAKE_UE, '.upe-smoke'), 'mcp-smoke');
+// boş port: bağlanılınca reddedilir (sahte "editör kapalı")
+const deadPort = () => new Promise((ok, no) => { const s = net.createServer(); s.once('error', no); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => ok(p)); }); });
 
 if (await ping()) { console.error(`Port ${PORT} zaten kullanımda (eski bir sunucu açık olabilir); duman testi kendi sunucusunu başlatamaz.`); process.exit(1); }
 
@@ -188,6 +198,34 @@ try {
       const csBad = cs.filter((f) => { const d = path.join(FAKE, 'Assets', 'Editor', 'UnityPreview', f); return !(fs.existsSync(d) && fs.readFileSync(d).equals(fs.readFileSync(path.join(ROOT, 'unity', f)))); });
       check('importer .cs kopyası', !csBad.length, csBad.length ? 'eksik: ' + csBad.join(',') : cs.join(', '));
     }
+  });
+
+  // ── Unreal (docs/UNREAL.md): editör yok; MCP adresi boş bir porta ayarlanır (gerçek UE editörüne asla gönderilmez)
+  await step('U: Unreal araçları', async () => {
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    const missing = ['get_unreal_info', 'set_unreal_project', 'send_vfx_to_unreal'].filter((n) => !names.includes(n));
+    check('U: araç listesi', !missing.length, missing.length ? 'eksik: ' + missing.join(', ') : '');
+    const deadUrl = `http://127.0.0.1:${await deadPort()}/mcp`;
+    const bad = await call('set_unreal_project', { project: os.tmpdir() });
+    check('U: set_unreal_project (.uproject yok → hata)', bad.isError && /uproject/i.test(bad.text), bad.text.slice(0, 100));
+    const badC = await call('set_unreal_project', { contentPath: 'Game/yanlis yol' });
+    check('U: set_unreal_project (geçersiz içerik yolu → hata)', badC.isError && /Game/.test(badC.text), badC.text.slice(0, 100));
+    const s = await call('set_unreal_project', { project: path.join(FAKE_UE, 'SmokeUE.uproject'), mcpUrl: deadUrl, contentPath: '/Game/UPE/SmokeVFX/' });
+    const j = s.json;
+    check('U: set_unreal_project (.uproject yolu → klasör)', !s.isError && path.resolve(j?.project || '') === FAKE_UE && j.projectValid === true && j.projectName === 'SmokeUE' && j.mcpUrl === deadUrl && j.contentPath === '/Game/UPE/SmokeVFX', s.text.slice(0, 160));
+    if (j?.mcpUrl !== deadUrl) throw new Error('MCP adresi boş porta ayarlanamadı; gönderim atlandı (gerçek editöre gitmesin).');
+    const info = await call('get_unreal_info');
+    check('U: get_unreal_info (editör yok)', !info.isError && info.json?.status && info.json.status.connected === false && info.json.mcpUrl === deadUrl, JSON.stringify(info.json?.status).slice(0, 120));
+    await wait(600); // durum dosyası gecikmeli yazılır (save 300 ms)
+    let saved = null; try { saved = JSON.parse(fs.readFileSync(path.join(ROOT, '.ports', `project-${PORT}.json`), 'utf8')).unreal; } catch { /* yok */ }
+    check('U: ayar kalıcı (durum dosyası)', saved && path.resolve(saved.project || '') === FAKE_UE && saved.mcpUrl === deadUrl && saved.contentPath === '/Game/UPE/SmokeVFX', JSON.stringify(saved));
+    const none = await call('send_vfx_to_unreal', { name: 'yok_boyle_efekt' });
+    check('U: send_vfx_to_unreal (olmayan → hata)', !none.isError && none.json?.ok === false && /yok_boyle_efekt/.test(none.json.error || ''), none.text.slice(0, 100));
+    const r = await call('send_vfx_to_unreal'); const rj = r.json; // editördeki efekt (kütüphane kopyası yukarıda silindi)
+    const msg = [rj?.error, ...Object.values(rj?.errors || {})].filter(Boolean).join('; ');
+    check('U: send_vfx_to_unreal (editör yok → anlaşılır hata)', !r.isError && rj?.ok === false && msg.length > 0, msg.slice(0, 120));
+    const http = await fetch(BASE + '/api/unreal/status').then((x) => x.json());
+    check('U: GET /api/unreal/status', http.status?.connected === false && http.projectName === 'SmokeUE', '');
   });
 
   await step('get_status (eski araç, son)', async () => {

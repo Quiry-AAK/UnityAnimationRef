@@ -200,6 +200,71 @@ async function unitySendVfx({ name, all }) {
   return out;
 }
 
+// ── Unreal entegrasyonu (yalnız VFX; docs/UNREAL.md): UPE sunucusu, çalışan UE editörünün MCP sunucusuna istemci olarak bağlanır
+const UNREAL_DEFAULTS = { project: null, mcpUrl: 'http://127.0.0.1:8000/mcp', contentPath: '/Game/UPE/VFX' };
+state.unreal = { ...UNREAL_DEFAULTS, ...(state.unreal && typeof state.unreal === 'object' ? state.unreal : {}) };
+// proje: .uproject içeren klasör ya da .uproject yolu → { dir, uproject } | null
+function resolveUnrealProject(p) {
+  if (!p) return null;
+  const full = path.resolve(String(p).trim().replace(/^"|"$/g, ''));
+  try {
+    const st = fs.statSync(full);
+    if (st.isFile() && /\.uproject$/i.test(full)) return { dir: path.dirname(full), uproject: full };
+    if (st.isDirectory()) { const f = fs.readdirSync(full).find((x) => /\.uproject$/i.test(x)); if (f) return { dir: full, uproject: path.join(full, f) }; }
+  } catch { /* yok */ }
+  return null;
+}
+// lib/unreal-vfx.js değiştiyse yeniden yüklenir: dönüştürücü geliştirilirken sunucuyu yeniden başlatmak gerekmez
+let unrealLib = null; let unrealLibStamp = 0;
+async function loadUnrealLib() {
+  const f = path.join(ROOT, 'lib', 'unreal-vfx.js');
+  if (!fs.existsSync(f)) throw new Error('lib/unreal-vfx.js yok — Unreal dönüştürücüsü kurulu değil.');
+  const stamp = fs.statSync(f).mtimeMs;
+  if (!unrealLib || stamp !== unrealLibStamp) {
+    try { unrealLib = await import(pathToFileURL(f).href + '?v=' + stamp); unrealLibStamp = stamp; } catch (e) { throw new Error('lib/unreal-vfx.js yüklenemedi: ' + (e?.message || e)); }
+  }
+  return unrealLib;
+}
+async function unrealInfo({ probe = true } = {}) {
+  const u = state.unreal; const proj = resolveUnrealProject(u.project);
+  const out = { project: u.project, projectValid: !!proj, uproject: proj?.uproject || null, projectName: proj ? path.basename(proj.uproject, '.uproject') : null, mcpUrl: u.mcpUrl, contentPath: u.contentPath };
+  if (probe) {
+    try { const { unrealStatus } = await loadUnrealLib(); out.status = await unrealStatus({ mcpUrl: u.mcpUrl }); } catch (e) { out.status = { connected: false, error: String(e?.message || e) }; }
+  }
+  return out;
+}
+const badRequest = (msg) => Object.assign(new Error(msg), { status: 400 });
+function unrealConfig(b = {}) {
+  const next = { ...state.unreal };
+  if (b.project !== undefined) {
+    if (b.project === null || String(b.project).trim() === '') next.project = null;
+    else { const r = resolveUnrealProject(b.project); if (!r) throw badRequest('Burası bir Unreal projesi değil (.uproject yok): ' + b.project); next.project = r.dir; }
+  }
+  if (b.mcpUrl !== undefined) {
+    const m = String(b.mcpUrl || '').trim() || UNREAL_DEFAULTS.mcpUrl;
+    if (!/^https?:\/\/[^\s/]+/i.test(m)) throw badRequest('MCP adresi http(s):// ile başlamalı: ' + m);
+    next.mcpUrl = m;
+  }
+  if (b.contentPath !== undefined) {
+    const c = (String(b.contentPath || '').trim() || UNREAL_DEFAULTS.contentPath).replace(/\\/g, '/').replace(/\/+$/, '');
+    if (!/^\/Game(\/[\w-]+)*$/.test(c)) throw badRequest('İçerik yolu /Game ile başlamalı, yalnız harf/rakam/_/- içermeli: ' + c);
+    next.contentPath = c;
+  }
+  state.unreal = next; save();
+}
+async function unrealSendVfx({ name, all } = {}) {
+  // gönderilecek efektler: unitySendVfx ile aynı (all → kütüphane, name → kütüphaneden, yoksa editördeki)
+  const list = [];
+  if (all) { for (const it of listVfx()) { try { list.push({ ...readVfx(it.name), name: it.name }); } catch { /* bozuk json atlanır */ } } if (!list.length) throw new Error('VFX kütüphanesi boş (vfx/*.json yok)'); }
+  else if (name) { const e = readVfx(name); if (!e) throw new Error('VFX kütüphanesinde yok: ' + name); list.push({ ...e, name: path.basename(vfxFile(name), '.json') }); }
+  else { if (!state.vfx) throw new Error('Gönderilecek efekt yok (editörde VFX boş)'); list.push(state.vfx); }
+  // UE varlık adı NS_<ad>: boşluk/nokta/tire → _
+  const effects = list.map((src) => { const { effect } = normalizeEffect(src); effect.name = safeName(effect.name || 'vfx').replace(/[\s.-]+/g, '_'); return effect; });
+  const { sendVfxToUnreal } = await loadUnrealLib();
+  const u = state.unreal;
+  return await sendVfxToUnreal(effects, { mcpUrl: u.mcpUrl, contentPath: u.contentPath, texturesDir: VFX_TEX_DIR, log: (...a) => console.log('[unreal]', ...a) });
+}
+
 // ── Materyal + Shader kütüphanesi (docs/MATERIAL.md; format/mantık public/shader-schema.js)
 const BUILTINS = BUILTIN_SHADERS.map((s) => normalizeShader(s).shader);
 const lc = (s) => String(s ?? '').trim().toLowerCase();
@@ -581,6 +646,17 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true, name: effect.name, warnings, clients: clients.size });
     }
     if (p === '/api/unity/send-vfx' && req.method === 'POST') return send(res, 200, await unitySendVfx(await readJson(req)));
+    // ── Unreal (VFX → Niagara; docs/UNREAL.md). /api/unreal: ayarlar (bağlantı denemesi yok), /status: + editör MCP bağlantısı
+    if (p === '/api/unreal' && req.method === 'GET') return send(res, 200, await unrealInfo({ probe: false }));
+    if (p === '/api/unreal/status' && req.method === 'GET') return send(res, 200, await unrealInfo());
+    if (p === '/api/unreal/config' && req.method === 'POST') {
+      try { unrealConfig(await readJson(req)); } catch (e) { return send(res, e.status || 500, { error: String(e?.message || e) }); }
+      return send(res, 200, await unrealInfo({ probe: false }));
+    }
+    if (p === '/api/unreal/send-vfx' && req.method === 'POST') {
+      const b = await readJson(req);
+      try { return send(res, 200, await unrealSendVfx(b)); } catch (e) { return send(res, 200, { ok: false, error: String(e?.message || e) }); }
+    }
     // ── Shader modu: kütüphane (builtin + shaders/)
     if (p === '/api/shaders/list' && req.method === 'GET') return send(res, 200, listShaders());
     if (p === '/api/shaders/get' && req.method === 'GET') { // ad ya da unityName; working=1 → editördeki kaydedilmemiş özel kopya kütüphaneden önce

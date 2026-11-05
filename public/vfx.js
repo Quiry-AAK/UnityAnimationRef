@@ -429,6 +429,16 @@ export function initVfx(ctx) {
     const r = await api('/api/unity/send-vfx', { all });
     return r.error ? 'Hata: ' + r.error : r.ok ? "Unity'ye aktarıldı: " + (r.prefabs || []).join(', ') : (r.note || 'Gönderildi');
   }
+  // Unreal (docs/UNREAL.md): yanıt { ok, systems:[{ name, path, warnings }], errors:{ ad: mesaj } } ya da { ok:false, error }
+  async function sendUnreal({ all = false } = {}) {
+    toast("Unreal'e gönderiliyor…"); await api('/api/vfx', effect);
+    const r = await api('/api/unreal/send-vfx', { all });
+    const errs = Object.entries(r.errors || {}).map(([n, m]) => `${n}: ${m}`);
+    if (r.error || errs.length) return 'Hata: ' + [r.error, ...errs].filter(Boolean).join('; ');
+    const paths = (r.systems || []).map((s) => s.path || s.name);
+    const nWarn = (r.systems || []).reduce((a, s) => a + (s.warnings?.length || 0), 0);
+    return r.ok ? "Unreal'e aktarıldı: " + paths.join(', ') + (nWarn ? ` (${nWarn} uyarı)` : '') : 'Hata: Unreal gönderimi başarısız';
+  }
 
   // ── kadraj + kontak sayfası (MCP render_vfx)
   function frameBox(times) {
@@ -508,7 +518,7 @@ export function initVfx(ctx) {
 
   return {
     activate, deactivate, get active() { return active; }, tick, render, onRemoteEffect, setFromState, renderSheet, undo, redo, togglePlay, restart, nudge,
-    sendUnity: () => sendUnity({}), frame: focus, get effect() { return effect; }, player,
+    sendUnity: () => sendUnity({}), sendUnreal: (o) => sendUnreal(o || {}), frame: focus, get effect() { return effect; }, player,
     noteContext: () => { const t = player.allLooping ? dispTime % effect.duration : Math.min(dispTime, effect.duration); // ekranda görünen zaman
       return { label: `VFX · ${effect.name}${em() ? ' · emitter ' + em().name : ''} · ${t.toFixed(2)} sn`, data: { mode: 'vfx', emitter: em()?.name || null, effectTime: +t.toFixed(2) } }; },
     baseline: async () => { await api('/api/vfx', effect); await api('/api/vfx/baseline', {}); },

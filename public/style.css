@@ -60,6 +60,10 @@ body:not(.left-open) #left, body:not(.right-open) #right { border:0; }
 #left { border-right:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
 #right { border-left:1px solid var(--line); }
 #right > div[data-modes] { padding:8px 10px 16px; }
+#right > #unrealRight { padding-top:0; }
+#unrDot { width:8px; height:8px; border-radius:50%; background:var(--faint); flex:none; margin-left:auto; }
+#unrDot.ok { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+#unrDot.bad { background:var(--err); }
 .ptitle { font-weight:600; font-size:13px; display:flex; flex-direction:column; }
 .ptitle small { font-weight:400; color:var(--faint); font-size:11px; }
 /* panel kenar düğmeleri: yan panelleri açar/kapatır, kapalıyken panelin adını gösterir */

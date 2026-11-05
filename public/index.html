@@ -39,6 +39,7 @@
   <span class="sp"></span>
   <div class="hgroup"><button id="btnUndo" class="icon" title="Geri al (Ctrl+Z)">↶</button><button id="btnRedo" class="icon" title="Yinele (Ctrl+Y)">↷</button></div>
   <button id="btnNoteOpen" title="Claude'a not yaz (N)">💬 <span>Claude'a not</span></button>
+  <button id="btnSendUnreal" class="primary" data-modes="vfx" title="Efekti çalışan Unreal editörüne Niagara System olarak gönder (Ctrl+Shift+Enter)">⇪ Unreal'e gönder</button>
   <button id="btnSendUnity" class="primary" data-modes="anim vfx material shader" title="Bu moddaki işi Unity'ye gönder (Ctrl+Enter)">⇪ <span id="sendLabel">Unity'ye gönder</span></button>
   <button id="btnHelp" class="icon" title="Yardım ve kısayollar (F1)">?</button>
   <span class="vsep"></span>
@@ -127,6 +128,18 @@
   <aside id="right">
     <div class="rhead"><input id="panelFilter" type="search" placeholder="Ayar ara… (Ctrl+F)" autocomplete="off"></div>
     <div id="vfxRight" data-modes="vfx"></div>
+    <div id="unrealRight" data-modes="vfx">
+    <details id="secUnreal">
+      <summary>Unreal <i id="unrDot" class="dot" title="Unreal editörü MCP bağlantısı"></i></summary>
+      <label class="fl">UE proje klasörü (.uproject olan) ya da .uproject yolu<input id="unrProject" placeholder="örn: C:/Elarion/Elarion"></label>
+      <label class="fl">Editörün MCP adresi<input id="unrMcp" placeholder="http://127.0.0.1:8000/mcp"></label>
+      <label class="fl">İçerik yolu (Niagara sistemleri)<input id="unrContent" placeholder="/Game/UPE/VFX"></label>
+      <label class="chk"><input type="checkbox" id="unrAll"> Kütüphanedeki tüm efektleri gönder</label>
+      <div class="row"><button id="btnUnrSave">Kaydet</button><button id="btnUnrCheck" title="Unreal editörüne bağlanmayı dene">Bağlantıyı dene</button><button id="btnUnrSend" class="primary">Unreal'e gönder</button></div>
+      <div id="unrStatus" class="hint-s"></div>
+      <div class="hint-s">Efekt <code>&lt;içerik yolu&gt;/NS_&lt;ad&gt;</code> Niagara System olur. Unreal editörü açık ve MCP eklentisi çalışıyor olmalı (editör 1: 8000, editör 2: 8001).</div>
+    </details>
+    </div>
     <div id="matRight" data-modes="material"></div>
     <div id="shRight" data-modes="shader"></div>
     <div id="mdlRight" data-modes="model"></div>

@@ -423,7 +423,8 @@ ${presetList()}
 - Kullanıcı editörde düzeltince: get_vfx_user_edits (fark + notlar), farkı öğren; acknowledge:true ile referansı yenile.
 - Özel görünüm (dissolve, kayan doku, fresnel…): material_reference → new_shader/set_shader (UPE-SL) → new_material/set_material + save_material
   → update_vfx [{ emitter:'alev', path:'renderer.material', value:'<materyal>' }] ('' kaldırır) → render_vfx ile kontrol.
-- Bitince: save_vfx { name } → send_vfx_to_unity { name } (Unity'de Assets/UnityPreview/VFX/<ad>.prefab; bağlı materyaller de gönderilir).
+- Bitince: save_vfx { name } → send_vfx_to_unreal { name } (Elarion UE5'te; öncelikli: <contentPath>/NS_<ad> Niagara System, get_unreal_info ile bağlantıyı gör)
+  ya da send_vfx_to_unity { name } (Unity'de Assets/UnityPreview/VFX/<ad>.prefab; bağlı materyaller de gönderilir).
 `);
 });
 
@@ -585,6 +586,27 @@ server.registerTool('send_vfx_to_unity', {
     + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. ≤20 sn bekler; Unity kapalıysa "waiting" döner ve açılınca işlenir. Karakter gerekmez; önce set_unity_project ile proje ayarlı olmalı. Yanıt: { ok, sent, imported, waiting, prefabs, missingTextures, materials?, materialErrors?, shaderErrors?, note | error }.',
   inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
 }, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-vfx', { name, all })); });
+
+// ── Unreal'e VFX gönderimi (docs/UNREAL.md): UPE sunucusu çalışan UE editörünün MCP sunucusuna bağlanıp Niagara System kurar
+server.registerTool('get_unreal_info', {
+  description: 'Unreal entegrasyonu durumu: ayarlı UE proje klasörü (.uproject), editörün MCP adresi (varsayılan http://127.0.0.1:8000/mcp), içerik yolu (varsayılan /Game/UPE/VFX) ve bağlantı denemesi (status: { connected, projectName?, engineVersion?, error? }). Editör kapalıyken de çalışır (connected:false).',
+  inputSchema: {},
+}, async () => { await ensureServer(); return text(await get('/api/unreal/status')); });
+
+server.registerTool('set_unreal_project', {
+  description: 'Unreal ayarlarını değiştirir (kalıcı; verilmeyen alan aynı kalır). project: .uproject içeren klasör ya da .uproject yolu (Elarion: C:\\Elarion\\Elarion). mcpUrl: UE editörünün MCP sunucusu (editör 1: http://127.0.0.1:8000/mcp, editör 2: http://127.0.0.1:8001/mcp). contentPath: Niagara sistemlerinin yazılacağı /Game/... yolu.',
+  inputSchema: { project: z.string().optional(), mcpUrl: z.string().optional(), contentPath: z.string().optional() },
+}, async ({ project, mcpUrl, contentPath }) => {
+  await ensureServer(); await post('/api/unreal/config', { project, mcpUrl, contentPath });
+  return text(await get('/api/unreal/status'));
+});
+
+server.registerTool('send_vfx_to_unreal', {
+  description: 'Efekti TEK ADIMDA çalışan Unreal editörüne gönderir: Niagara System <contentPath>/NS_<ad> kurulur (aynı adla tekrar gönderim varlığı yerinde yeniden kurar), kullanılan dokular <contentPath>/Textures/T_UPE_<doku> olur. '
+    + 'name: kütüphaneden ad (verilmezse editördeki efekt), all: tüm kütüphane. UE editörü açık ve MCP eklentisi çalışıyor olmalı (get_unreal_info → status.connected); kapalıysa anlaşılır hatayla döner. '
+    + 'Karşılığı olmayan/yaklaşık şema alanları warnings olarak döner, gönderim durmaz. Yanıt: { ok, systems: [{ name, path, warnings }], errors: { efektAdı: mesaj } } ya da { ok:false, error }.',
+  inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
+}, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unreal/send-vfx', { name, all })); });
 
 // ── Materyal + Shader modu (docs/MATERIAL.md). Shader = UPE-SL kodu (Unity HLSL alt kümesi), materyal = shader + değerler. Format: material_reference
 const changeSchema = z.object({ path: z.string().describe('Nokta ile yol'), value: z.any() });

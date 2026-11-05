@@ -920,10 +920,44 @@ async function sendUnity() {
 $('#btnUSave').onclick = async () => { if (await saveUnityCfg()) { toast('Unity ayarı kaydedildi', 'ok'); refreshStatusUnity(); } };
 $('#btnUSend').onclick = () => sendCurrent();
 
+// ───────────────────────── Unreal (yalnız VFX → Niagara; docs/UNREAL.md)
+function setUnrealDot(st) { const d = $('#unrDot'); d.className = 'dot ' + (st?.connected ? 'ok' : st ? 'bad' : ''); d.title = st?.connected ? `Unreal bağlı${st.projectName ? ' · ' + st.projectName : ''}${st.engineVersion ? ' · UE ' + st.engineVersion : ''}` : 'Unreal editörüne bağlı değil' + (st?.error ? ': ' + st.error : ''); }
+function fillUnreal(u) {
+  for (const [id, k] of [['#unrProject', 'project'], ['#unrMcp', 'mcpUrl'], ['#unrContent', 'contentPath']]) if (document.activeElement !== $(id)) $(id).value = u[k] || '';
+}
+async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna bağlanmayı dene (/api/unreal/status)
+  const u = await fetch(probe ? '/api/unreal/status' : '/api/unreal').then((r) => r.json()).catch(() => null);
+  if (!u) { $('#unrStatus').textContent = 'Sunucuya ulaşılamadı'; return null; }
+  fillUnreal(u);
+  const proj = u.projectValid ? `Proje: ${u.projectName}` : u.project ? 'Proje klasöründe .uproject yok' : 'Proje ayarlı değil (gönderim için zorunlu değil)';
+  if (probe) { setUnrealDot(u.status); $('#unrStatus').textContent = `${proj} · ${u.status?.connected ? 'Unreal bağlı' + (u.status.projectName ? ' (' + u.status.projectName + ')' : '') : 'Unreal bağlı değil' + (u.status?.error ? ': ' + u.status.error : '')}`; }
+  else $('#unrStatus').textContent = proj;
+  return u;
+}
+async function saveUnrealCfg() {
+  const r = await api('/api/unreal/config', { project: $('#unrProject').value, mcpUrl: $('#unrMcp').value, contentPath: $('#unrContent').value });
+  if (r.error) { toast('Hata: ' + r.error, 'err'); $('#unrStatus').textContent = r.error; return false; }
+  fillUnreal(r); return true;
+}
+async function sendUnreal() {
+  if (mode !== 'vfx') return toast("Unreal'e şimdilik yalnız VFX gönderilir (VFX moduna geç)");
+  if (!(await saveUnrealCfg())) return;
+  $('#unrStatus').textContent = 'Gönderiliyor…';
+  let msg; try { msg = await vfx.sendUnreal({ all: $('#unrAll').checked }); } catch (e) { msg = 'Hata: ' + (e.message || e); }
+  toast(msg || 'Gönderildi', /^Hata/.test(msg || '') ? 'err' : 'ok'); $('#unrStatus').textContent = msg;
+  refreshUnreal().then(() => { $('#unrStatus').textContent = msg; });
+}
+$('#btnUnrSave').onclick = async () => { if (await saveUnrealCfg()) { toast('Unreal ayarı kaydedildi', 'ok'); refreshUnreal(); } };
+$('#btnUnrCheck').onclick = () => { $('#unrStatus').textContent = 'Bağlanılıyor…'; refreshUnreal(); };
+$('#btnUnrSend').onclick = $('#btnSendUnreal').onclick = () => sendUnreal();
+$('#secUnreal').addEventListener('toggle', () => { if ($('#secUnreal').open) refreshUnreal(); });
+refreshUnreal(false);
+
 // ───────────────────────── klavye
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F1') { e.preventDefault(); return openHelp(); }
   if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); if (!panelOpen('right')) setPanel('right', true); return $('#panelFilter').focus(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && mode === 'vfx') { e.preventDefault(); return sendUnreal(); }
   if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); return sendCurrent(); }
   if (document.querySelector('dialog[open]')) return;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['checkbox', 'range'].includes(document.activeElement.type)) return;
