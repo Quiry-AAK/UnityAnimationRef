@@ -37,6 +37,11 @@
   yazılır, Unity (açıksa birkaç saniyede) `Assets/UnityPreview/VFX/<ad>.prefab` ve `Materials/` üretir. Kök objede `Play()` tüm
   katmanları oynatır. Unity kapalıyken: `-executeMethod UnityPreviewVfxImporter.ProcessPending`. Aynı adla tekrar gönderim prefab'ı
   yerinde günceller (GUID korunur). Malzeme: URP Particles/Unlit, additive/alpha, `_BaseColor` = intensity (HDR, bloom).
+- **Unreal'e gönder** (üst bar, Ctrl+Shift+Enter; MCP `send_vfx_to_unreal`): UPE sunucusu çalışan UE5 editörünün MCP sunucusuna
+  (Unreal `ModelContextProtocol` eklentisi; Elarion editör 1 `http://127.0.0.1:8000/mcp`, editör 2 `:8001`) bağlanıp
+  `<içerik yolu>/NS_<ad>` Niagara System kurar (varsayılan `/Game/UPE/VFX`; dokular `Textures/T_UPE_<doku>`). Ayar: sağ panel →
+  **Unreal** (proje klasörü ya da `.uproject`, MCP adresi, içerik yolu; nokta = bağlantı) ya da MCP `set_unreal_project`. Editör
+  kapalıysa gönderim anlaşılır hatayla durur; karşılığı olmayan alanlar uyarı olarak döner. Ayrıntı: `docs/UNREAL.md`.
 - Dokular `vfx/textures/*.png` (beyaz + alfa; renk parçacıktan gelir). Yerleşikleri yeniden üretmek: `npm run textures`.
   Özel doku: sağ panel → Görünüm → PNG yükle.
 - Kısayollar (VFX): Space oynat · Home baştan · ←/→ ±0.05 sn · Ctrl+Z / Ctrl+Y · B/P paneller.

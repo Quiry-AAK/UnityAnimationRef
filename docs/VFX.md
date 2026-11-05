@@ -33,6 +33,10 @@ farkı buna göre). Notlar `mode` alanı taşır (`'anim'` varsayılan).
 | `POST /api/claude/mode` | `{ mode }` | olay `mode` |
 | `POST /api/claude/render` | `{ kind:'vfx', times?, count?, cols?, size?, camera?, showHero?, bg? }` | olay `render`, `{ png }` (zaman aşımı 30 sn) |
 | `POST /api/unity/send-vfx` | `{ name?, all? }` | aşağıda |
+| `GET /api/unreal` | | `{ project, projectValid, uproject, projectName, mcpUrl, contentPath }` (bağlantı denemesi yok) |
+| `GET /api/unreal/status` | | yukarıdaki + `status: { connected, projectName?, engineVersion?, error? }` (`unrealStatus`) |
+| `POST /api/unreal/config` | `{ project?, mcpUrl?, contentPath? }` | doğrular (proje: `.uproject` içeren klasör ya da `.uproject` yolu; içerik yolu `/Game/...`), kalıcı; hata 400 |
+| `POST /api/unreal/send-vfx` | `{ name?, all? }` | aşağıda (Unreal) |
 
 Statik: `/vfx-textures/` → `vfx/textures/`.
 
@@ -56,6 +60,12 @@ Statik: `/vfx-textures/` → `vfx/textures/`.
 - `render` `{ id, kind:'vfx', ... }` → editör efektin zaman karelerini kontak sayfası PNG'si olarak çizer ve
   `POST /api/render-result { id, png }` gönderir. `kind` yoksa eski karakter render'ı.
 
+### Unreal'e VFX gönderimi (sözleşme: [UNREAL.md](UNREAL.md))
+1. `state.unreal = { project, mcpUrl ('http://127.0.0.1:8000/mcp'), contentPath ('/Game/UPE/VFX') }`; proje gönderim için zorunlu değil.
+2. Efekt seçimi Unity ile aynı (`all` → kütüphane, `name` → kütüphaneden, yoksa `state.vfx`); `normalizeEffect`, adda boşluk/nokta/tire → `_`.
+3. `sendVfxToUnreal(effects, { mcpUrl, contentPath, texturesDir: vfx/textures, log })` (`lib/unreal-vfx.js`, değişince yeniden yüklenir)
+   → yanıt aynen: `{ ok, systems: [{ name, path, warnings }], errors: { ad: mesaj } }`; istisna → `{ ok:false, error }`.
+
 ## MCP araçları (mcp.js, sunucu adı `unity-preview-editor`)
 Mevcut animasyon araçları aynen kalır. `get_status` ayrıca `mode` ve `vfx` özeti döner.
 
@@ -73,6 +83,9 @@ Mevcut animasyon araçları aynen kalır. `get_status` ayrıca `mode` ve `vfx` �
 | `list_vfx_textures` | | dokular + yerleşik açıklamaları |
 | `set_editor_mode` | `mode: anim|vfx` | kullanıcının ekranındaki modu değiştirir |
 | `send_vfx_to_unity` | `name?, all?` | `/api/unity/send-vfx` |
+| `send_vfx_to_unreal` | `name?, all?` | `/api/unreal/send-vfx` |
+| `get_unreal_info` | | `/api/unreal/status` (editör kapalıyken de çalışır) |
+| `set_unreal_project` | `project?, mcpUrl?, contentPath?` | `/api/unreal/config` |
 
 ## Unity dönüştürücüsü (unity/UnityPreviewVfxImporter.cs)
 `Assets/UnityPreview/VFX/*.vfx.json` → `Assets/UnityPreview/VFX/<ad>.prefab` (+ `Materials/<ad>__<emitter>.mat`).
