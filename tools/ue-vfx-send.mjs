@@ -13,6 +13,7 @@ const opt = (k) => { const i = args.indexOf(k); if (i < 0) return undefined; con
 const contentPathOpt = opt('--content');
 const mcpUrl = opt('--mcp');
 const presets = opt('--preset');
+const part = opt('--part'); // iz | ana: emitter.follow ile bölünen efektin yalnız bir parçası
 // --loop: görsel kontrol için tüm emitter'lar döngülü, gecikmesiz (ad sonuna _loop); varsayılan klasör /Game/UPE/VFX_Test
 // --freeze T: efektin T. saniyedeki görünümü donmuş (görsel kontrol; arka plandaki editör yavaş tick'lediği için): her emitter'ın
 // parçacık yaşı T'ye göre hesaplanır, renk/alfa/boyut eğrileri o andaki sabit değere çekilir, ömür uzun, döngülü. Ad sonuna _f<T>
@@ -58,7 +59,7 @@ if (presets) {
 const contentPath = contentPathOpt || (loop || nomat || matOverride || freeze !== undefined ? '/Game/UPE/VFX_Test' : '/Game/UPE/VFX');
 console.log('durum:', JSON.stringify(await unrealStatus({ mcpUrl })));
 const t0 = Date.now();
-const res = await sendVfxToUnreal(effects, { mcpUrl, contentPath, materialsDir, shadersDir, log: (m) => console.log(m) });
+const res = await sendVfxToUnreal(effects, { mcpUrl, contentPath, materialsDir, shadersDir, part, log: (m) => console.log(m) });
 for (const s of res.systems) {
   console.log(`\n✓ ${s.name} → ${s.path} (${s.compile}) emitter: ${s.emitters.join(', ')}`);
   for (const w of s.warnings) console.log('   uyarı:', w);
