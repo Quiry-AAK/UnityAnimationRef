@@ -1,0 +1,23 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h4b_iz",
+ "shader": "UnityPreview/donus_iz",
+ "values": {
+  "_Edge": {
+   "color": "#f2f9ff",
+   "intensity": 1.5
+  },
+  "_Body": {
+   "color": "#5aa6ff",
+   "intensity": 1.3
+  },
+  "_Haze": {
+   "color": "#3570e0",
+   "intensity": 0.7
+  },
+  "_EdgeW": 0.1,
+  "_Tail": 0.6,
+  "_Fib": 14
+ },
+ "renderQueue": -1
+}

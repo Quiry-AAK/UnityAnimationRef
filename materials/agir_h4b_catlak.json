@@ -1,0 +1,9 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h4b_catlak",
+ "shader": "UnityPreview/zemin_catlak",
+ "values": {
+  "_Pool": 0.22
+ },
+ "renderQueue": -1
+}

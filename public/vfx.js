@@ -88,6 +88,11 @@ export function initVfx(ctx) {
     if (a.target === 'prop') { const p = ctx.getProps().find((x) => x.id === a.name || x.prop === a.name); if (p?.obj) return pivotFor(p.obj, null); }
     return scene;
   }
+  player.followFor = (f) => { // katman düzeyi bağlama (emitter.follow)
+    if (f.target === 'bone') { const b = findBone(ctx.getRig(), f.name); return b ? pivotFor(b.obj, b.restWQ) : null; }
+    if (f.target === 'prop') { const p = ctx.getProps().find((x) => x.id === f.name || x.prop === f.name) || ctx.getProps()[0]; return p?.obj ? pivotFor(p.obj, null) : null; }
+    return null;
+  };
   function applyHeroVisibility(show) {
     const walk = (o) => { if (o === player.root || o.name === 'vfx-pivot') return; if (o.isMesh || o.isSkinnedMesh) o.visible = show; for (const c of o.children) walk(c); };
     walk(ctx.stage);

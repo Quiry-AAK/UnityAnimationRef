@@ -1,0 +1,69 @@
+{
+ "name": "zemin_catlak",
+ "description": "H4 zemin çatlakları (additive, yere yatırılmış plane mesh: UV 0..1, merkez 0.5 = darbe noktası). Kutupsal uzatılmış Voronoi kenarlarından merkezden dışa ışınsal, kırık kırık (düz değil) ışıyan çatlaklar; i.custom.x = yayılma yarıçapı (0 → 1 kenar), merkezde sıcak beyaz havuz, uca doğru camgöbeği → mavi; yaşla soğur, incelir ve söner. Yanık/siyah değil. life = 1 - alfa.",
+ "properties": [
+  {
+   "name": "_Hot",
+   "type": "hdrColor",
+   "label": "Sıcak",
+   "default": {
+    "color": "#f4faff",
+    "intensity": 1.6
+   }
+  },
+  {
+   "name": "_Cool",
+   "type": "hdrColor",
+   "label": "Soğuk",
+   "default": {
+    "color": "#3f86f0",
+    "intensity": 0.9
+   }
+  },
+  {
+   "name": "_Rays",
+   "type": "range",
+   "label": "Işın sıklığı",
+   "min": 3,
+   "max": 30,
+   "default": 11
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Çatlak kalınlığı",
+   "min": 0.005,
+   "max": 0.2,
+   "default": 0.05
+  },
+  {
+   "name": "_Pool",
+   "type": "range",
+   "label": "Merkez havuz",
+   "min": 0,
+   "max": 1,
+   "default": 0.5
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float2 q = (i.uv - 0.5) * 2.0;\n    float r = length(q);\n    float ang = atan2(q.y, q.x) / 6.28318 + 0.5;\n    float life = 1.0 - i.color.a;\n    float grow = i.custom.x;\n    float2 p = float2(ang * _Rays, r * 3.2 - r * r * 0.8);\n    p += (float2(fbm(q * 3.0), fbm(q * 3.0 + 5.0)) - 0.5) * 0.35;\n    // Voronoi F2 - F1 (açısal eksende periyodik değil; kesik dikiş görünmesin diye ağırlık düşük)\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float f1 = 8.0;\n    float f2 = 8.0;\n    for (int y = -1; y <= 1; y++)\n    {\n        for (int x = -1; x <= 1; x++)\n        {\n            float2 g = float2(float(x), float(y));\n            float2 o = float2(hash21(c + g), hash21(c + g + 17.0));\n            float d = length(g + o - f);\n            if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }\n        }\n    }\n    float edgeD = f2 - f1;\n    float w = _Width * (1.2 - 0.8 * r) * (1.0 - life * 0.6);\n    float crack = 1.0 - smoothstep(w * 0.4, w, edgeD);\n    float reach = 1.0 - smoothstep(grow - 0.08, grow, r);\n    float heat = 1.0 - smoothstep(0.0, 0.7, life);\n    float3 colr = lerp(_Hot.rgb, _Cool.rgb, smoothstep(0.05, 0.8, r + life * 0.4));\n    float pool = exp(-r * r * 30.0) * _Pool * (0.4 + 0.6 * heat);\n    float edgeFade = 1.0 - smoothstep(0.75, 1.0, r);\n    float3 col = colr * crack * (0.35 + 0.65 * heat) + _Hot.rgb * pool;\n    float fade = 1.0 - smoothstep(0.65, 1.0, life);\n    return float4(col * reach * edgeFade * fade * i.color.rgb, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

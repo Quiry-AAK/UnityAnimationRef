@@ -1,0 +1,22 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h4b_serit_agir",
+ "shader": "UnityPreview/iz_serit",
+ "values": {
+  "_Edge": {
+   "color": "#f4faff",
+   "intensity": 2
+  },
+  "_Body": {
+   "color": "#6cb4ff",
+   "intensity": 1.4
+  },
+  "_Haze": {
+   "color": "#3a76e8",
+   "intensity": 0.7
+  },
+  "_EdgeW": 0.12,
+  "_Reach": 0.8
+ },
+ "renderQueue": -1
+}

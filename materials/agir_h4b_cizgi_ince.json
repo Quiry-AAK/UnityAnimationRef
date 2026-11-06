@@ -1,0 +1,23 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h4b_cizgi_ince",
+ "shader": "UnityPreview/delme_cizgi",
+ "values": {
+  "_Core": {
+   "color": "#e8f4ff",
+   "intensity": 0.7
+  },
+  "_Mid": {
+   "color": "#5aa8ff",
+   "intensity": 0.45
+  },
+  "_Deep": {
+   "color": "#2a5cd8",
+   "intensity": 0.35
+  },
+  "_Width": 0.05,
+  "_Speed": 9,
+  "_Break": 0.8
+ },
+ "renderQueue": -1
+}

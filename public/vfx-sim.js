@@ -544,6 +544,8 @@ export class EffectPlayer {
     this.onTexture = null;
     this.materialFor = null; // (ad) => { shader, values } | null — renderer.material'ı kütüphaneden çözer (yüklenmediyse null)
     this.meshFor = null; // (dosya) => { positions, normals, uvs, indices } | null — meshes/ dosyası (yüklenmediyse null)
+    this.followFor = null; // ({ target, name }) => Object3D | null — katman düzeyi bağlama (emitter.follow)
+    this.follows = [];      // [{ group, follow }] — izleyen katmanların ayna grupları
     this.shared = newShared(); // bükülme / yumuşak parçacık / decal: sahne hedefi + kamera
   }
   setVisible(v) { this.root.visible = this.worldRoot.visible = this.lightRoot.visible = v; }
@@ -554,11 +556,14 @@ export class EffectPlayer {
   setEffect(effect) {
     for (const s of this.sims) s?.dispose(); for (const n of this.nodes) n.removeFromParent();
     for (const l of this.lights) l.light.removeFromParent(); this.lights = [];
+    for (const f of this.follows) f.group.removeFromParent(); this.follows = [];
     this.effect = effect; this.sims = []; this.nodes = [];
     this.offset.position.set(...effect.attach.position); unityQuat(effect.attach.rotation, this.offset.quaternion);
     const base = hashStr(effect.name);
     effect.emitters.forEach((em, i) => {
-      const node = new THREE.Group(); node.position.set(...em.position); unityQuat(em.rotation, node.quaternion); this.offset.add(node); this.nodes.push(node);
+      const node = new THREE.Group(); node.position.set(...em.position); unityQuat(em.rotation, node.quaternion); this.nodes.push(node);
+      if (em.follow && em.follow.target !== 'none') { const g = new THREE.Group(); g.scale.set(-1, 1, 1); g.add(node); this.follows.push({ group: g, follow: em.follow }); this.resolveFollow(); }
+      else this.offset.add(node);
       if (!em.enabled) { this.sims.push(null); return; }
       const upe = em.renderer.material ? this.materialFor?.(em.renderer.material) || null : null;
       const sim = em.bladeTrail?.enabled ? new TrailSim(em, () => this.onTexture?.(), upe)
@@ -580,7 +585,8 @@ export class EffectPlayer {
     });
     this.reset();
   }
-  attachTo(parent) { if (this.root.parent !== parent) parent.add(this.root); }
+  attachTo(parent) { if (this.root.parent !== parent) parent.add(this.root); this.resolveFollow(); }
+  resolveFollow() { for (const f of this.follows) { const p = this.followFor?.(f.follow) || this.root; if (f.group.parent !== p) p.add(f.group); } }
   reset() { this.time = 0; this.acc = 0; this.deferred = []; for (const s of this.sims) s?.reset(); }
   emitterMatrix(i, out) { return out.multiplyMatrices(MIRROR, this.nodes[i].matrixWorld); } // emitter yereli → Unity dünyası
   deliver(s, ev, E, EQ) {
@@ -590,7 +596,9 @@ export class EffectPlayer {
   }
   stepOnce() {
     this.onBeforeStep?.(this.time);
+    if (this.follows.length) this.resolveFollow();
     this.root.updateWorldMatrix(true, true);
+    for (const f of this.follows) f.group.updateWorldMatrix(true, true);
     const E = _m, EQ = _q;
     const pending = this.deferred; this.deferred = [];
     this.sims.forEach((s, i) => {

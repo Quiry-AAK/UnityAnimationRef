@@ -24,6 +24,10 @@ const FITS = {
   h3: { anim: 'arpg_attack_combo3_from_b3', normal: [-0.6663, 0.6942, -0.2723], center: [2.2059, 3.3036, 3.3631], rotation: [-43.966, -112.226, -108.481],
     radius: 3.1679, angle: 45.56, inner: 0.92, impact: 0.5, axes: { X: [-0.4896, -0.6826, -0.5425], Y: [-0.5625, -0.2282, 0.7947] },
     progress: [[0.4, 0], [0.4167, 0.047], [0.4333, 0.121], [0.45, 0.2228], [0.4583, 0.3545], [0.4667, 0.4868], [0.475, 0.6223], [0.4833, 0.7838], [0.4917, 0.8606], [0.5, 0.9325], [0.5167, 1]] },
+  // H4: atlayarak tepeden yere vuruş (kare 43–50); dönüş kesişleri varyant içinde
+  h4: { anim: 'arpg_attack_combo4_from_b4', normal: [0.8289, -0.5573, -0.0489], center: [0.0642, 0.9832, 4.8255], rotation: [33.869, 93.377, 7.184],
+    radius: 1.1758, angle: 222.14, inner: 0.3979, impact: 0.9, axes: { X: [0.0111, 0.1038, -0.9945], Y: [0.5593, 0.8238, 0.0923] },
+    progress: [[0.7167, 0], [0.7333, 0.0267], [0.75, 0.076], [0.7583, 0.1504], [0.7667, 0.237], [0.775, 0.4291], [0.7833, 0.6287], [0.7917, 0.7194], [0.8, 0.7798], [0.8083, 0.9044], [0.8167, 1]] },
 };
 
 const once = (count) => ({ rateOverTime: 0, bursts: [{ time: 0, count, cycles: 1, interval: 0.01 }] });
@@ -85,6 +89,97 @@ function build(key, variant) {
     curve: [[0, 0.2], [0.1, 0.7], [0.2, 1], [0.45, 0.4], [0.8, 0], [1, 0]], maxLights: 1, shadows: false } } });
   const M = (v, n) => `agir_${key}${v}_${n}`;
   const prev = { withAnimation: true, startFrame: 0, background: '#141a26', bloom: 0.65, showHero: true, showGrid: true };
+  if (variant === 'bitirici') {
+    // H4 "bitirici": dönerek iki kesiş (rüzgâr-enerji izleri) → kurulma → atlayarak tepeden yere vuruş (0.81 sn, darbe noktası
+    // kılıç ucunun yere indiği yer, UPE'de kemik/eşya dünya konumundan ölçüldü). Ağırlık darbede: zeminde ışınsal ışıyan çatlaklar,
+    // yere yayılan iki şok halkası + güçlü bükülme halkası, darbeden yukarı fışkırıp dışa kıvrılan enerji çizgileri, kırıntı, toz,
+    // çakma ışığı. H1 yarık / H2 hilal / H3 delme dilinden ayrı.
+    const D2R = Math.PI / 180;
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const toEuler = (X, Y, Z) => { const x = Math.asin(Math.max(-1, Math.min(1, -Z[1]))) / D2R, y = Math.atan2(Z[0], Z[2]) / D2R, z = Math.atan2(X[1], Y[1]) / D2R; return [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)]; };
+    const CUT1 = { center: [-0.1043, 1.299, 3.3203], rotation: [78.304, 150.288, 86.912], radius: 1.2965, angle: 161.08,
+      progress: [[0.0667, 0], [0.1, 0.125], [0.1333, 0.2796], [0.1667, 0.4499], [0.2, 0.6213], [0.2333, 0.7797], [0.2667, 0.9107], [0.3, 1]] };
+    const CUT2 = { center: [-0.3985, 1.415, 3.727], rotation: [46.469, 117.172, -136.096], radius: 0.906, angle: 194.38,
+      progress: [[0.35, 0], [0.3667, 0.159], [0.3833, 0.4607], [0.4, 0.5816], [0.4167, 0.705], [0.4333, 0.9001], [0.45, 1]] };
+    const SMASH = { center: F.center, rotation: F.rotation, radius: R, angle: A, progress: F.progress };
+    const trail = (name, mat, fit, { life, order, inner = 0.55, extra = {} }) => {
+      const delay = fit.progress[0][0];
+      const e = arc(name, mat, { order, dt: delay - t0, life, extra,
+        mesh: { shape: 'arc', file: '', innerRadius: +(fit.radius * inner).toFixed(4), outerRadius: +(fit.radius * 1.04).toFixed(4), angle: fit.angle, height: 0.5, segments: 128, rings: 10 } });
+      e.position = fit.center; e.rotation = fit.rotation;
+      const x = [[0, 0]]; for (const [t, p] of fit.progress) { const f = +((t - delay + 0.006) / life).toFixed(4); if (f > x[x.length - 1][0] && f < 1) x.push([f, p]); }
+      x.push([1, 1]); e.customData.x = x;
+      return e;
+    };
+    // kılıç izi: yay ağı kılıcın bütün hareketini kopyalayamaz → kılıca bağlı (emitter.follow) şerit, gerçek yolu birebir izler.
+    // Katana yereli: bıçak +Z boyunca (uç ~+0.48); iz yalnız kesiş pencerelerinde örnek alır.
+    const bladeTrail = (name, mat, t0w, t1w, life, order, width) => {
+      const e = emitAt(name, [0, 0, 0], [0, 0, 0], { delay: t0w, life: [1, 1], speed: [0, 0], size: [1, 1], color: ['#ffffff', '#ffffff'], max: 1, count: [0, 0],
+        r: 0, arc: 1, from: 0, mat, order });
+      e.follow = { target: 'prop', name: 'katana' };
+      e.main.duration = +(t1w - t0w).toFixed(3); e.main.looping = false; e.main.simulationSpace = 'world';
+      e.emission = { rateOverTime: 0, bursts: [] };
+      e.bladeTrail = { enabled: true, from: [0, 0, -0.12], to: [0, 0, 0.48], lifetime: life, subdiv: 6, width, taper: 'tip', uvMode: 'stretch', tileLength: 1 };
+      e.colorOverLifetime = { enabled: true, color: [[0, '#ffffff'], [1, '#ffffff']], alpha: [[0, 1], [0.6, 0.8], [1, 0]] };
+      return e;
+    };
+    const blade = [
+      bladeTrail('iz', M('b', 'serit'), 0.0, 1.0, 0.2, 3, [[0, 1], [0.5, 0.8], [1, 0.35]]),   // kesintisiz: animasyon boyunca kılıcı izler
+      bladeTrail('iz_vurus', M('b', 'serit_agir'), 0.7, 0.84, 0.24, 4, [[0, 1], [0.5, 0.9], [1, 0.5]]),
+    ];
+    const tImp = 0.81, P = [0.34, 0.02, 5.55];
+    const flat = (name, mat, { delay, life, size, mesh, order, blend = 'additive', y = 0.03, extra = {} }) => {
+      const e = arc(name, mat, { order, dt: delay - t0, life, size, blend, mesh, extra });
+      e.position = [P[0], y, P[2]]; e.rotation = [90, 0, 0];                // yerel XY → yatay (yere yatık)
+      e.customData.x = [[0, 1], [1, 1]];
+      return e;
+    };
+    const ringMesh = { shape: 'arc', file: '', innerRadius: 0.1, outerRadius: 0.75, angle: 360, height: 0.5, segments: 128, rings: 8 };
+    const crack = flat('catlak', M('b', 'catlak'), { delay: tImp - 0.005, life: 1.4, size: 5, order: 2, y: 0.015,
+      mesh: { shape: 'plane', file: '', innerRadius: 0, outerRadius: 1, angle: 360, height: 0.5, segments: 1, rings: 1 } });
+    crack.customData.x = [[0, 0.05], [0.04, 0.55], [0.15, 0.92], [1, 1]];
+    crack.sizeOverLifetime = { enabled: true, curve: [[0, 1], [1, 1]] };
+    const ring = (name, d, color, s1) => { const e = flat(name, M('b', 'halka'), { delay: d, life: 0.5, order: 9, y: 0.06, mesh: ringMesh });
+      e.main.startColor = [color, color]; e.sizeOverLifetime = { enabled: true, curve: [[0, 0.5], [0.35, s1 * 0.65], [1, s1]] }; return e; };
+    const dist = flat('bukulme', M('b', 'bukulme'), { delay: tImp, life: 0.42, order: 0, blend: 'distortion', y: 0.25, mesh: ringMesh,
+      extra: { renderer: { distortion: { mode: 'noise', strength: 0.12, frequency: 6, scroll: [0, 3] } } } });
+    dist.sizeOverLifetime = { enabled: true, curve: [[0, 0.6], [0.4, 3.0], [1, 4.6]] };
+    // darbeden fışkıran enerji çizgileri: yerel X yukarı, yerel -Z dışa (radyal) → yukarı fırlar, dışa kıvrılır
+    let sd = 73; const rr = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+    const fount = [];
+    for (let k = 0; k < 16; k++) {
+      const main = k % 3 === 0, ph = (k * 22.5 + rr() * 18) * D2R, out = [Math.cos(ph), 0, Math.sin(ph)];
+      const X = [0, 1, 0], Z = out.map((v) => -v), Y = cross(Z, X);
+      const t = +(tImp + rr() * 0.04).toFixed(3), life = +(0.35 + rr() * 0.25).toFixed(3);
+      const e = arc('fiskirma' + k, M('b', main ? 'cizgi' : 'cizgi_ince'), { order: 7, dt: t - t0, life, color: ['#ffffff', '#f4f9ff', '#eef6ff', '#f8fbff'][k % 4],
+        mesh: { shape: 'kivrim', file: '', innerRadius: +(main ? 0.16 + rr() * 0.06 : 0.1 + rr() * 0.06).toFixed(3), outerRadius: +(0.8 + rr() * 1.4).toFixed(2), angle: 360,
+          height: +(1.0 + rr() * 2.2).toFixed(2), segments: 72, rings: 4 } });
+      e.position = [P[0] + (rr() - 0.5) * 0.3, 0.05, P[2] + (rr() - 0.5) * 0.3].map((v) => +v.toFixed(3)); e.rotation = toEuler(X, Y, Z);
+      e.customData.x = [[0, 0], [+(0.28 + rr() * 0.2).toFixed(2), 1], [1, 1]];
+      e.customData.z = [[0, 0], [1, 0]];
+      fount.push(e);
+    }
+    const lamp = emitAt('isik', [P[0], 0.6, P[2]], [0, 0, 0], { delay: tImp, life: [0.6, 0.6], speed: [0, 0], size: [0.01, 0.01], color: ['#9cc0ff', '#9cc0ff'], max: 1, count: [1, 1],
+      r: 0, arc: 1, from: 0, alpha: [[0, 0], [1, 0]], mat: 'zerre_hafif', order: 0 });
+    Object.assign(lamp, light(1.5, 5).root);
+    return {
+      name: 'agir_' + key + '_bitirici', duration: 1.6, loop: true, preview: prev,
+      emitters: [
+        ...blade,
+        crack, dist,
+        ring('halka1', tImp, '#ffffff', 5.2), ring('halka2', tImp + 0.07, '#f0f6ff', 3.6),
+        ...fount,
+        emitAt('cakma', [P[0], 0.3, P[2]], [0, 0, 0], { delay: tImp, life: [0.16, 0.16], speed: [0, 0], size: [0.75, 0.75], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
+          r: 0, arc: 1, from: 0, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+        lamp,
+        emitAt('kirinti', [P[0], 0.05, P[2]], [-90, 0, 0], { delay: tImp, life: [0.5, 1.0], speed: [2.0, 6.0], size: [0.03, 0.07], color: ['#eef6ff', '#8fbaff'], gravity: 1.4,
+          max: 60, count: [40, 55], r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.55, drag: 2, mat: 'zerre_hafif', order: 8 }),
+        emitAt('toz', [P[0], 0.05, P[2]], [-90, 0, 0], { delay: tImp + 0.02, life: [0.8, 1.3], speed: [1.5, 3.5], size: [0.5, 1.0], srot: [0, 360], color: ['#ffffff', '#eef3ff'],
+          max: 14, count: [10, 12], r: 0.4, thick: 1, arc: 360, from: 0, rand: 0.2, noise: 0.2, drag: 3, angv: [-40, 40], sizeCurve: [[0, 0.5], [1, 1.8]],
+          alpha: [[0, 0], [0.1, 0.45], [1, 0]], blend: 'alpha', mat: M('b', 'sis'), order: 1 }),
+      ],
+    };
+  }
   if (variant === 'delme') {
     // H3 "delme" (sıfırdan, BDO dili): kahraman katanayla birlikte havayı delip geçer. Atılış düz +Z (kalça z 1.57 → 2.82,
     // 0.43–0.55 sn; UPE'de kemik dünya konumundan ölçüldü). Kahramanı saran, önde sivrilen hacimli rüzgâr konisi onunla birlikte

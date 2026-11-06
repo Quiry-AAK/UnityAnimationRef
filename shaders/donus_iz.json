@@ -1,0 +1,78 @@
+{
+ "name": "donus_iz",
+ "description": "H4 dönüş izi (additive, mesh yay: U yay boyunca 0 → 1 baş, V iç 0 → dış 1 = uç yolu). Kılıcın arkasında kalan rüzgâr-enerji izi: dış kenarda (uç yolu) ince keskin beyaz-camgöbeği hat, içe doğru yay boyunca akan kıvrık lifler ve sönen mavi pus; baş i.custom.x ile bıçağı izler, arkasında _Tail uzunluğunda kuyruk incelir ve söner (baştan kuyruğa sönme). Hafif saldırı kesiğinin dolu gövdesi değil; siyah yok. life = 1 - alfa.",
+ "properties": [
+  {
+   "name": "_Edge",
+   "type": "hdrColor",
+   "label": "Kenar",
+   "default": {
+    "color": "#f2f9ff",
+    "intensity": 1.4
+   }
+  },
+  {
+   "name": "_Body",
+   "type": "hdrColor",
+   "label": "Lifler",
+   "default": {
+    "color": "#5aa6ff",
+    "intensity": 0.8
+   }
+  },
+  {
+   "name": "_Haze",
+   "type": "hdrColor",
+   "label": "Pus",
+   "default": {
+    "color": "#2f66dc",
+    "intensity": 0.35
+   }
+  },
+  {
+   "name": "_EdgeW",
+   "type": "range",
+   "label": "Kenar kalınlığı (V)",
+   "min": 0.01,
+   "max": 0.3,
+   "default": 0.06
+  },
+  {
+   "name": "_Tail",
+   "type": "range",
+   "label": "Kuyruk uzunluğu (U)",
+   "min": 0.05,
+   "max": 1,
+   "default": 0.55
+  },
+  {
+   "name": "_Fib",
+   "type": "range",
+   "label": "Lif sıklığı",
+   "min": 2,
+   "max": 40,
+   "default": 16
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 3
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float life = 1.0 - i.color.a;\n    float t = i.time;\n    float head = i.custom.x;\n    float behind = head - u;\n    float vis = smoothstep(-0.01, 0.01, behind);\n    float tail = 1.0 - smoothstep(0.0, _Tail, behind);\n    float tailW = 0.35 + 0.65 * tail;                                   // kuyruk inceliyor\n    float e = (1.0 - v) / max(_EdgeW * tailW, 0.002);\n    float edge = exp(-e * e);\n    float n = fbm(float2(u * 3.0 - t * 1.5, v * _Fib));\n    float n2 = fbm(float2(u * 7.0 - t * 2.5 + 3.0, v * _Fib * 1.8));\n    float fib = smoothstep(0.45, 0.8, n * 0.7 + n2 * 0.4) * smoothstep(1.0 - 0.75 * tailW, 1.0, v);\n    float haze = smoothstep(0.35, 1.0, v) * (0.5 + 0.5 * n);\n    float3 col = _Edge.rgb * edge + _Body.rgb * fib * 0.7 + _Haze.rgb * haze * 0.4;\n    float fade = 1.0 - smoothstep(0.6, 1.0, life);\n    return float4(col * vis * tail * fade * i.color.rgb, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

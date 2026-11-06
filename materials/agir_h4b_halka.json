@@ -1,0 +1,17 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h4b_halka",
+ "shader": "UnityPreview/sok_halka",
+ "values": {
+  "_Core": {
+   "color": "#eef8ff",
+   "intensity": 0.9
+  },
+  "_Glow": {
+   "color": "#5aa8ff",
+   "intensity": 0.4
+  },
+  "_Width": 0.09
+ },
+ "renderQueue": -1
+}

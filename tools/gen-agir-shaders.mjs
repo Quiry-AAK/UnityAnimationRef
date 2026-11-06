@@ -770,6 +770,107 @@ shaders.delme_cizgi = {
 `,
 };
 
+shaders.donus_iz = {
+  description: 'H4 dönüş izi (additive, mesh yay: U yay boyunca 0 → 1 baş, V iç 0 → dış 1 = uç yolu). Kılıcın arkasında kalan rüzgâr-enerji izi: dış kenarda (uç yolu) ince keskin beyaz-camgöbeği hat, içe doğru yay boyunca akan kıvrık lifler ve sönen mavi pus; baş i.custom.x ile bıçağı izler, arkasında _Tail uzunluğunda kuyruk incelir ve söner (baştan kuyruğa sönme). Hafif saldırı kesiğinin dolu gövdesi değil; siyah yok. life = 1 - alfa.',
+  properties: [P.hdr('_Edge', 'Kenar', '#f2f9ff', 1.4), P.hdr('_Body', 'Lifler', '#5aa6ff', 0.8), P.hdr('_Haze', 'Pus', '#2f66dc', 0.35),
+    P.rng('_EdgeW', 'Kenar kalınlığı (V)', 0.01, 0.3, 0.06), P.rng('_Tail', 'Kuyruk uzunluğu (U)', 0.05, 1, 0.55), P.rng('_Fib', 'Lif sıklığı', 2, 40, 16)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float t = i.time;
+    float head = i.custom.x;
+    float behind = head - u;
+    float vis = smoothstep(-0.01, 0.01, behind);
+    float tail = 1.0 - smoothstep(0.0, _Tail, behind);
+    float tailW = 0.35 + 0.65 * tail;                                   // kuyruk inceliyor
+    float e = (1.0 - v) / max(_EdgeW * tailW, 0.002);
+    float edge = exp(-e * e);
+    float n = fbm(float2(u * 3.0 - t * 1.5, v * _Fib));
+    float n2 = fbm(float2(u * 7.0 - t * 2.5 + 3.0, v * _Fib * 1.8));
+    float fib = smoothstep(0.45, 0.8, n * 0.7 + n2 * 0.4) * smoothstep(1.0 - 0.75 * tailW, 1.0, v);
+    float haze = smoothstep(0.35, 1.0, v) * (0.5 + 0.5 * n);
+    float3 col = _Edge.rgb * edge + _Body.rgb * fib * 0.7 + _Haze.rgb * haze * 0.4;
+    float fade = 1.0 - smoothstep(0.6, 1.0, life);
+    return float4(col * vis * tail * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.zemin_catlak = {
+  description: 'H4 zemin çatlakları (additive, yere yatırılmış plane mesh: UV 0..1, merkez 0.5 = darbe noktası). Kutupsal uzatılmış Voronoi kenarlarından merkezden dışa ışınsal, kırık kırık (düz değil) ışıyan çatlaklar; i.custom.x = yayılma yarıçapı (0 → 1 kenar), merkezde sıcak beyaz havuz, uca doğru camgöbeği → mavi; yaşla soğur, incelir ve söner. Yanık/siyah değil. life = 1 - alfa.',
+  properties: [P.hdr('_Hot', 'Sıcak', '#f4faff', 1.6), P.hdr('_Cool', 'Soğuk', '#3f86f0', 0.9), P.rng('_Rays', 'Işın sıklığı', 3, 30, 11), P.rng('_Width', 'Çatlak kalınlığı', 0.005, 0.2, 0.05), P.rng('_Pool', 'Merkez havuz', 0, 1, 0.5)],
+  renderState: rs('additive', 2),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float2 q = (i.uv - 0.5) * 2.0;
+    float r = length(q);
+    float ang = atan2(q.y, q.x) / 6.28318 + 0.5;
+    float life = 1.0 - i.color.a;
+    float grow = i.custom.x;
+    float2 p = float2(ang * _Rays, r * 3.2 - r * r * 0.8);
+    p += (float2(fbm(q * 3.0), fbm(q * 3.0 + 5.0)) - 0.5) * 0.35;
+    // Voronoi F2 - F1 (açısal eksende periyodik değil; kesik dikiş görünmesin diye ağırlık düşük)
+    float2 c = floor(p);
+    float2 f = frac(p);
+    float f1 = 8.0;
+    float f2 = 8.0;
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float2 g = float2(float(x), float(y));
+            float2 o = float2(hash21(c + g), hash21(c + g + 17.0));
+            float d = length(g + o - f);
+            if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }
+        }
+    }
+    float edgeD = f2 - f1;
+    float w = _Width * (1.2 - 0.8 * r) * (1.0 - life * 0.6);
+    float crack = 1.0 - smoothstep(w * 0.4, w, edgeD);
+    float reach = 1.0 - smoothstep(grow - 0.08, grow, r);
+    float heat = 1.0 - smoothstep(0.0, 0.7, life);
+    float3 colr = lerp(_Hot.rgb, _Cool.rgb, smoothstep(0.05, 0.8, r + life * 0.4));
+    float pool = exp(-r * r * 30.0) * _Pool * (0.4 + 0.6 * heat);
+    float edgeFade = 1.0 - smoothstep(0.75, 1.0, r);
+    float3 col = colr * crack * (0.35 + 0.65 * heat) + _Hot.rgb * pool;
+    float fade = 1.0 - smoothstep(0.65, 1.0, life);
+    return float4(col * reach * edgeFade * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.iz_serit = {
+  description: 'Kılıç izi şeridi (additive, bladeTrail; emitter.follow ile kılıca bağlı): uv.x = iz yaşı (0 baş/kılıç → 1 kuyruk), uv.y = 0 kök → 1 uç. Kılıcın gerçek yolunu birebir izler. Uç kenarında ince keskin beyaz-camgöbeği hat, köke doğru yaş boyunca akan kıvrık lifler ve sönen mavi pus; kuyruk incelip söner, kuyruk ucu liflere ayrılır. Siyah yok. Renk/alfa parçacık renginden (colorOverLifetime yaşa göre).',
+  properties: [P.hdr('_Edge', 'Uç hattı', '#f2f9ff', 1.5), P.hdr('_Body', 'Lifler', '#5aa6ff', 1.1), P.hdr('_Haze', 'Pus', '#3570e0', 0.55),
+    P.rng('_EdgeW', 'Uç hattı kalınlığı', 0.01, 0.4, 0.09), P.rng('_Fib', 'Lif sıklığı', 2, 40, 14), P.rng('_Reach', 'Köke doğru yayılma', 0.1, 1, 0.65)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float age = saturate(i.uv.x);
+    float v = i.uv.y;
+    float t = i.time;
+    float keep = 1.0 - age;
+    float e = (1.0 - v) / max(_EdgeW * (0.35 + 0.65 * keep), 0.002);
+    float edge = exp(-e * e);
+    float n = fbm(float2(age * 4.0 + t * 1.5, v * _Fib));
+    float n2 = fbm(float2(age * 9.0 + t * 2.5 + 3.0, v * _Fib * 1.8));
+    float reach = 1.0 - _Reach * keep;                                    // genç izde lifler köke kadar iner, yaşlandıkça uca çekilir
+    float fib = smoothstep(0.45, 0.8, n * 0.7 + n2 * 0.4) * smoothstep(reach - 0.15, reach + 0.25, v);
+    float haze = smoothstep(reach - 0.2, 1.0, v) * (0.5 + 0.5 * n);
+    float shred = lerp(1.0, smoothstep(0.35, 0.65, n2), smoothstep(0.55, 1.0, age));
+    float3 col = _Edge.rgb * edge + _Body.rgb * fib * 0.75 + _Haze.rgb * haze * 0.45;
+    float fade = 1.0 - smoothstep(0.55, 1.0, age);
+    return float4(col * shred * fade * i.color.rgb * i.color.a, 1.0);
+}
+`,
+};
+
 for (const [name, s] of Object.entries(shaders)) {
   const out = { name, description: s.description, properties: s.properties, renderState: s.renderState,
     lighting: { receiveShadows: false, castShadows: false }, outline: { enabled: false }, code: { common: s.common, vertex: '', fragment: s.fragment, outlineFragment: '' } };

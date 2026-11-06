@@ -27,6 +27,7 @@ export function defaultEmitter() {
     enabled: true,
     position: v3(), // efekt köküne göre (m)
     rotation: v3(), // derece, Unity Euler (Z→X→Y)
+    follow: { target: 'none', name: '' }, // bu katman efekt kökü yerine kemiği/eşyayı izler (ör. kılıç izi), diğerleri dünyada kalır
     main: {
       duration: 2, looping: true, prewarm: false, startDelay: 0,
       startLifetime: [1, 1.5], startSpeed: [1, 2], startSize: [0.1, 0.2], startRotation: [0, 0],
@@ -346,6 +347,7 @@ export function normalizeEmitter(input, warn = () => {}, index = 0) {
     enabled: typeof src.enabled === 'boolean' ? src.enabled : true,
     position: normVec3(src.position, def.position),
     rotation: normVec3(src.rotation, def.rotation),
+    follow: { target: ['none', 'bone', 'prop'].includes(src.follow?.target) ? src.follow.target : 'none', name: String(src.follow?.name || '') },
   };
   const where = (m, f) => `${out.name}.${m}.${f}`;
   for (const mod of MODULES) {
@@ -498,6 +500,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 
 ## Efekt
 - name, duration (önizleme döngüsü, sn; Unity'de kök ParticleSystem süresi), loop (önizlemede tekrar)
+- emitter.follow: { target: none|bone|prop, name } — yalnız bu katman kemiği/eşyayı izler (konum/dönüş onun çerçevesinde; ör. kılıç izi bladeTrail), diğer katmanlar efekt kökünde/dünyada kalır. Unreal: ayrı sistem olarak oyunda bağlanır.
 - attach: { target: none|bone|prop, name: kemik kısa adı ("RightHand") ya da eşya id ("katana"), position, rotation }
   Konum/dönüş, kemiğin REST (T-pose) dünya eksenlerinde ya da eşyanın kendi ekseninde (eşya modeli ortalanır: orijin = modelin
   merkezi; Elarion katanası ±Z boyunca ~0.92 m). Ölçek iptal edilir, birim hep metre. Önizleme + oyuna bağlama bilgisi.
