@@ -8,11 +8,12 @@
   "_Tail": 0.95,
   "_Eat": 0.5,
   "_Hit": 0.846,
-  "_Void": "#010208",
+  "_Void": "#1a2a44",
   "_Swirl": {
-   "color": "#1e1650",
+   "color": "#3a5a86",
    "intensity": 1
-  }
+  },
+  "_Opacity": 0.5
  },
  "renderQueue": -1
 }

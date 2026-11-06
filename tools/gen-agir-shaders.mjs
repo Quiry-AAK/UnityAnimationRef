@@ -267,8 +267,8 @@ float2 riftShape(float u, float v, float3 tr, float open, float t)
 const propsRift = [P.rng('_Center', 'Yarık merkezi (V)', 0.5, 1, 0.9), P.rng('_Open', 'Açıklık (V)', 0.005, 0.3, 0.12), P.rng('_Hit', 'En geniş yer (yay kesri)', 0, 1, 0.85)];
 Object.assign(shaders, {
   yarik_ic: {
-    description: 'Yarığın içi (alfa, mesh yay): havada açılan derin, koyu boşluk; içinde yavaş dönen mor-lacivert girdap. Açıklık i.custom.y, iz/açılma i.custom.x (kesik_agir ile aynı).',
-    properties: [P.col('_Void', 'Boşluk', '#02030c'), P.hdr('_Swirl', 'İç girdap', '#2a1e6a', 1), ...propsRift, ...trailProps],
+    description: 'Yarığın içi (alfa, mesh yay): havada açılan yarığın yarı saydam, soğuk koyu mavi-gri içi (siyah/mor karanlık boşluk değil: o Karanlık elementine ait), içinde yavaş akan açık mavi-gri. Açıklık i.custom.y, iz/açılma i.custom.x (kesik_agir ile aynı).',
+    properties: [P.col('_Void', 'İç', '#1a2a44'), P.hdr('_Swirl', 'İç akış', '#3a5a86', 1), P.rng('_Opacity', 'Opaklık', 0, 1, 0.5), ...propsRift, ...trailProps],
     renderState: rs('alpha', 1),
     common: NOISE + TRAIL + RIFT,
     fragment: `float4 frag(UPEInput i)
@@ -282,7 +282,7 @@ Object.assign(shaders, {
     float sw = fbm(float2(u * 14.0 - i.time * 0.8, (v - _Center) / max(rs2.y, 0.002) * 1.5 + i.time * 0.5));
     float3 col = lerp(_Void.rgb, _Swirl.rgb, smoothstep(0.45, 0.85, sw) * 0.8);
     float a = inside * tr.y * step(0.0005, rs2.y);
-    return float4(col, saturate(a * 0.96));
+    return float4(col, saturate(a * _Opacity));
 }
 `,
   },
