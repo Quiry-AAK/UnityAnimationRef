@@ -442,6 +442,32 @@ Object.assign(shaders, {
   },
 });
 
+shaders.yer_cizik = {
+  description: 'Zemindeki çizik (additive, yatay quad): hilalin yere değdiği yerde kalan parlak oluk; uzunlamasına (V boyunca) uzanan, kenarları gürültüyle düzensiz, ortası beyaz-camgöbeği sıcak, dışa doğru soğuk mavi; uçları yumuşak (art arda dizilen quad\'lar kesintisiz iz oluşturur); yaşla soğur ve incelir (life = 1 - alfa). Siyah/yanık değil.',
+  properties: [P.hdr('_Hot', 'Sıcak çekirdek', '#eef6ff', 2.4), P.hdr('_Cool', 'Soğuk kenar', '#4a7ce8', 1.0), P.rng('_Width', 'Genişlik (U)', 0.02, 0.5, 0.16), P.rng('_Rough', 'Kenar düzensizliği', 0, 1, 0.5)],
+  renderState: rs('additive', 1),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float2 uv = i.uv;
+    float life = 1.0 - i.color.a;
+    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 30.0;
+    float along = uv.y;
+    float ends = smoothstep(0.0, 0.18, along) * smoothstep(1.0, 0.82, along);
+    float wob = (fbm(float2(along * 6.0 + seed, 1.0)) - 0.5) * 0.12 * _Rough;
+    float x = abs(uv.x - 0.5 - wob);
+    float w = _Width * (0.6 + 0.6 * fbm(float2(along * 9.0 + seed, 4.0))) * (1.0 - life * 0.55);
+    float core = exp(-pow(x / max(w * 0.25, 0.001), 2.0));
+    float body = exp(-pow(x / max(w, 0.001), 2.0));
+    float grit = smoothstep(0.55, 0.85, vnoise(float2(uv.x * 40.0 + seed, along * 25.0))) * body;
+    float heat = 1.0 - smoothstep(0.0, 0.6, life);
+    float brk = smoothstep(0.25, 0.6, fbm(float2(along * 5.0 + seed, 9.0)));
+    float3 col = (_Hot.rgb * core * (0.4 + 0.6 * heat) * brk + _Cool.rgb * body * (0.35 + 0.4 * brk) + _Cool.rgb * grit * 0.9) * ends * (1.0 - smoothstep(0.55, 1.0, life)) * i.color.rgb;
+    return float4(col, 1.0);
+}
+`,
+};
+
 shaders.duman_enerji = smoke('alpha');
 shaders.duman_enerji_isik = smoke('additive');
 

@@ -1,0 +1,18 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2h_cizik",
+ "shader": "UnityPreview/yer_cizik",
+ "values": {
+  "_Hot": {
+   "color": "#e6f2ff",
+   "intensity": 1.3
+  },
+  "_Cool": {
+   "color": "#4a7ce8",
+   "intensity": 0.8
+  },
+  "_Width": 0.22,
+  "_Rough": 1
+ },
+ "renderQueue": -1
+}

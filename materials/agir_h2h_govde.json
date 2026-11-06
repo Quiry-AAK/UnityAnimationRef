@@ -3,7 +3,7 @@
  "name": "agir_h2h_govde",
  "shader": "UnityPreview/kesik_agir",
  "values": {
-  "_Width": 0.8,
+  "_Width": 0.85,
   "_CoreW": 0.02,
   "_Core": {
    "color": "#f2f8ff",
@@ -23,9 +23,9 @@
   },
   "_Fiber": 36,
   "_Scroll": 5,
-  "_Gain": 1.05,
+  "_Gain": 1,
   "_Tail": 1,
-  "_Eat": 0.45
+  "_Eat": 0.5
  },
  "renderQueue": -1
 }
