@@ -1,0 +1,78 @@
+{
+ "name": "hilal_enerji",
+ "description": "Dolu enerji hilali (additive, mesh yay; dış kenar V=1 gidiş yönündeki bombeli ön): kalın, içi dolu, parlak hilal. Kalınlık ortada en fazla, uçlarda sivri. Bant içinde öne yakın beyaz-sıcak çekirdek, dışa ve içe doğru camgöbeği → açık mavi; ön kenar keskin parlak dudak; içeride yavaşça dönen enerji akışı (parlaklığı hafifçe dalgalandırır); arka (iç) kenar yumuşak ışıma ile söner. Hafif saldırı kesiğinin ince kenar + lifli yassı gövdesi değil. life = 1 - alfa.",
+ "properties": [
+  {
+   "name": "_Core",
+   "type": "hdrColor",
+   "label": "Çekirdek",
+   "default": {
+    "color": "#f6fbff",
+    "intensity": 3
+   }
+  },
+  {
+   "name": "_Mid",
+   "type": "hdrColor",
+   "label": "Orta",
+   "default": {
+    "color": "#9ad8ff",
+    "intensity": 2
+   }
+  },
+  {
+   "name": "_Outer",
+   "type": "hdrColor",
+   "label": "Dış",
+   "default": {
+    "color": "#4a90ff",
+    "intensity": 1.3
+   }
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Kalınlık (V)",
+   "min": 0.1,
+   "max": 1,
+   "default": 0.75
+  },
+  {
+   "name": "_CorePos",
+   "type": "range",
+   "label": "Çekirdek konumu (0 iç-1 ön)",
+   "min": 0,
+   "max": 1,
+   "default": 0.68
+  },
+  {
+   "name": "_Flow",
+   "type": "range",
+   "label": "Akış",
+   "min": 0,
+   "max": 10,
+   "default": 3
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float life = 1.0 - i.color.a;\n    float ends = pow(saturate(sin(3.14159 * u)), 0.9);\n    float w = _Width * ends;\n    float inner = 1.0 - w;\n    float d = saturate((v - inner) / max(w, 0.001));               // 0 iç → 1 ön\n    float band = smoothstep(inner - 0.05, inner + 0.12, v) * (1.0 - smoothstep(0.982, 1.0, v));\n    float core = exp(-pow((d - _CorePos) / 0.2, 2.0)) * smoothstep(0.05, 0.35, ends);\n    float lip = exp(-pow((v - 0.975) / 0.012, 2.0)) * ends;\n    float n = fbm(float2(u * 5.0 - i.time * _Flow, d * 3.0 + i.time * 0.7));\n    float pulse = 0.8 + 0.4 * n;\n    float3 col = lerp(_Outer.rgb, _Mid.rgb, smoothstep(0.0, 0.55, d));\n    col = lerp(col, _Core.rgb, core);\n    float body = band * (0.35 + 0.65 * smoothstep(0.0, 0.5, d)) * pulse;\n    float glowIn = smoothstep(inner - 0.25, inner, v) * (1.0 - band) * ends * 0.25;   // iç kenardan geriye yumuşak ışıma\n    float er = fbm(float2(u * 6.0 + life * 2.0, v * 5.0));\n    float erode = saturate((er + 0.75 - life * 1.2) * 3.5);\n    float fade = (1.0 - smoothstep(0.6, 1.0, life)) * smoothstep(0.0, 0.05, life);\n    float3 outc = (col * body + _Core.rgb * lip * 0.8 + _Mid.rgb * glowIn) * erode * fade * i.color.rgb;\n    return float4(outc, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

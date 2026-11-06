@@ -1,0 +1,22 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2h_enerji",
+ "shader": "UnityPreview/hilal_enerji",
+ "values": {
+  "_Core": {
+   "color": "#f2f8ff",
+   "intensity": 1.5
+  },
+  "_Mid": {
+   "color": "#8fd0ff",
+   "intensity": 1.1
+  },
+  "_Outer": {
+   "color": "#3f86ff",
+   "intensity": 0.8
+  },
+  "_Width": 0.75,
+  "_CorePos": 0.7
+ },
+ "renderQueue": -1
+}

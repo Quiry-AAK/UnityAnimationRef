@@ -476,6 +476,39 @@ shaders.ruzgar_hilal = {
 `,
 };
 
+shaders.hilal_enerji = {
+  description: 'Dolu enerji hilali (additive, mesh yay; dış kenar V=1 gidiş yönündeki bombeli ön): kalın, içi dolu, parlak hilal. Kalınlık ortada en fazla, uçlarda sivri. Bant içinde öne yakın beyaz-sıcak çekirdek, dışa ve içe doğru camgöbeği → açık mavi; ön kenar keskin parlak dudak; içeride yavaşça dönen enerji akışı (parlaklığı hafifçe dalgalandırır); arka (iç) kenar yumuşak ışıma ile söner. Hafif saldırı kesiğinin ince kenar + lifli yassı gövdesi değil. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Çekirdek', '#f6fbff', 3.0), P.hdr('_Mid', 'Orta', '#9ad8ff', 2.0), P.hdr('_Outer', 'Dış', '#4a90ff', 1.3),
+    P.rng('_Width', 'Kalınlık (V)', 0.1, 1, 0.75), P.rng('_CorePos', 'Çekirdek konumu (0 iç-1 ön)', 0, 1, 0.68), P.rng('_Flow', 'Akış', 0, 10, 3)],
+  renderState: rs('additive', 2),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float ends = pow(saturate(sin(3.14159 * u)), 0.9);
+    float w = _Width * ends;
+    float inner = 1.0 - w;
+    float d = saturate((v - inner) / max(w, 0.001));               // 0 iç → 1 ön
+    float band = smoothstep(inner - 0.05, inner + 0.12, v) * (1.0 - smoothstep(0.982, 1.0, v));
+    float core = exp(-pow((d - _CorePos) / 0.2, 2.0)) * smoothstep(0.05, 0.35, ends);
+    float lip = exp(-pow((v - 0.975) / 0.012, 2.0)) * ends;
+    float n = fbm(float2(u * 5.0 - i.time * _Flow, d * 3.0 + i.time * 0.7));
+    float pulse = 0.8 + 0.4 * n;
+    float3 col = lerp(_Outer.rgb, _Mid.rgb, smoothstep(0.0, 0.55, d));
+    col = lerp(col, _Core.rgb, core);
+    float body = band * (0.35 + 0.65 * smoothstep(0.0, 0.5, d)) * pulse;
+    float glowIn = smoothstep(inner - 0.25, inner, v) * (1.0 - band) * ends * 0.25;   // iç kenardan geriye yumuşak ışıma
+    float er = fbm(float2(u * 6.0 + life * 2.0, v * 5.0));
+    float erode = saturate((er + 0.75 - life * 1.2) * 3.5);
+    float fade = (1.0 - smoothstep(0.6, 1.0, life)) * smoothstep(0.0, 0.05, life);
+    float3 outc = (col * body + _Core.rgb * lip * 0.8 + _Mid.rgb * glowIn) * erode * fade * i.color.rgb;
+    return float4(outc, 1.0);
+}
+`,
+};
+
 shaders.yer_cizik = {
   description: 'Zemindeki çizik (additive, yatay quad): hilalin yere değdiği yerde kalan parlak oluk; uzunlamasına (V boyunca) uzanan, kenarları gürültüyle düzensiz, ortası beyaz-camgöbeği sıcak, dışa doğru soğuk mavi; uçları yumuşak (art arda dizilen quad\'lar kesintisiz iz oluşturur); yaşla soğur ve incelir (life = 1 - alfa). Siyah/yanık değil.',
   properties: [P.hdr('_Hot', 'Sıcak çekirdek', '#eef6ff', 2.4), P.hdr('_Cool', 'Soğuk kenar', '#4a7ce8', 1.0), P.rng('_Width', 'Genişlik (U)', 0.02, 0.5, 0.16), P.rng('_Rough', 'Kenar düzensizliği', 0, 1, 0.5)],

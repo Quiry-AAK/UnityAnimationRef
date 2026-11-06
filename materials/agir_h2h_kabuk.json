@@ -1,0 +1,21 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2h_kabuk",
+ "shader": "UnityPreview/kesik_hafif_kabuk",
+ "values": {
+  "_Glow": {
+   "color": "#8fc8ff",
+   "intensity": 2.2
+  },
+  "_Core": {
+   "color": "#f2f8ff",
+   "intensity": 2
+  },
+  "_Spread": 0.42,
+  "_Tail": 1,
+  "_Eat": 0.6,
+  "_Fiber": 8,
+  "_Scroll": 4
+ },
+ "renderQueue": -1
+}

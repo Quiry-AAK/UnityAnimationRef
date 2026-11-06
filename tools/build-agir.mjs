@@ -160,7 +160,7 @@ function build(key, variant) {
     const D2R = Math.PI / 180;
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     const toEuler = (X, Y, Z) => { const x = Math.asin(Math.max(-1, Math.min(1, -Z[1]))) / D2R, y = Math.atan2(Z[0], Z[2]) / D2R, z = Math.atan2(X[1], Y[1]) / D2R; return [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)]; };
-    const spd = 9, fly = 0.55, HR = 1.3, span = 140, from = 90 - span / 2;   // yay yerelde +Y'ye (ileri) bombeli
+    const spd = 9, fly = 0.55, HR = 1.4, span = 140, from = 90 - span / 2;   // yay yerelde +Y'ye (ileri) bombeli
     // savruluşun arkadan görünen kirişi (uç yolunun XY izdüşümü, baştan sona)
     const proj = (a) => { const r = a * D2R; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
     const pS = proj(0), pE = proj(A); let cx = pE[0] - pS[0], cy = pE[1] - pS[1]; const cl = Math.hypot(cx, cy) || 1; cx /= cl; cy /= cl;
@@ -174,7 +174,7 @@ function build(key, variant) {
     const C = [0.12, +(0.03 - at3([0, 0, 0], low)[1]).toFixed(3), 1.6];           // en alçak nokta yerden 3 cm
     const contact = at3(C, low).map((c, i) => +(i === 1 ? 0.03 : c).toFixed(3));
     const t1 = +(tEnd - 0.005).toFixed(4);
-    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.45).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
+    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.5).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
     const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
     const fwd = (sp) => ({ enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
     const moon = (name, mat, blend, order, extra = {}) => {
@@ -184,6 +184,12 @@ function build(key, variant) {
       return e;
     };
     const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 7, scroll: [0, 3] } } });
+    // hilal kabuğu: silindir dilimi, ekseni hilal normali; açı hilalin başlangıç açısından (from) başlar
+    const KH = 0.5, fr = from * D2R;
+    const kabukRot = toEuler([Math.cos(fr), Math.sin(fr), 0], [0, 0, -1], [-Math.sin(fr), Math.cos(fr), 0]);
+    const hilalKabuk = moon('hilal_kabuk', M('h', 'kabuk'), 'additive', 4);
+    hilalKabuk.renderer.mesh = { shape: 'cylinder', file: '', innerRadius: +(HR * 0.985).toFixed(4), outerRadius: +(HR * 0.985).toFixed(4), angle: span, height: KH, segments: 128, rings: 6, rotation: kabukRot };
+    hilalKabuk.position = C.map((c, k) => +(c + LZ[k] * KH / 2).toFixed(4));
     // hacim: aynı hilal, ileri eksen (LY) etrafında ±18° döndürülmüş iki ince kopya (arkadan bakınca da dolgun)
     const tilted = (deg) => { const r = deg * D2R; const X2 = LX.map((x, k) => x * Math.cos(r) + LZ[k] * Math.sin(r)); return toEuler(X2, LY, cross(X2, LY)); };
     const moonT = (name, mat, deg) => { const e = moon(name, mat, 'additive', 3); e.rotation = tilted(deg); return e; };
@@ -191,9 +197,9 @@ function build(key, variant) {
     const wake = [];
     for (let k = 1; k * 0.45 < spd * fly * 0.85; k++) {
       const dz = k * 0.45, pos = [C[0], C[1], +(C[2] + dz).toFixed(3)];
-      const e = emitAt(`iz${k}`, pos, rot, { delay: +(t1 + dz / spd).toFixed(4), life: [0.3, 0.5], speed: [0.05, 0.25], size: [0.14, 0.28], srot: [0, 360], color: ['#ffffff', '#eaf2ff'],
-        max: 6, count: [2, 4], r: +(HR * 0.82).toFixed(3), thick: 0.3, arc: span, from, rand: 0.5, noise: 0.3, angv: [-50, 50], sizeCurve: [[0, 0.6], [1, 1.4]],
-        mat: M('h', 'wisp'), order: 2 });
+      const e = emitAt(`iz${k}`, pos, rot, { delay: +(t1 + dz / spd).toFixed(4), life: [0.25, 0.55], speed: [0.2, 1.0], size: [0.05, 0.11], srot: [0, 45], color: ['#ffffff', '#9fd0ff'],
+        max: 12, count: [6, 9], r: +(HR * 0.72).toFixed(3), thick: 0.35, arc: span, from, rand: 0.6, noise: 0.35, gravity: -0.05,
+        alpha: [[0, 0], [0.1, 1], [0.5, 0.7], [1, 0]], mat: 'zerre_hafif', order: 6 });
       wake.push(e);
     }
     // zemindeki iz (hilalin alçak ucu geçtikçe)
@@ -223,7 +229,9 @@ function build(key, variant) {
         emitAt('cikis_sis', out, [0, 0, 0], { delay: t1, life: [0.35, 0.6], speed: [0.6, 1.6], size: [0.35, 0.7], srot: [0, 360], color: ['#ffffff', '#eef3ff'], max: 10, count: [5, 7],
           r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.8, noise: 0.3, angv: [-60, 60], sizeCurve: [[0, 0.5], [1, 1.5]], blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
         moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.06)),
-        moon('hilal_ruzgar', M('h', 'ruzgar'), 'additive', 4, light(1.8, 4)),
+        // dolu enerji hilali + ön kenarı saran dik bant (arkadan bakınca da kalın okunsun; yatık katman yelpazesi düz çizgi gibi açıldı)
+        moon('hilal', M('h', 'enerji'), 'additive', 5, light(2.2, 4)),
+        hilalKabuk,
         ...wake,
         contactGlow,
         ...steps,
