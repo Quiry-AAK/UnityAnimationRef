@@ -1,0 +1,10 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1y_dalga",
+ "shader": "UnityPreview/dalga_bukulme",
+ "values": {
+  "_Width": 0.6,
+  "_Freq": 8
+ },
+ "renderQueue": -1
+}

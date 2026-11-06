@@ -249,7 +249,12 @@ function build(key, variant) {
         emitAt('toplanma', [0.12, 1.26, 1.34], [0, 0, 0], { delay: 0.3, life: [0.1, 0.13], speed: [0.2, 0.4], size: [0.03, 0.05], color: ['#eef6ff', '#a8d0ff'],
           max: 24, count: [16, 20], r: 0.5, thick: 0.4, arc: 360, from: 0, rand: 0.1, sizeCurve: [[0, 1], [1, 0.3]], mat: 'zerre_hafif', order: 8 }),
         cone('bukulme', M('d', 'bukulme'), { Rb: 1.0, L: 3.6, back: -0.15, life: 0.5, order: 0, blend: 'distortion',
-          extra: { renderer: { distortion: { mode: 'noise', strength: 0.045, frequency: 7, scroll: [0, -4] } } } }),
+          extra: { renderer: { distortion: { mode: 'noise', strength: 0.08, frequency: 7, scroll: [0, -4] } } } }),
+        // ses duvarı: iki halka dışa yayılırken havayı da büker
+        ...[['halka1_buk', tipZ - 0.15, 0.52, 0.1], ['halka2_buk', tipZ + 0.25, 0.56, 0.08]].map(([n, z, d, st]) => {
+          const e = ring(n, z, d, '#ffffff');
+          e.renderer = { ...e.renderer, material: M('d', 'bukulme'), blend: 'distortion', sortingOrder: 0, distortion: { mode: 'noise', strength: st, frequency: 6, scroll: [0, 3] } };
+          e.sizeOverLifetime = { enabled: true, curve: [[0, 0.5], [0.35, 1.5], [1, 2.3]] }; return e; }),
         cone('kabuk', M('d', 'kabuk'), { Rb: 0.95, L: 3.6, back: -0.15, life: 0.5, order: 3, tw: 70 }),
         cone('sarmal', M('d', 'sarmal'), { Rb: 0.72, L: 3.3, back: 0.1, life: 0.48, order: 4, tw: -150 }),
         cone('cekirdek', M('d', 'cekirdek'), { Rb: 0.3, L: 2.9, back: 0.5, life: 0.42, order: 5, tw: 220, extra: light(0.5, 2.5) }),
@@ -354,6 +359,14 @@ function build(key, variant) {
       name: `agir_${key}_yarik`, duration: 1.6, loop: true, preview: prev,
       emitters: [
         arc('bukulme', M('y', 'bukulme'), { blend: 'distortion', order: 0, life: 0.7, extra: { renderer: { distortion: { mode: 'noise', strength: 0.035, frequency: 8, scroll: [0, 2] } } } }),
+        // yırtılma: isabette hava yarık boyunca iki yana açılır — yay dışa doğru genişleyen güçlü bükülme dalgası + isabet noktasında halka
+        (() => { const e = arc('yirtilma', M('y', 'dalga'), { blend: 'distortion', order: 0, dt: tHit - 0.01 - t0, life: 0.38,
+          extra: { renderer: { distortion: { mode: 'noise', strength: 0.075, frequency: 6, scroll: [0, 3] } } } });
+          e.customData.x = [[0, 1], [1, 1]]; e.sizeOverLifetime = { enabled: true, curve: [[0, 0.96], [0.35, 1.12], [1, 1.22]] }; return e; })(),
+        (() => { const e = arc('yirtilma_halka', M('y', 'dalga'), { blend: 'distortion', order: 0, dt: tHit - t0, life: 0.32,
+          mesh: { shape: 'arc', file: '', innerRadius: 0.1, outerRadius: 0.75, angle: 360, height: 0.5, segments: 96, rings: 8 },
+          extra: { renderer: { distortion: { mode: 'noise', strength: 0.07, frequency: 6, scroll: [0, 3] } } } });
+          e.position = arcPoint(hitAng, rr); e.customData.x = [[0, 1], [1, 1]]; e.sizeOverLifetime = { enabled: true, curve: [[0, 0.3], [0.35, 1.2], [1, 1.8]] }; return e; })(),
         arc('iz', M('y', 'iz'), { order: 3, life: 0.3, extra: light(1.6) }),
         // yarığın içi açık mavi sisle dolu (boş kalınca arka plan siyah şerit gibi okunuyordu; koyu/siyah Karanlık elementinin dili)
         arc('yarik_ic', M('y', 'ic'), { blend: 'alpha', order: 5, life: 0.9, cy: open }),
@@ -494,7 +507,10 @@ function build(key, variant) {
       emitters: [
         emitAt('cikis_sis', out, [0, 0, 0], { delay: t1, life: [0.35, 0.6], speed: [0.6, 1.6], size: [0.35, 0.7], srot: [0, 360], color: ['#ffffff', '#eef3ff'], max: 10, count: [5, 7],
           r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.8, noise: 0.3, angv: [-60, 60], sizeCurve: [[0, 0.5], [1, 1.5]], blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
-        moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.06)),
+        moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.09)),
+        // art dalga: hilalin ~0,5 m gerisinden gelen, genişleyerek sönen ikinci bükülme (hilal havayı yarıp geçmiş gibi)
+        (() => { const e = moon('hilal_art_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.07)); e.main.startDelay = +(e.main.startDelay + 0.06).toFixed(4);
+          e.sizeOverLifetime = { enabled: true, curve: [[0, 0.95], [0.4, 1.2], [1, 1.4]] }; return e; })(),
         // dolu enerji hilali + ön kenarı saran dik bant (arkadan bakınca da kalın okunsun; yatık katman yelpazesi düz çizgi gibi açıldı)
         moon('hilal', M('h', 'enerji'), 'additive', 5, light(0.7, 2.2)),
         ...wake,
