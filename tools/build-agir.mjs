@@ -157,10 +157,16 @@ function build(key, variant) {
     // H2 "öne giden hilal" (tek): kesiş biter bitmez karakterin önünde dik, çapraz eğik dolu bir hilal belirir; alt ucu yere
     // değerek öne (+Z) kayar. Geçtiği yerde zeminde parlak bir çizik kalır, toz ve kırıntı kalkar. H1'in yarık dilinden ayrı.
     const spd = 9, fly = 0.55, HR = 1.25;            // hız (m/sn), uçuş (sn), hilal yarıçapı (m)
-    const span = 170, from = -150;                    // hilal yayı: dünya açısı -150° → +20° (alt ucu -90°'de yere değer)
+    // hilalin yönü kılıcın savruluşundan: arkadan bakınca (XY izdüşümü) uç yolunun kirişi; hilal bu kirişe oturur, dışa (aşağı-yana) bombeli
+    const proj = (a) => { const r = a * Math.PI / 180; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
+    const pS = proj(0), pE = proj(A); const chord = Math.atan2(pE[1] - pS[1], pE[0] - pS[0]) * 180 / Math.PI; // baştan sona kiriş yönü
+    let bulge = chord - 90; if (Math.sin(bulge * Math.PI / 180) > 0) bulge += 180;  // bombe aşağı tarafa
+    const span = 150, from = +(bulge - span / 2).toFixed(1);
     const t1 = +(tEnd - 0.005).toFixed(4);            // hilalin doğuşu (kesiş sonu)
-    const start = [0.12, +(HR + 0.03).toFixed(3), 2.0]; // hilal merkezi; en alt noktası yerden 3 cm
-    const contact = [start[0], 0.03, start[2]];
+    const lowSin = Math.min(...Array.from({ length: 61 }, (_, k) => Math.sin((from + span * k / 60) * Math.PI / 180)));
+    const start = [0.12, +(-lowSin * HR + 0.03).toFixed(3), 2.0]; // hilal merkezi; en alt noktası yerden 3 cm
+    const lowA = Array.from({ length: 61 }, (_, k) => from + span * k / 60).reduce((m, a) => (Math.sin(a * Math.PI / 180) < Math.sin(m * Math.PI / 180) ? a : m));
+    const contact = [+(start[0] + HR * Math.cos(lowA * Math.PI / 180)).toFixed(3), 0.03, start[2]];
     const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.48).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 10, rotation: [0, 0, from] };
     const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
     const fwd = (sp) => ({ enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
