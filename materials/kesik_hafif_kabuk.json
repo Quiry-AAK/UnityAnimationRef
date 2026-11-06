@@ -1,0 +1,28 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_hafif_kabuk",
+ "shader": "UnityPreview/kesik_hafif_kabuk",
+ "values": {
+  "_Glow": {
+   "color": "#a9ccff",
+   "intensity": 1.2
+  },
+  "_Core": {
+   "color": "#eef6ff",
+   "intensity": 1.2
+  },
+  "_Spread": 0.22,
+  "_Tail": 0.75,
+  "_Eat": 0.08,
+  "_Fiber": 10,
+  "_Scroll": 3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

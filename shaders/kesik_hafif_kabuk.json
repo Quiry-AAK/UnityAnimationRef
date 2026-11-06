@@ -1,0 +1,91 @@
+{
+ "format": "upe-shader-1",
+ "name": "kesik_hafif_kabuk",
+ "description": "Hafif kesiğin 'kabuğu' (additive, silindir dilimi mesh): yayın dış kenarını saran, kesiş düzlemine dik dar bant. Kamera düzleme yandan baktığında kesik bu bantla okunur. U yay boyunca (kesik_hafif ile aynı yön), V bant boyunca 0→1 (orta = düzlem). Aynı iz/yenme/uç mantığı; parlaklık ortada, iki yana yumuşak söner; lifler yay boyunca akar.",
+ "builtin": false,
+ "unityName": "UnityPreview/kesik_hafif_kabuk",
+ "properties": [
+  {
+   "name": "_Glow",
+   "type": "hdrColor",
+   "label": "Renk",
+   "default": {
+    "color": "#a9ccff",
+    "intensity": 1.2
+   }
+  },
+  {
+   "name": "_Core",
+   "type": "hdrColor",
+   "label": "Orta çizgi",
+   "default": {
+    "color": "#eef6ff",
+    "intensity": 1.2
+   }
+  },
+  {
+   "name": "_Spread",
+   "type": "range",
+   "label": "Yayılma",
+   "min": 0.05,
+   "max": 0.5,
+   "default": 0.22
+  },
+  {
+   "name": "_Tail",
+   "type": "range",
+   "label": "İz uzunluğu",
+   "min": 0.1,
+   "max": 1,
+   "default": 0.75
+  },
+  {
+   "name": "_Eat",
+   "type": "range",
+   "label": "Kuyruktan yenme başı",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.08
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Lif sıklığı",
+   "min": 2,
+   "max": 40,
+   "default": 10
+  },
+  {
+   "name": "_Scroll",
+   "type": "range",
+   "label": "Lif akışı",
+   "min": 0,
+   "max": 10,
+   "default": 3
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 1
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float head = i.custom.x;\n    float life = 1.0 - i.color.a;\n    float eat = saturate((life - _Eat) / max(1.0 - _Eat, 0.001));\n    float tailS = max(head - _Tail, eat * 1.02);\n    float k = saturate((u - tailS) / max(head - tailS, 0.001));\n    float m = smoothstep(0.0, 0.08, k) * (1.0 - smoothstep(head, head + 0.015, u)) * step(tailS, u);\n    float tipT = 1.0 - smoothstep(0.78, 1.0, u / max(head, 0.001));\n    float spread = _Spread * (0.3 + 0.7 * k) * (0.2 + 0.8 * tipT);\n    float dv = abs(v - 0.5);\n    float prof = exp(-dv * dv / max(spread * spread, 0.0001) * 2.0);\n    float core = exp(-dv * dv / max(spread * spread * 0.04, 0.00001) * 2.0);\n    float fib = 0.55 + 0.45 * vnoise(float2(u * _Fiber - i.time * _Scroll, v * 6.0));\n    float er = vnoise(float2(u * 14.0, v * 5.0 - i.time));\n    float erodeM = saturate((er + 0.55 - life * 1.1) * 5.0);\n    float fadeAll = 1.0 - smoothstep(0.55, 1.0, life);\n    float3 col = (_Glow.rgb * prof * fib + _Core.rgb * core) * pow(k, 1.6) * m * erodeM * fadeAll * i.color.rgb;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}
