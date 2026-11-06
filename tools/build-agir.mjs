@@ -165,8 +165,8 @@ function build(key, variant) {
     const proj = (a) => { const r = a * D2R; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
     const pS = proj(0), pE = proj(A); let cx = pE[0] - pS[0], cy = pE[1] - pS[1]; const cl = Math.hypot(cx, cy) || 1; cx /= cl; cy /= cl;
     if (cy > 0) { cx = -cx; cy = -cy; }                                          // yerel X aşağı uca baksın (o uç yere değer)
-    // bombe önde (+Z) ama arkadan (oyun kamerası) da hilal okunsun diye kiriş ekseni etrafında yukarı doğru eğik
-    const lean = 35 * D2R; let ux = -cy, uy = cx; if (uy < 0) { ux = -ux; uy = -uy; }
+    // bombe tam önde (+Z): hilalin simetri ekseni gidiş yönü (kullanıcı: yana yatık olmasın; lean 35° denendi, "hafif yan" bulundu)
+    const lean = 0 * D2R; let ux = -cy, uy = cx; if (uy < 0) { ux = -ux; uy = -uy; }
     const LX = [cx, cy, 0], LY = [Math.sin(lean) * ux, Math.sin(lean) * uy, Math.cos(lean)], LZ = cross(LX, LY), rot = toEuler(LX, LY, LZ);
     const at3 = (C, a) => { const r = a * D2R; return C.map((c, i) => c + HR * (Math.cos(r) * LX[i] + Math.sin(r) * LY[i])); };
     const samples = Array.from({ length: 71 }, (_, k) => from + span * k / 70);
