@@ -87,7 +87,7 @@ function build(key, variant) {
       emitters: [
         arc('bukulme', M('y', 'bukulme'), { blend: 'distortion', order: 0, life: 0.7, extra: { renderer: { distortion: { mode: 'noise', strength: 0.035, frequency: 8, scroll: [0, 2] } } } }),
         arc('iz', M('y', 'iz'), { order: 3, life: 0.3, extra: light(1.6) }),
-        arc('yarik_ic', M('y', 'ic'), { blend: 'alpha', order: 5, life: 0.9, cy: open }),
+        // yarığın içi yok: koyu/siyah boşluk Karanlık elementinin dili (kullanıcı); yarık kenar + çatlak + bükülmeyle okunur
         arc('yarik_kenar', M('y', 'kenar'), { order: 6, life: 0.9, cy: open }),
         onArc('cakma', { delay: tHit, life: [0.14, 0.14], speed: [0, 0], size: [0.6, 0.6], color: ['#cfe4ff', '#cfe4ff'], max: 2, count: [1, 1], r: rr,
           arc: 2, from: hitAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
@@ -97,9 +97,9 @@ function build(key, variant) {
         onArc('zerre', { delay: tHit, life: [0.3, 0.6], speed: [0.2, 0.8], size: [0.045, 0.09], srot: [0, 45], color: ['#dcecff', '#8fb8ff'], gravity: -0.05,
           max: 50, count: [30, 40], r: rr, thick: 0.15, arc: +(A * 0.7).toFixed(1), from: +(A * 0.25).toFixed(1), rand: 0.6, drag: 2,
           alpha: [[0, 0], [0.08, 1], [0.35, 0.5], [0.45, 1], [1, 0]], mat: 'zerre_hafif', order: 6 }),
-        onArc('duman', { delay: tHit + 0.15, life: [0.5, 0.9], speed: [0.2, 0.5], size: [0.35, 0.7], srot: [0, 360], color: ['#c8d0e8', '#b8bde0'], max: 14, count: [8, 10],
+        onArc('sis', { delay: tHit + 0.15, life: [0.5, 0.9], speed: [0.2, 0.5], size: [0.35, 0.7], srot: [0, 360], color: ['#ffffff', '#e8f0ff'], max: 14, count: [8, 10],
           r: rr, thick: 0.1, arc: +(A * 0.6).toFixed(1), from: +(A * 0.3).toFixed(1), rand: 0.7, noise: 0.25, angv: [-40, 40], sizeCurve: [[0, 0.6], [1, 1.4]],
-          blend: 'alpha', mat: `agir_${key}_duman`, order: 1 }),
+          blend: 'alpha', mat: M('y', 'sis'), order: 1 }),
       ],
     };
   }

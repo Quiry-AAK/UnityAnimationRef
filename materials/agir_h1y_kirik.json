@@ -3,16 +3,16 @@
  "name": "agir_h1y_kirik",
  "shader": "UnityPreview/kirik_parca",
  "values": {
-  "_Stretch": 2.0,
-  "_Fill": "#060c22",
+  "_Fill": "#7f9fd0",
   "_Facet": {
-   "color": "#5f86d0",
-   "intensity": 1.0
+   "color": "#d4e6ff",
+   "intensity": 1.4
   },
   "_Rim": {
-   "color": "#cfeaff",
-   "intensity": 3.0
-  }
+   "color": "#f2f8ff",
+   "intensity": 2.6
+  },
+  "_Stretch": 2
  },
  "renderQueue": -1
 }
