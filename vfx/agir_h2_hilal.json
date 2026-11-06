@@ -551,6 +551,1194 @@
    }
   },
   {
+   "name": "iz1",
+   "position": [
+    0.12,
+    1.011,
+    2.05
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.495,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz2",
+   "position": [
+    0.12,
+    1.011,
+    2.5
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.545,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz3",
+   "position": [
+    0.12,
+    1.011,
+    2.95
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.595,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz4",
+   "position": [
+    0.12,
+    1.011,
+    3.4
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.645,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz5",
+   "position": [
+    0.12,
+    1.011,
+    3.85
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.695,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz6",
+   "position": [
+    0.12,
+    1.011,
+    4.3
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.745,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz7",
+   "position": [
+    0.12,
+    1.011,
+    4.75
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.795,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz8",
+   "position": [
+    0.12,
+    1.011,
+    5.2
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.845,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "iz9",
+   "position": [
+    0.12,
+    1.011,
+    5.65
+   ],
+   "rotation": [
+    36.549,
+    -90,
+    -90
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.895,
+    "startLifetime": [
+     0.3,
+     0.5
+    ],
+    "startSpeed": [
+     0.05,
+     0.25
+    ],
+    "startSize": [
+     0.14,
+     0.28
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eaf2ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 6
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       2,
+       4
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.066,
+    "radiusThickness": 0.3,
+    "arc": 140,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     20
+    ],
+    "randomDirection": 0.5
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -50,
+     50
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h2h_wisp",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
    "name": "temas",
    "position": [
     0.847,

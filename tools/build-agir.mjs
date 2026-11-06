@@ -184,6 +184,18 @@ function build(key, variant) {
       return e;
     };
     const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 7, scroll: [0, 3] } } });
+    // hacim: aynı hilal, ileri eksen (LY) etrafında ±18° döndürülmüş iki ince kopya (arkadan bakınca da dolgun)
+    const tilted = (deg) => { const r = deg * D2R; const X2 = LX.map((x, k) => x * Math.cos(r) + LZ[k] * Math.sin(r)); return toEuler(X2, LY, cross(X2, LY)); };
+    const moonT = (name, mat, deg) => { const e = moon(name, mat, 'additive', 3); e.rotation = tilted(deg); return e; };
+    // rüzgâr izi: hilal her adımda bulunduğu yerde, hilal boyunca geride kalan hafif tutamlar bırakır
+    const wake = [];
+    for (let k = 1; k * 0.45 < spd * fly * 0.85; k++) {
+      const dz = k * 0.45, pos = [C[0], C[1], +(C[2] + dz).toFixed(3)];
+      const e = emitAt(`iz${k}`, pos, rot, { delay: +(t1 + dz / spd).toFixed(4), life: [0.3, 0.5], speed: [0.05, 0.25], size: [0.14, 0.28], srot: [0, 360], color: ['#ffffff', '#eaf2ff'],
+        max: 6, count: [2, 4], r: +(HR * 0.82).toFixed(3), thick: 0.3, arc: span, from, rand: 0.5, noise: 0.3, angv: [-50, 50], sizeCurve: [[0, 0.6], [1, 1.4]],
+        mat: M('h', 'wisp'), order: 2 });
+      wake.push(e);
+    }
     // zemindeki iz (hilalin alçak ucu geçtikçe)
     const steps = [], stepLen = 0.42, travel = spd * fly * 0.9;
     for (let k = 0; k * stepLen < travel; k++) {
@@ -212,6 +224,7 @@ function build(key, variant) {
           r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.8, noise: 0.3, angv: [-60, 60], sizeCurve: [[0, 0.5], [1, 1.5]], blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
         moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.06)),
         moon('hilal_ruzgar', M('h', 'ruzgar'), 'additive', 4, light(1.8, 4)),
+        ...wake,
         contactGlow,
         ...steps,
       ],

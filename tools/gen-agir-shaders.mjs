@@ -443,9 +443,9 @@ Object.assign(shaders, {
 });
 
 shaders.ruzgar_hilal = {
-  description: 'Rüzgâr hilali (additive, mesh yay; dış kenar V=1 gidiş yönündeki bombeli ön): sıkışmış havadan hilal. Önde yumuşak, parlak hava cephesi; gövdede yay boyunca hızla akan çok sayıda ince, kavisli rüzgâr çizgisi (farklı yarıçaplarda, kopuk, kalınlığı dalgalı); çok şeffaf iç pus; uçlarda çizgiler dağınık tutamlara ayrılır. Hafif saldırı kesiğinin dolu mavi gövdesi/beyaz kenarı değil. life = 1 - alfa.',
-  properties: [P.hdr('_Front', 'Ön cephe', '#e8f4ff', 1.8), P.hdr('_Wind', 'Rüzgâr çizgileri', '#bfe0ff', 1.6), P.hdr('_Haze', 'İç pus', '#6f9cf0', 0.35),
-    P.rng('_Width', 'Gövde (V)', 0.1, 0.9, 0.6), P.rng('_Lines', 'Çizgi sayısı', 2, 24, 11), P.rng('_Speed', 'Akış', 0, 20, 7)],
+  description: 'Rüzgâr hilali (additive, mesh yay; dış kenar V=1 gidiş yönündeki bombeli ön): sıkışmış havadan hilal. Önde keskin, ince, parlak hava cephesi (uçlara doğru incelir), arkasında içe doğru sönen yumuşak pus; pusun içinde yay boyunca akan düşük kontrastlı, uzamış rüzgâr dokusu (çizgili/barkod değil); arka (iç) kenar gürültüyle tutam tutam dağılır; uçlar kıvrılan tutamlarla biter. Hafif saldırı kesiğinin dolu mavi gövdesi değil: beyaz → soluk camgöbeği → açık çelik mavisi, çok şeffaf. life = 1 - alfa.',
+  properties: [P.hdr('_Front', 'Ön cephe', '#f2f8ff', 2.4), P.hdr('_Body', 'Pus', '#bcdcff', 0.9), P.hdr('_Deep', 'İç pus', '#7aa4e8', 0.35),
+    P.rng('_Width', 'Gövde (V)', 0.1, 0.9, 0.55), P.rng('_EdgeW', 'Cephe kalınlığı (V)', 0.003, 0.08, 0.018), P.rng('_Speed', 'Akış', 0, 20, 6)],
   renderState: rs('additive', 2),
   common: NOISE,
   fragment: `float4 frag(UPEInput i)
@@ -453,29 +453,25 @@ shaders.ruzgar_hilal = {
     float u = i.uv.x;
     float v = i.uv.y;
     float life = 1.0 - i.color.a;
-    float ends = pow(saturate(sin(3.14159 * u)), 0.7);
-    float w = _Width * ends * (1.0 - life * 0.35);
-    float inner = 1.0 - w;
-    float d = saturate((v - inner) / max(w, 0.001));            // 0 iç → 1 ön
-    float inBand = smoothstep(inner - 0.03, inner + 0.08, v) * (1.0 - smoothstep(0.985, 1.0, v));
-    // rüzgâr çizgileri: d uzayında _Lines şerit; her şerit yay boyunca akan gürültüyle kopuk, kalınlığı ve konumu dalgalı
-    float ld = d * _Lines + (vnoise(float2(u * 6.0 - i.time * 2.0, d * 3.0)) - 0.5) * 0.9;
-    float li = floor(ld);
-    float lf = frac(ld) - 0.5;
-    float seed = hash21(float2(li, 7.0));
-    float thick = 0.06 + 0.12 * vnoise(float2(u * 9.0 + seed * 20.0, li));
-    float line = 1.0 - smoothstep(thick * 0.5, thick, abs(lf));
-    float flow = vnoise(float2(u * (10.0 + seed * 8.0) - i.time * _Speed * (0.7 + seed * 0.6), li * 3.1));
-    float seg = smoothstep(0.35, 0.7, flow);
-    float tipWisp = smoothstep(0.0, 0.25, ends);                // uçlarda çizgiler incelip dağılır
-    float wind = line * seg * tipWisp * (0.35 + 0.65 * d);
-    float front = exp(-abs(v - 0.975) / 0.02) * ends;
-    float haze = inBand * pow(d, 1.5) * (0.6 + 0.4 * fbm(float2(u * 5.0 - i.time, v * 4.0)));
-    float er = fbm(float2(u * 8.0 + life * 3.0, v * 6.0));
-    float erode = saturate((er + 0.65 - life * 1.15) * 4.0);
-    float fade = (1.0 - smoothstep(0.55, 1.0, life)) * smoothstep(0.0, 0.06, life);
-    float3 col = (_Front.rgb * front + _Wind.rgb * wind * inBand + _Haze.rgb * haze) * erode * fade * i.color.rgb;
-    return float4(col, 1.0);
+    float ends = pow(saturate(sin(3.14159 * u)), 0.65);
+    // akış dokusu: yay boyunca uzamış (u yavaş, v hızlı değişen) fbm, zamanla uca doğru akar
+    float2 fq = float2(u * 4.0 - i.time * _Speed * 0.35, v * 18.0);
+    float flow = fbm(fq + float2(0.0, fbm(fq * 0.5) * 1.5));
+    float w = _Width * ends * (1.0 - life * 0.3);
+    // arka (iç) kenar: tutam tutam dağılan sınır
+    float wisp = fbm(float2(u * 14.0 - i.time * 2.0, life * 2.0)) - 0.5;
+    float inner = 1.0 - w * (0.85 + wisp * 0.6);
+    float body = smoothstep(inner - 0.06, inner + 0.2, v) * (1.0 - smoothstep(0.975, 1.0, v));
+    float d = saturate((v - inner) / max(1.0 - inner, 0.001));
+    float frontW = _EdgeW * (0.35 + 0.65 * ends);
+    float front = exp(-pow((v - (0.985 - frontW)) / max(frontW, 0.001), 2.0)) * smoothstep(0.02, 0.2, ends);
+    float glow = exp(-max(0.99 - v, 0.0) / 0.06) * ends * 0.35;
+    float3 col = lerp(_Deep.rgb, _Body.rgb, pow(d, 1.4)) * body * (0.55 + 0.6 * flow) * pow(d, 0.8);
+    col += _Front.rgb * (front + glow);
+    float er = fbm(float2(u * 7.0 + life * 2.5, v * 5.0));
+    float erode = saturate((er + 0.7 - life * 1.15) * 3.5);
+    float fade = (1.0 - smoothstep(0.6, 1.0, life)) * smoothstep(0.0, 0.05, life);
+    return float4(col * erode * fade * i.color.rgb, 1.0);
 }
 `,
 };
