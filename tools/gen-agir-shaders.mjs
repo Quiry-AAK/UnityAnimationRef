@@ -509,6 +509,54 @@ shaders.hilal_enerji = {
 `,
 };
 
+shaders.hilal_hacim = {
+  description: 'Hacimli enerji hilali (additive, renderer.mesh shape "hilal": U yay boyunca uç→uç, V enine iç 0 → ön 1). Işıkla değil çizimle okunur: önde keskin (bulanık değil) ince beyaz kenar ve hemen arkasında ince ikinci bir pah çizgisi; gövde yarı saydam mavi, içinde yay boyunca akan ince parlak lifler (sırtlı gürültü, kıvrık); iç kenar keskin sınırlı biçimde liflere ayrılıp çözülür, çözülme sınırında ince ışıltı; uçlar sivri, kenar uca doğru incelir. Yalnız kameraya dönük yüz çizilir (cull back), tek katman. life = 1 - alfa.',
+  properties: [P.hdr('_Front', 'Ön kenar', '#f4faff', 1.4), P.hdr('_Body', 'Lifler', '#7cc0ff', 0.9), P.hdr('_Inner', 'Gövde', '#2a5cc8', 0.6),
+    P.hdr('_Rim', 'Hacim halesi', '#cfe8ff', 0.55), P.rng('_RimPow', 'Hale keskinliği', 0.5, 8, 3.0), P.rng('_Flow', 'Akış', 0, 10, 3), P.rng('_Edge', 'Ön kenar kalınlığı', 0.005, 0.2, 0.035)],
+  renderState: { ...rs('additive', 2), cull: 'back' },
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float c = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float t = i.time;
+    float3 N = normalize(i.normalWS);
+    float3 Vd = normalize(i.viewDirWS);
+    float facing = abs(dot(N, Vd));
+    float sU = sin(3.14159 * u);
+    // kıvrık enine koordinat: lifler düz çizgi olmasın
+    float warp = fbm(float2(u * 2.5 - t * _Flow * 0.25, c * 1.5)) - 0.5;
+    float cc = c + warp * 0.14;
+    // sırtlı gürültü: ince, keskin, yay boyunca akan lifler
+    float f1 = vnoise(float2(u * 3.0 - t * _Flow * 0.6, cc * 14.0));
+    float f2 = vnoise(float2(u * 6.0 - t * _Flow, cc * 28.0 + 5.3));
+    float fil = pow(1.0 - abs(2.0 * f1 - 1.0), 7.0) * 0.8 + pow(1.0 - abs(2.0 * f2 - 1.0), 12.0) * 0.5;
+    // ön kenar: keskin ana hat + ince pah çizgisi + dar hale
+    float d = 1.0 - c;
+    float ew = _Edge * (0.7 + 0.6 * vnoise(float2(u * 10.0 - t * _Flow * 1.2, 7.0))) * (0.35 + 0.65 * sU);
+    float edge = 1.0 - smoothstep(ew * 0.55, ew, d);
+    float bevel = exp(-pow((d - ew * 2.4) / max(ew * 0.35, 0.001), 2.0)) * 0.55;
+    float halo = exp(-d / max(ew * 3.0, 0.001)) * 0.3;
+    // iç kenardan çözülme: keskin sınır + sınırda ince ışıltı
+    float dn = fbm(float2(u * 5.0 - t * 0.8, c * 3.0));
+    float thr = c * 1.2 + 0.12 + (dn - 0.5) * 0.5 - smoothstep(0.3, 1.0, life) * 0.9 - (1.0 - sU) * 0.25;
+    float alive = smoothstep(0.2, 0.25, thr);
+    float cut = smoothstep(0.14, 0.2, thr) * (1.0 - smoothstep(0.24, 0.32, thr));
+    float3 col = _Inner.rgb * (0.3 + 0.2 * facing) * smoothstep(0.1, 0.8, c) * alive;
+    col += _Body.rgb * fil * alive * smoothstep(0.15, 0.75, c);
+    float graze = smoothstep(0.03, 0.45, facing);              // kenardan (arkadan) bakışta yüzey yığılıp beyaza patlamasın
+    col += _Rim.rgb * pow(1.0 - facing, _RimPow) * alive * graze;
+    col += _Body.rgb * cut * 0.45;
+    float tipE = smoothstep(0.0, 0.04, u) * smoothstep(1.0, 0.96, u);
+    float sil = 1.0 - 0.85 * smoothstep(0.15, 0.8, facing);   // ön kenar ancak siluette ince hat; önden bakınca geniş alana yayılmasın
+    col += (_Front.rgb * (edge + bevel) + _Body.rgb * halo) * tipE * sil;
+    float fade = (1.0 - smoothstep(0.55, 1.0, life)) * smoothstep(0.0, 0.04, life);
+    return float4(col * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
 shaders.yer_cizik = {
   description: 'Zemindeki çizik (additive, yatay quad): hilalin yere değdiği yerde kalan parlak oluk; uzunlamasına (V boyunca) uzanan, kenarları gürültüyle düzensiz, ortası beyaz-camgöbeği sıcak, dışa doğru soğuk mavi; uçları yumuşak (art arda dizilen quad\'lar kesintisiz iz oluşturur); yaşla soğur ve incelir (life = 1 - alfa). Siyah/yanık değil.',
   properties: [P.hdr('_Hot', 'Sıcak çekirdek', '#eef6ff', 2.4), P.hdr('_Cool', 'Soğuk kenar', '#4a7ce8', 1.0), P.rng('_Width', 'Genişlik (U)', 0.02, 0.5, 0.16), P.rng('_Rough', 'Kenar düzensizliği', 0, 1, 0.5)],

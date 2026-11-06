@@ -10,8 +10,12 @@ const D2R = Math.PI / 180;
 //  cylinder: Y ekseni etrafında, taban y=0, tepe y=height; alt yarıçap outerRadius, üst yarıçap innerRadius (koni/hortum),
 //            açı 0 = +X, +Z'ye doğru. U = açı boyunca, V = alttan üste.
 //  plane:    XY düzleminde 1×1 kare (merkez orijin). U = +X, V = +Y.
+//  hilal:    hacimli 3B hilal: XY düzleminde yay (açı 0 = +X, +Y'ye doğru `angle`), ön (dış) kenar outerRadius, ortadaki
+//            en geniş iç kenar innerRadius (uçlarda genişlik 0), Z yönünde mercek kesitli kalınlık (en fazla `height`, kenarlara
+//            ve uçlara doğru 0). Kapalı yüzey (üst + alt). U = yay boyunca 0→1, V = enine iç 0 → dış/ön 1 (üst ve alt yüzde aynı).
 // Normaller -Z (arc/plane: Unity Local hizalı quad gibi -Z tarafından aynasız görünür), silindirde dışa.
 export function proceduralMesh(m) {
+  if (m.shape === 'hilal') return crescentMesh(m);
   const seg = Math.max(1, Math.round(m.segments || 1)), rings = Math.max(1, Math.round(m.rings || 1));
   const nv = (seg + 1) * (rings + 1);
   const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = new Float32Array(nv * 2);
@@ -34,6 +38,40 @@ export function proceduralMesh(m) {
   for (let i = 0; i < seg; i++) for (let j = 0; j < rings; j++) {
     const a = id(i, j), b = id(i + 1, j), c = id(i + 1, j + 1), d = id(i, j + 1);
     I.set([a, b, c, a, c, d], t); t += 6;
+  }
+  return { positions: P, normals: N, uvs: UV, indices: I };
+}
+
+// hacimli hilal (bkz. üstteki açıklama): seg × rings ızgara; rings kesit çevresini dolaşır (üst yüz iç→dış, alt yüz dış→iç)
+function crescentMesh(m) {
+  const seg = Math.max(4, Math.round(m.segments || 64)), rings = Math.max(4, Math.round(m.rings || 16)) * 2;
+  const R = m.outerRadius, W = Math.max(0.001, m.outerRadius - m.innerRadius), T = (m.height || 0.3) * 0.5, A = m.angle * D2R;
+  const pt = (u, v) => {
+    const side = v <= 0.5 ? 1 : -1, c = v <= 0.5 ? v * 2 : (1 - v) * 2;
+    const su = Math.sin(Math.PI * u), w = W * Math.pow(su, 0.9), r = R - w * (1 - c);
+    const t = T * Math.pow(su, 0.7) * Math.pow(Math.sin(Math.PI * c), 0.6);
+    const a = u * A; return [Math.cos(a) * r, Math.sin(a) * r, side * t, c];
+  };
+  const nv = (seg + 1) * (rings + 1);
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = new Float32Array(nv * 2);
+  const e = 1e-3; let k = 0;
+  for (let i = 0; i <= seg; i++) {
+    const u = i / seg;
+    for (let j = 0; j <= rings; j++, k++) {
+      const v = j / rings, p = pt(u, v);
+      const pu1 = pt(Math.min(1, u + e), v), pu0 = pt(Math.max(0, u - e), v), pv1 = pt(u, Math.min(1, v + e)), pv0 = pt(u, Math.max(0, v - e));
+      const du = [pu1[0] - pu0[0], pu1[1] - pu0[1], pu1[2] - pu0[2]], dv = [pv1[0] - pv0[0], pv1[1] - pv0[1], pv1[2] - pv0[2]];
+      let n = [du[1] * dv[2] - du[2] * dv[1], du[2] * dv[0] - du[0] * dv[2], du[0] * dv[1] - du[1] * dv[0]];
+      const nl = Math.hypot(...n);
+      n = nl > 1e-9 ? n.map((x) => -x / nl) : [0, 0, v <= 0.5 ? 1 : -1];   // du×dv içe bakar; dışa çevir
+      P.set(p.slice(0, 3), k * 3); N.set(n, k * 3); UV.set([u, p[3]], k * 2);
+    }
+  }
+  const I = new Uint32Array(seg * rings * 6); let t = 0;
+  const id = (i, j) => i * (rings + 1) + j;
+  for (let i = 0; i < seg; i++) for (let j = 0; j < rings; j++) {
+    const a = id(i, j), b = id(i + 1, j), c = id(i + 1, j + 1), d = id(i, j + 1);
+    I.set([a, c, b, a, d, c], t); t += 6;   // dışa bakan sarım (cull back yalnız yakın yüzü çizsin)
   }
   return { positions: P, normals: N, uvs: UV, indices: I };
 }

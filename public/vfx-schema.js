@@ -176,7 +176,7 @@ export const MODULES = [
     ['velocityScale', 'num', 'Uzama: hız çarpanı', { min: 0, max: 5, step: 0.01 }],
     ['sortingOrder', 'int', 'Çizim sırası', { min: -100, max: 100, step: 1 }],
     ['mesh', 'group', 'Mesh', { when: { mode: ['mesh'] }, fields: [
-      ['shape', 'enum', 'Şekil', { options: [['arc', 'Yay / halka dilimi (kesik)'], ['cylinder', 'Silindir / koni kesiti'], ['plane', 'Düzlem (1×1)'], ['file', 'Dosya (meshes/ GLB/OBJ)']] }],
+      ['shape', 'enum', 'Şekil', { options: [['arc', 'Yay / halka dilimi (kesik)'], ['cylinder', 'Silindir / koni kesiti'], ['plane', 'Düzlem (1×1)'], ['hilal', 'Hacimli 3B hilal'], ['file', 'Dosya (meshes/ GLB/OBJ)']] }],
       ['file', 'meshfile', 'Dosya (meshes/)'],
       ['innerRadius', 'num', 'İç yarıçap (m) · silindirde üst', { min: 0, max: 50, step: 0.01 }],
       ['outerRadius', 'num', 'Dış yarıçap (m) · silindirde alt', { min: 0, max: 50, step: 0.01 }],

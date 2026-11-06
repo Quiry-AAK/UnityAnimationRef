@@ -174,7 +174,8 @@ function build(key, variant) {
     const C = [0.12, +(0.03 - at3([0, 0, 0], low)[1]).toFixed(3), 1.6];           // en alçak nokta yerden 3 cm
     const contact = at3(C, low).map((c, i) => +(i === 1 ? 0.03 : c).toFixed(3));
     const t1 = +(tEnd - 0.005).toFixed(4);
-    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.2).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
+    // hacimli 3B hilal: ön kenar HR, ortada ~0,85 m genişlik, gidiş yönüne dik en fazla 0,5 m kalınlık (düz yüzey değil)
+    const moonMesh = { shape: 'hilal', file: '', innerRadius: +(HR - 0.85).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 96, rings: 14 };
     const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
     const fwd = (sp) => ({ enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
     const moon = (name, mat, blend, order, extra = {}) => {
@@ -230,8 +231,7 @@ function build(key, variant) {
           r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.8, noise: 0.3, angv: [-60, 60], sizeCurve: [[0, 0.5], [1, 1.5]], blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
         moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.06)),
         // dolu enerji hilali + ön kenarı saran dik bant (arkadan bakınca da kalın okunsun; yatık katman yelpazesi düz çizgi gibi açıldı)
-        moon('hilal', M('h', 'enerji'), 'additive', 5, light(2.2, 4)),
-        hilalKabuk,
+        moon('hilal', M('h', 'enerji'), 'additive', 5, light(0.7, 2.2)),
         ...wake,
         contactGlow,
         ...steps,
