@@ -1,0 +1,29 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1y_iz",
+ "shader": "UnityPreview/kesik_agir",
+ "values": {
+  "_Width": 0.05,
+  "_CoreW": 0.014,
+  "_Core": {
+   "color": "#eef6ff",
+   "intensity": 1.8
+  },
+  "_ColA": {
+   "color": "#6fd0ff",
+   "intensity": 1.1
+  },
+  "_ColB": {
+   "color": "#3a62e0",
+   "intensity": 0.8
+  },
+  "_ColC": {
+   "color": "#5a2cc0",
+   "intensity": 0.6
+  },
+  "_Gain": 0.7,
+  "_Tail": 0.7,
+  "_Eat": 0.15
+ },
+ "renderQueue": -1
+}

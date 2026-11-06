@@ -1,0 +1,17 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1k_kor",
+ "shader": "UnityPreview/kutle_kenar",
+ "values": {
+  "_EdgeW": 0.11,
+  "_Hot": {
+   "color": "#eaf6ff",
+   "intensity": 3.0
+  },
+  "_Warm": {
+   "color": "#4a8cff",
+   "intensity": 2.2
+  }
+ },
+ "renderQueue": -1
+}

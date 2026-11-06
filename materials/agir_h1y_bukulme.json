@@ -1,0 +1,12 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1y_bukulme",
+ "shader": "UnityPreview/kesik_hafif_bukulme",
+ "values": {
+  "_Width": 0.5,
+  "_Tail": 0.9,
+  "_Eat": 0.25,
+  "_Freq": 10
+ },
+ "renderQueue": -1
+}

@@ -212,6 +212,236 @@ ${blend === 'alpha' ? '    return float4(col * i.color.rgb, alpha);' : '    retu
 }
 `,
 });
+// ───────────── Varyant shader'ları (H1: yarık / dalga / kütle)
+const VORO = `
+float2 hash22(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
+    return frac(sin(p) * 43758.5453);
+}
+
+// hücre kenarına uzaklık (çatlak çizgileri için); girdi gürültüyle bükülürse çatlaklar kavisli olur
+float voroEdge(float2 x)
+{
+    float2 n = floor(x);
+    float2 f = frac(x);
+    float md = 8.0;
+    float2 mr = float2(0.0, 0.0);
+    float2 mg = float2(0.0, 0.0);
+    for (int j = -1; j <= 1; j++)
+    {
+        for (int i = -1; i <= 1; i++)
+        {
+            float2 g = float2(float(i), float(j));
+            float2 r = g + hash22(n + g) - f;
+            float d = dot(r, r);
+            if (d < md) { md = d; mr = r; mg = g; }
+        }
+    }
+    md = 8.0;
+    for (int j2 = -2; j2 <= 2; j2++)
+    {
+        for (int i2 = -2; i2 <= 2; i2++)
+        {
+            float2 g2 = mg + float2(float(i2), float(j2));
+            float2 r2 = g2 + hash22(n + g2) - f;
+            float2 dr = r2 - mr;
+            if (dot(dr, dr) > 0.00001) { md = min(md, dot(0.5 * (mr + r2), normalize(dr))); }
+        }
+    }
+    return md;
+}
+`;
+// yarık geometrisi: vc merkez çizgisi (V), hw yarı genişlik; açıklık i.custom.y (0 kapalı → 1 tam açık), iz kesik_agir ile aynı
+const RIFT = `
+float2 riftShape(float u, float v, float3 tr, float open, float t)
+{
+    float k = saturate(tr.x);
+    float lens = (0.35 + 0.65 * exp(-pow((u - _Hit) / 0.18, 2.0))) * smoothstep(0.0, 0.15, k) * tr.z;
+    float wob = (vnoise(float2(u * 30.0, t * 2.0)) - 0.5) * 0.5 + (vnoise(float2(u * 90.0, 3.0)) - 0.5) * 0.25;
+    float hw = _Open * open * lens * (1.0 + wob);
+    float dv = abs(v - _Center);
+    return float2(dv, hw);
+}
+`;
+const propsRift = [P.rng('_Center', 'Yarık merkezi (V)', 0.5, 1, 0.9), P.rng('_Open', 'Açıklık (V)', 0.005, 0.3, 0.12), P.rng('_Hit', 'En geniş yer (yay kesri)', 0, 1, 0.85)];
+Object.assign(shaders, {
+  yarik_ic: {
+    description: 'Yarığın içi (alfa, mesh yay): havada açılan derin, koyu boşluk; içinde yavaş dönen mor-lacivert girdap. Açıklık i.custom.y, iz/açılma i.custom.x (kesik_agir ile aynı).',
+    properties: [P.col('_Void', 'Boşluk', '#02030c'), P.hdr('_Swirl', 'İç girdap', '#2a1e6a', 1), ...propsRift, ...trailProps],
+    renderState: rs('alpha', 1),
+    common: NOISE + TRAIL + RIFT,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float3 tr = trail(u, i.custom.x, life);
+    float2 rs2 = riftShape(u, v, tr, i.custom.y, i.time);
+    float inside = 1.0 - smoothstep(rs2.y * 0.7, rs2.y, rs2.x);
+    float sw = fbm(float2(u * 14.0 - i.time * 0.8, (v - _Center) / max(rs2.y, 0.002) * 1.5 + i.time * 0.5));
+    float3 col = lerp(_Void.rgb, _Swirl.rgb, smoothstep(0.45, 0.85, sw) * 0.8);
+    float a = inside * tr.y * step(0.0005, rs2.y);
+    return float4(col, saturate(a * 0.96));
+}
+`,
+  },
+  yarik_kenar: {
+    description: 'Yarığın kenarı (additive, mesh yay): boşluğun iki kenarında beyaz-camgöbeği parlak dudak, kenardan dışa kavisli çatlaklar (bükülmüş hücre kenarları; düz çizgi değil) ve kenara yakın ışıma. Çatlaklar açıklıkla uzar, sonra söner.',
+    properties: [P.hdr('_Lip', 'Kenar', '#eaf6ff', 2.6), P.hdr('_Crack', 'Çatlak', '#8fd0ff', 2), P.hdr('_Glow', 'Işıma', '#3c6cff', 0.9),
+      P.rng('_Reach', 'Çatlak erimi (V)', 0.01, 0.4, 0.16), P.rng('_CellsU', 'Çatlak sıklığı (yay)', 4, 120, 46), P.rng('_CellsV', 'Çatlak sıklığı (V)', 2, 40, 10), ...propsRift, ...trailProps],
+    renderState: rs('additive', 2),
+    common: NOISE + VORO + TRAIL + RIFT,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float open = i.custom.y;
+    float3 tr = trail(u, i.custom.x, life);
+    float2 rs2 = riftShape(u, v, tr, open, i.time);
+    float outside = rs2.x - rs2.y;
+    float lip = exp(-max(outside, 0.0) / 0.006) * step(-0.002, outside) * step(0.0005, rs2.y);
+    float2 q = float2(u * _CellsU, v * _CellsV);
+    q += (float2(fbm(q * 0.35 + 2.0), fbm(q * 0.35 + 7.0)) - 0.5) * 1.6;
+    float e = voroEdge(q);
+    float reach = _Reach * open * (0.4 + 0.6 * saturate(tr.x));
+    float near = 1.0 - smoothstep(0.0, max(reach, 0.001), outside);
+    float crack = (1.0 - smoothstep(0.0, 0.06, e)) * near * step(0.0, outside) * step(0.0005, rs2.y);
+    float glow = exp(-max(outside, 0.0) / max(reach * 0.5, 0.004)) * 0.45 * step(0.0005, rs2.y) * step(0.0, outside);
+    float fade = 1.0 - smoothstep(0.55, 0.95, life);
+    float3 col = (_Lip.rgb * lip + _Crack.rgb * crack + _Glow.rgb * glow) * tr.y * fade * i.color.rgb;
+    return float4(col, 1.0);
+}
+`,
+  },
+  kirik_parca: {
+    description: 'Yarıktan kopan kırık parçası (alfa, quad): 3 rastgele kesme düzleminin kesişimi olan köşeli camsı kıymık (kenarlar çok hafif kavisli, her parçacıkta farklı), yüzeyleri farklı parlaklıkta (faset), ince parlak camgöbeği kenar; yaşla söner.',
+    properties: [P.col('_Fill', 'İç', '#060c22'), P.hdr('_Facet', 'Faset ışığı', '#5f86d0', 1.0), P.hdr('_Rim', 'Kenar', '#cfeaff', 3.0), P.rng('_Stretch', 'Uzunluk', 1, 4, 2.2)],
+    renderState: rs('alpha', 3),
+    common: NOISE,
+    fragment: `float4 frag(UPEInput i)
+{
+    float2 p = i.uv * 2.0 - 1.0;
+    float life = 1.0 - i.color.a;
+    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 50.0;
+    p.x *= _Stretch * (0.8 + 0.4 * hash21(float2(seed, 1.0)));
+    float edge = 10.0;
+    float facet = 0.0;
+    for (int k = 0; k < 3; k++)
+    {
+        float fk = float(k);
+        float th = (fk + hash21(float2(fk, seed)) * 0.6) * 2.0944;
+        float2 n = float2(cos(th), sin(th));
+        float2 t = float2(-n.y, n.x);
+        float d = 0.35 + 0.45 * hash21(float2(fk + 7.0, seed)) + 0.04 * sin(dot(p, t) * 4.0 + seed);
+        float e = d - dot(p, n);
+        if (e < edge) { edge = e; facet = hash21(float2(fk * 3.1, seed + 2.0)); }
+    }
+    float inside = smoothstep(0.0, 0.025, edge);
+    float rim = exp(-edge / 0.03) * inside;
+    float3 col = _Fill.rgb + _Facet.rgb * (0.25 + 0.75 * facet) * saturate(edge * 2.5) + _Rim.rgb * rim * (1.0 - life * 0.7);
+    float a = inside * i.color.a;
+    return float4(col * i.color.rgb, saturate(a));
+}
+`,
+  },
+  dalga_kenar: {
+    description: 'Basınç dalgası (additive, mesh yay): ileri uçan şeffaf hilal hava bıçağı; öndeki dış kenar parlak ve ince, içe doğru sönen yumuşak gövde, gövdede kavisli hava lifleri; uçlar sivri, yaşla incelir ve söner (life = 1 - alfa).',
+    properties: [P.hdr('_Edge', 'Ön kenar', '#d8ecff', 1.6), P.hdr('_Body', 'Gövde', '#5f8fe8', 0.6), P.rng('_Width', 'Gövde (V)', 0.05, 0.8, 0.35), P.rng('_Fiber', 'Lif', 4, 80, 30)],
+    renderState: rs('additive', 2),
+    common: NOISE,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float ends = pow(saturate(sin(3.14159 * u)), 0.8);
+    float w = _Width * ends * (1.0 - life * 0.5);
+    float inner = 1.0 - w;
+    float body = smoothstep(inner - 0.02, inner + 0.15, v) * (1.0 - smoothstep(0.97, 1.0, v));
+    float d = saturate((v - inner) / max(w, 0.001));
+    float edge = exp(-abs(v - 0.975) / 0.012) * ends;
+    float fib = 0.5 + 0.5 * fbm(float2(v * _Fiber, u * 6.0 - i.time * 3.0));
+    float er = fbm(float2(u * 10.0, v * 8.0 + life * 2.0));
+    float erode = saturate((er + 0.6 - life * 1.1) * 4.0);
+    float fade = (1.0 - smoothstep(0.5, 1.0, life)) * smoothstep(0.0, 0.08, life);
+    float3 col = (_Body.rgb * body * pow(d, 1.5) * fib + _Edge.rgb * edge) * erode * fade * i.color.rgb;
+    return float4(col, 1.0);
+}
+`,
+  },
+  dalga_bukulme: {
+    description: 'Basınç dalgasının bükülmesi (renderer.blend distortion, mesh yay): rg = kayan gürültü yönü, a = dalga gövdesi maskesi (dalga_kenar ile aynı şekil); güçlü, kısa.',
+    properties: [P.rng('_Width', 'Gövde (V)', 0.05, 0.8, 0.4), P.rng('_Freq', 'Gürültü sıklığı', 1, 40, 8)],
+    renderState: rs('alpha', 0),
+    common: NOISE,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float ends = pow(saturate(sin(3.14159 * u)), 0.8);
+    float w = _Width * ends;
+    float band = smoothstep(1.0 - w, 1.0 - w * 0.5, v) * (1.0 - smoothstep(0.92, 1.0, v));
+    float2 p = float2(u * _Freq, v * _Freq * 0.5 - i.time * 2.0);
+    float2 dir = float2(vnoise(p) - 0.5, vnoise(p + float2(13.1, 4.7)) - 0.5) * 2.0;
+    return float4(dir, 0.0, saturate(band * (1.0 - life)));
+}
+`,
+  },
+  kutle: {
+    description: 'Ağır kütle gövdesi (alfa, mesh yay): kalın, yoğun, akan enerji sisi (domain-warp fbm), lacivert-siyah içinde açık mavi girdaplar; bıçakla açılır, kalınlığı uca doğru artar, sonra dağılarak (aşınarak) söner.',
+    properties: [P.col('_Dark', 'Koyu', '#040a22'), P.col('_Light', 'Girdap', '#2f56b8'), P.rng('_Width', 'Kalınlık (V)', 0.1, 1, 0.8), P.rng('_Density', 'Yoğunluk', 0, 1.5, 0.95), ...trailProps],
+    renderState: rs('alpha', 1),
+    common: NOISE + TRAIL,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float3 tr = trail(u, i.custom.x, life);
+    float k = saturate(tr.x);
+    float2 s = float2(u * 10.0 - i.time * 1.5, v * 3.5);
+    float2 wq = float2(fbm(s * 0.8 + float2(1.0, i.time * 0.4)), fbm(s * 0.8 + float2(6.0, -i.time * 0.3))) - 0.5;
+    float n = fbm(s + wq * 2.0);
+    float w = _Width * (0.35 + 0.65 * k) * tr.z;
+    float inner = 1.0 - w * (0.8 + (n - 0.5) * 0.8);
+    float band = smoothstep(inner - 0.03, inner + 0.12, v) * (1.0 - smoothstep(0.95, 1.0, v));
+    float er = saturate((n + 0.65 - life * 1.25) * 4.0);
+    float d = saturate((v - inner) / max(1.0 - inner, 0.001));
+    float3 col = lerp(_Dark.rgb, _Light.rgb, smoothstep(0.35, 0.8, n) * (0.5 + 0.5 * d));
+    float a = band * tr.y * er * _Density * (0.6 + 0.4 * n);
+    return float4(col, saturate(a));
+}
+`,
+  },
+  kutle_kenar: {
+    description: 'Kütlenin kor gibi kenarı (additive, mesh yay): dış kenarda kalın, titreşen sıcak-beyaz/camgöbeği kor bandı, kenar boyunca kıpırdayan ışık düğümleri; kütle ile aynı iz.',
+    properties: [P.hdr('_Hot', 'Kor', '#e6f4ff', 2.6), P.hdr('_Warm', 'Kor çevresi', '#4a8cff', 1.4), P.rng('_EdgeW', 'Kenar kalınlığı (V)', 0.005, 0.15, 0.05), ...trailProps],
+    renderState: rs('additive', 2),
+    common: NOISE + TRAIL,
+    fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float3 tr = trail(u, i.custom.x, life);
+    float k = saturate(tr.x);
+    float fl = vnoise(float2(u * 40.0 - i.time * 8.0, i.time * 6.0));
+    float knots = smoothstep(0.6, 0.95, vnoise(float2(u * 18.0 - i.time * 5.0, 2.0)));
+    float ew = _EdgeW * (0.4 + 0.6 * k) * (0.3 + 0.7 * tr.z) * (0.8 + 0.4 * fl);
+    float dv = 0.97 - v;
+    float hot = exp(-abs(dv) / max(ew * 0.25, 0.001));
+    float warm = exp(-max(dv, 0.0) / max(ew * 1.6, 0.001)) * step(-0.03, dv);
+    float fade = 1.0 - smoothstep(0.5, 0.95, life);
+    float3 col = (_Hot.rgb * hot * (0.7 + 0.6 * knots) + _Warm.rgb * warm * 0.6) * tr.y * (0.3 + 0.7 * pow(k, 1.2)) * fade * i.color.rgb;
+    return float4(col, 1.0);
+}
+`,
+  },
+});
+
 shaders.duman_enerji = smoke('alpha');
 shaders.duman_enerji_isik = smoke('additive');
 

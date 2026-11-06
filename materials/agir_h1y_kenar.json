@@ -1,0 +1,13 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1y_kenar",
+ "shader": "UnityPreview/yarik_kenar",
+ "values": {
+  "_Open": 0.13,
+  "_Center": 0.9,
+  "_Tail": 0.95,
+  "_Eat": 0.5,
+  "_Hit": 0.846
+ },
+ "renderQueue": -1
+}

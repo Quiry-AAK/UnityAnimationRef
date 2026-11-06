@@ -1,0 +1,18 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1d_dalga2",
+ "shader": "UnityPreview/dalga_kenar",
+ "values": {
+  "_Edge": {
+   "color": "#bcd8ff",
+   "intensity": 1.7
+  },
+  "_Body": {
+   "color": "#4a6fe0",
+   "intensity": 0.9
+  },
+  "_Width": 0.5,
+  "_Fiber": 24
+ },
+ "renderQueue": -1
+}

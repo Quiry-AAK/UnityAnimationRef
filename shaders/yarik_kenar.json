@@ -1,0 +1,118 @@
+{
+ "name": "yarik_kenar",
+ "description": "Yarığın kenarı (additive, mesh yay): boşluğun iki kenarında beyaz-camgöbeği parlak dudak, kenardan dışa kavisli çatlaklar (bükülmüş hücre kenarları; düz çizgi değil) ve kenara yakın ışıma. Çatlaklar açıklıkla uzar, sonra söner.",
+ "properties": [
+  {
+   "name": "_Lip",
+   "type": "hdrColor",
+   "label": "Kenar",
+   "default": {
+    "color": "#eaf6ff",
+    "intensity": 2.6
+   }
+  },
+  {
+   "name": "_Crack",
+   "type": "hdrColor",
+   "label": "Çatlak",
+   "default": {
+    "color": "#8fd0ff",
+    "intensity": 2
+   }
+  },
+  {
+   "name": "_Glow",
+   "type": "hdrColor",
+   "label": "Işıma",
+   "default": {
+    "color": "#3c6cff",
+    "intensity": 0.9
+   }
+  },
+  {
+   "name": "_Reach",
+   "type": "range",
+   "label": "Çatlak erimi (V)",
+   "min": 0.01,
+   "max": 0.4,
+   "default": 0.16
+  },
+  {
+   "name": "_CellsU",
+   "type": "range",
+   "label": "Çatlak sıklığı (yay)",
+   "min": 4,
+   "max": 120,
+   "default": 46
+  },
+  {
+   "name": "_CellsV",
+   "type": "range",
+   "label": "Çatlak sıklığı (V)",
+   "min": 2,
+   "max": 40,
+   "default": 10
+  },
+  {
+   "name": "_Center",
+   "type": "range",
+   "label": "Yarık merkezi (V)",
+   "min": 0.5,
+   "max": 1,
+   "default": 0.9
+  },
+  {
+   "name": "_Open",
+   "type": "range",
+   "label": "Açıklık (V)",
+   "min": 0.005,
+   "max": 0.3,
+   "default": 0.12
+  },
+  {
+   "name": "_Hit",
+   "type": "range",
+   "label": "En geniş yer (yay kesri)",
+   "min": 0,
+   "max": 1,
+   "default": 0.85
+  },
+  {
+   "name": "_Tail",
+   "type": "range",
+   "label": "İz uzunluğu (yay kesri)",
+   "min": 0.1,
+   "max": 1,
+   "default": 0.8
+  },
+  {
+   "name": "_Eat",
+   "type": "range",
+   "label": "Kuyruktan yenme başı (ömür)",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.2
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n\nfloat2 hash22(float2 p)\n{\n    p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));\n    return frac(sin(p) * 43758.5453);\n}\n\n// hücre kenarına uzaklık (çatlak çizgileri için); girdi gürültüyle bükülürse çatlaklar kavisli olur\nfloat voroEdge(float2 x)\n{\n    float2 n = floor(x);\n    float2 f = frac(x);\n    float md = 8.0;\n    float2 mr = float2(0.0, 0.0);\n    float2 mg = float2(0.0, 0.0);\n    for (int j = -1; j <= 1; j++)\n    {\n        for (int i = -1; i <= 1; i++)\n        {\n            float2 g = float2(float(i), float(j));\n            float2 r = g + hash22(n + g) - f;\n            float d = dot(r, r);\n            if (d < md) { md = d; mr = r; mg = g; }\n        }\n    }\n    md = 8.0;\n    for (int j2 = -2; j2 <= 2; j2++)\n    {\n        for (int i2 = -2; i2 <= 2; i2++)\n        {\n            float2 g2 = mg + float2(float(i2), float(j2));\n            float2 r2 = g2 + hash22(n + g2) - f;\n            float2 dr = r2 - mr;\n            if (dot(dr, dr) > 0.00001) { md = min(md, dot(0.5 * (mr + r2), normalize(dr))); }\n        }\n    }\n    return md;\n}\n\nfloat3 trail(float u, float head, float life)\n{\n    float eat = saturate((life - _Eat) / max(1.0 - _Eat, 0.001));\n    float tailS = max(head - _Tail, eat * 1.02);\n    float len = max(head - tailS, 0.001);\n    float k = (u - tailS) / len;\n    float m = smoothstep(0.0, 0.1, k) * (1.0 - smoothstep(head, head + 0.012, u)) * step(tailS, u);\n    float tipT = 1.0 - smoothstep(0.8, 1.0, u / max(head, 0.001)) * step(0.995, head);\n    float lead = 1.0 - smoothstep(head - 0.06, head, u) * (1.0 - step(0.995, head));\n    return float3(k, m, tipT * lead);\n}\n\nfloat2 riftShape(float u, float v, float3 tr, float open, float t)\n{\n    float k = saturate(tr.x);\n    float lens = (0.35 + 0.65 * exp(-pow((u - _Hit) / 0.18, 2.0))) * smoothstep(0.0, 0.15, k) * tr.z;\n    float wob = (vnoise(float2(u * 30.0, t * 2.0)) - 0.5) * 0.5 + (vnoise(float2(u * 90.0, 3.0)) - 0.5) * 0.25;\n    float hw = _Open * open * lens * (1.0 + wob);\n    float dv = abs(v - _Center);\n    return float2(dv, hw);\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float life = 1.0 - i.color.a;\n    float open = i.custom.y;\n    float3 tr = trail(u, i.custom.x, life);\n    float2 rs2 = riftShape(u, v, tr, open, i.time);\n    float outside = rs2.x - rs2.y;\n    float lip = exp(-max(outside, 0.0) / 0.006) * step(-0.002, outside) * step(0.0005, rs2.y);\n    float2 q = float2(u * _CellsU, v * _CellsV);\n    q += (float2(fbm(q * 0.35 + 2.0), fbm(q * 0.35 + 7.0)) - 0.5) * 1.6;\n    float e = voroEdge(q);\n    float reach = _Reach * open * (0.4 + 0.6 * saturate(tr.x));\n    float near = 1.0 - smoothstep(0.0, max(reach, 0.001), outside);\n    float crack = (1.0 - smoothstep(0.0, 0.06, e)) * near * step(0.0, outside) * step(0.0005, rs2.y);\n    float glow = exp(-max(outside, 0.0) / max(reach * 0.5, 0.004)) * 0.45 * step(0.0005, rs2.y) * step(0.0, outside);\n    float fade = 1.0 - smoothstep(0.55, 0.95, life);\n    float3 col = (_Lip.rgb * lip + _Crack.rgb * crack + _Glow.rgb * glow) * tr.y * fade * i.color.rgb;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1y_ic",
+ "shader": "UnityPreview/yarik_ic",
+ "values": {
+  "_Open": 0.13,
+  "_Center": 0.9,
+  "_Tail": 0.95,
+  "_Eat": 0.5,
+  "_Hit": 0.846,
+  "_Void": "#010208",
+  "_Swirl": {
+   "color": "#1e1650",
+   "intensity": 1
+  }
+ },
+ "renderQueue": -1
+}

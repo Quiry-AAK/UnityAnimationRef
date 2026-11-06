@@ -1,0 +1,12 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h1k_kutle",
+ "shader": "UnityPreview/kutle",
+ "values": {
+  "_Dark": "#0c1846",
+  "_Light": "#6a94f4",
+  "_Width": 0.92,
+  "_Density": 1.15
+ },
+ "renderQueue": -1
+}
