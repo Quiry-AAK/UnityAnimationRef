@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } from '../public/vfx-schema.js';
 import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
-import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL } from '../lib/unreal-vfx.js';
+import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings } from '../lib/unreal-vfx.js';
 import { proceduralMesh, meshToOBJ, fitArc } from '../public/vfx-mesh.js';
 
 let fails = 0, n = 0;
@@ -133,6 +133,15 @@ test('mesh yönü: qB ⊗ qz(−θ) = Unity Rem·Rz(−θ) (UE ekseninde)', () =
   const q = mul(qB, qz);
   for (const v of [[1, 0, 0], [0, 1, 0], [0.3, -0.2, 0.9]]) closeV(quatRotate(q, toUEDir(v)), toUEDir(matVec(Rem, matVec(unityEulerMatrix([0, 0, -th]), v))), 1e-9);
 });
+test('renderer bağlaması bayat: yazılan öznitelik için bBindingExistsOnSource false yakalanır (UE 5.8 GetRendererData biçimi)', () => {
+  const rd = JSON.stringify({ returnValue: { propertyValues: JSON.stringify({
+    ScaleBinding: { paramMapVariable: { name: 'Particles.Scale' }, bBindingExistsOnSource: false },
+    MeshOrientationBinding: { paramMapVariable: { name: 'Particles.MeshOrientation' }, bBindingExistsOnSource: false },
+    DynamicMaterialBinding: { paramMapVariable: { name: 'Particles.DynamicMaterialParameter' }, bBindingExistsOnSource: true } }) } });
+  assert.deepEqual(staleBindings(rd, new Set(['Particles.Scale', 'Particles.MeshOrientation'])), ['Particles.Scale', 'Particles.MeshOrientation']);
+  assert.deepEqual(staleBindings(rd, new Set(['Particles.Scale'])), ['Particles.Scale']); // yazılmayan atlanır
+  assert.deepEqual(staleBindings(rd.replace(/false/g, 'true'), new Set(['Particles.Scale', 'Particles.MeshOrientation'])), []);
+});
 test('mesh: dünya uzayı → Engine.Owner.Rotation ile çarpılır', () => {
   const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { main: { simulationSpace: 'world' } })));
   assert.ok(findP(p, 'Particles.MeshOrientation').hlsl.includes('Engine.Owner.Rotation'));
@@ -227,7 +236,7 @@ test('UPE-SL: i.custom → Dynamic Parameter girdileri; bükülme → _Distort +
   sh.code = { ...sh.code, fragment: 'float4 frag(UPEInput i)\n{\n    return float4(i.custom.xy, 0.0, i.custom.w);\n}\n' };
   const tr = translateShaderForUE(sh, { values: { _Surface: 1, _Blend: 0 }, distortion: true });
   assert.deepEqual(checkTranslation(tr), []);
-  assert.deepEqual(tr.inputs.filter((x) => /^UPE_CUS/.test(x.name)).map((x) => x.node.output), ['Param1', 'Param2', 'Param3', 'Param4']);
+  assert.deepEqual(tr.inputs.filter((x) => /^UPE_CUS/.test(x.name)).map((x) => x.node.output), ['', 'G', 'B', 'A']);
   assert.ok(tr.code.includes('upeIn.custom = float4(UPE_CUS0') && tr.code.includes('UPE_DistortStrength') && tr.blendMode === 'BLEND_Translucent');
   assert.equal(baseMaterialName(sh, renderStateFor(sh, {}), { distortion: true }), 'M_UPE_urp_particles_unlit_Distort');
   const mf = fs.readdirSync(path.join(root, 'materials')).find((x) => x.endsWith('.json'));

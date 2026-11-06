@@ -118,6 +118,18 @@ silinip yerinde yeniden kurulur, yol ve başvurular korunur) → emitter'lar →
 başlatır; bayat/derleniyor bitene kadar sorulur) → `save_assets` (yalnız dokunulan varlıklar) → `GetStackIssues`
 uyarıları. HLSL derleme hatası efekt hatası olarak döner.
 
+**Editörde doğrulandı (2026-11-06, UE 5.8, hafif_l1–l4):** mesh renderer (yön, konum, ölçek) önizlemeyle birebir; Light renderer;
+customData → Dynamic Parameter; UPE-SL kesik/kabuk/bükülme/zerre materyalleri. Bulunan ve düzeltilen hatalar:
+- Material `DynamicParameter` çıkış adları `''/G/B/A` (ilki R; görünen `Param1..4` bağlanmıyor).
+- `SceneColor`'ın tek girdisi kipe göre adlanıyor (`UVs`): `InputMode = OffsetFraction` yapılıp ad editörden okunuyor.
+- **Renderer bağlaması bayat:** mesh renderer'ın `Particles.Scale`/`MeshOrientation` bağlaması (`bBindingExistsOnSource`)
+  AddRenderer anında önbelleğe alınıyor, derlemeden sonra çoğu kez `false` kalıyor → mesh dönüşsüz/ölçeksiz çiziliyor (yay
+  yanlış yöne bakıyor). Derlemeden sonra `refreshRendererBindings`: sprite dışı renderer'da bayat bağlama varsa o özniteliği
+  yazan girdi metni farklı ama anlamı aynı (parantez sarmalı) ifadeyle yeniden yazılır (aynı metin değişiklik sayılmıyor),
+  derleme beklenir, yeniden bakılır (en çok 4 kez); kalırsa uyarı.
+- Art arda çok aktarım editör belleğini büyütüyor (~25 GB'ta bir kez çöktü): büyük aktarımlardan sonra editörü yeniden başlat.
+- Görsel doğrulama yöntemi: `--freeze` kopyası + kamerası bilinen `CaptureViewport` + hesaplanan yay noktalarını görüntüye işaretlemek.
+
 Araçlar: `tools/ue-vfx-plan-test.mjs` (editörsüz plan testi), `tools/ue-vfx-send.mjs [--content yol] [--preset a,b] <efekt…>`
 (uçtan uca gönderim), `tools/ue-vfx-capture.mjs <sistem>` (Niagara editörünü açıp editör görüntüsünü
 `exports/ue_vfx/`'e yazar; `CaptureAssetImage` Niagara sistemlerini desteklemiyor), keşif: `ue-vfx-explore/show/topo/probe.mjs`.
