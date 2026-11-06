@@ -65,7 +65,7 @@ struct UPEVertex { float3 positionOS; float3 normalOS; float2 uv; float4 color; 
 struct UPEInput {
   float2 uv; float4 color; float3 positionWS; float3 normalWS; float3 viewDirWS; float4 positionCS; float2 screenUV;
   float3 lightDir; float3 lightColor; float shadow; float3 ambient; float3 cameraRightWS; float3 cameraUpWS; float3 cameraPosWS;
-  float time; float facing; float4 custom;
+  float time; float facing; float4 custom; float sceneDepth; float softFade;
 };
 `;
 
@@ -153,17 +153,42 @@ function programParts(shader, outline) {
   const common = `${defs}\n${PRELUDE}\n${uniforms}\nuniform vec4 _Time;\n${STRUCTS}`;
   return { secs, user, common, warnings: secs.flatMap((s) => s.warnings.map((w) => `${s.name}: ${w}`)) };
 }
-const fragmentSource = (common, userCode, distortion = false) => `${distortion ? '#define UPE_DISTORT\n' : ''}${common}${PRELUDE_FRAG}
+// VFX parçacık seçenekleri (defines): UPE_DISTORT bükülme, UPE_DEPTH sahne derinliği (i.sceneDepth), UPE_SOFT yumuşak parçacık
+// (i.softFade, çıkış alfası çarpılır; UPE_SOFT_RGB premultiply'da renk de), UPE_DECAL yere iz (yüzey sahne derinliğinden kurulur)
+const particleDefines = ({ distortion, depth, soft, softRgb, decal } = {}) => [distortion && 'UPE_DISTORT', (depth || soft || decal || distortion) && 'UPE_DEPTH', soft && 'UPE_SOFT', soft && softRgb && 'UPE_SOFT_RGB', decal && 'UPE_DECAL']
+  .filter(Boolean).map((d) => `#define ${d}\n`).join('');
+const fragmentSource = (common, userCode, opts = {}) => `${particleDefines(opts)}${common}${PRELUDE_FRAG}
 uniform vec3 upeLightDir; uniform vec3 upeLightColor; uniform vec3 upeAmbient; uniform vec2 upeResolution;
 ${userCode}
 #line 10000 0
 varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS; varying vec4 vCustom;
 #ifdef UPE_DISTORT
-uniform sampler2D uScene; uniform vec2 uSceneRes; uniform float uStrength;
+uniform sampler2D uScene; uniform float uStrength;
+#endif
+#ifdef UPE_DEPTH
+#include <packing>
+uniform sampler2D uDepth; uniform vec2 uSceneRes; uniform float uCamNear, uCamFar;
+#endif
+#ifdef UPE_SOFT
+uniform float uSoft;
+#endif
+#ifdef UPE_DECAL
+uniform mat4 uInvProj, uCamWorld; uniform float uGroundOnly;
+varying vec3 vDC, vDX, vDY, vDP, vDS;
+bool upeDecal(out vec3 l, out vec3 wp, out vec3 n) { // vfx-sim.js DECAL_COMMON ile aynı
+  vec2 suv = gl_FragCoord.xy / uSceneRes; float d = texture(uDepth, suv).x;
+  if (d >= 0.99999) return false;
+  vec4 vp = uInvProj * vec4(suv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); vp /= vp.w; wp = (uCamWorld * vp).xyz;
+  vec3 r = wp - vDC; l = vec3(dot(r, vDX) / vDS.x, dot(r, vDY) / vDS.y, dot(r, vDP) / vDS.z);
+  if (any(greaterThan(abs(l), vec3(0.5)))) return false;
+  n = normalize(cross(dFdx(wp), dFdy(wp))); if (dot(n, vDP) > 0.0) n = -n;
+  if (uGroundOnly > 0.5 && dot(-n, vDP) < 0.7) return false;
+  return true;
+}
 #endif
 void main() {
   UPEInput i;
-  i.uv = vUv; i.color = vColor; i.custom = vCustom;
+  i.uv = vUv; i.color = vColor; i.custom = vCustom; i.sceneDepth = 0.0; i.softFade = 1.0;
   i.positionWS = upeToU(vPosWS);
   i.normalWS = upeToU(normalize(vNormalWS));
   i.viewDirWS = upeToU(normalize(cameraPosition - vPosWS));
@@ -172,6 +197,18 @@ void main() {
   i.cameraRightWS = upeToU(vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]));
   i.cameraUpWS = upeToU(vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]));
   i.cameraPosWS = upeToU(cameraPosition); i.time = _Time.y; i.facing = gl_FrontFacing ? 1.0 : -1.0;
+  #ifdef UPE_DEPTH
+  i.sceneDepth = -perspectiveDepthToViewZ(texture(uDepth, gl_FragCoord.xy / uSceneRes).x, uCamNear, uCamFar);
+  #endif
+  #ifdef UPE_SOFT
+  i.softFade = clamp((i.sceneDepth + perspectiveDepthToViewZ(gl_FragCoord.z, uCamNear, uCamFar)) / uSoft, 0.0, 1.0);
+  #endif
+  float upeDecalFade = 1.0;
+  #ifdef UPE_DECAL
+  vec3 upeL, upeW, upeN; if (!upeDecal(upeL, upeW, upeN)) discard;
+  i.uv = upeL.xy + 0.5; i.positionWS = upeToU(upeW); i.normalWS = upeToU(upeN); i.viewDirWS = upeToU(normalize(cameraPosition - upeW));
+  upeDecalFade = 1.0 - smoothstep(0.35, 0.5, abs(upeL.z));
+  #endif
   #ifdef UPE_OUTLINE
     #ifdef UPE_HAS_OUTLINE_FRAG
     gl_FragColor = outlineFrag(i);
@@ -184,6 +221,10 @@ void main() {
   gl_FragColor = vec4(texture(uScene, gl_FragCoord.xy / uSceneRes + upeD.rg * upeD.a * uStrength).rgb, 1.0);
   #else
   gl_FragColor = frag(i);
+  gl_FragColor.a *= i.softFade * upeDecalFade;
+  #ifdef UPE_SOFT_RGB
+  gl_FragColor.rgb *= i.softFade;
+  #endif
   #endif
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -229,14 +270,17 @@ void main() {
 // köşeleri dünya uzayındadır (nesne matrisi birim): v.positionOS = köşenin dünya konumu, v.color = parçacık rengi (Linear projede
 // doğrusala çevrilir), v.uv = quad UV'si (flipbook açıksa o anki kare; mesh modunda mesh UV'si), i.custom = customData eğrileri.
 // Kullanıcının vert/frag'ı aynen çalışır; outline yok. distortion: frag() çıkışı bükülme ofseti (rg) + maske (a) olarak yorumlanır.
-export function buildParticlePrograms(shader, { distortion = false } = {}) {
+export function buildParticlePrograms(shader, opts = {}) {
   const { user, common, warnings } = programParts(shader, false);
-  const vertexShader = `${common}${PRELUDE_VERT}
+  const vertexShader = `${particleDefines(opts)}${common}${PRELUDE_VERT}
 ${user([1, 2])}
 #line 10000 0
 attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iSRF; attribute vec4 iCus;
 uniform int uMode; uniform float uLengthScale, uVelScale; uniform vec2 uTiles; uniform mat3 uAlign;
 varying vec2 vUv; varying vec4 vColor; varying vec3 vPosWS; varying vec3 vNormalWS; varying vec4 vCustom;
+#ifdef UPE_DECAL
+uniform vec3 uDSize; uniform int uDProj; varying vec3 vDC, vDX, vDY, vDP, vDS;
+#endif
 vec3 upeLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
   vec2 c = position.xy; float size = iSRF.x, rot = iSRF.y;
@@ -261,6 +305,15 @@ void main() {
     wp = (modelMatrix * vec4(iPos, 1.0)).xyz; nW = vec3(0.0, 1.0, 0.0); // kılıç izi şeridi (uv = iSRF.zw)
   } else if (uMode == 4) {
     wp = (modelMatrix * vec4(iPos + uAlign * vec3(rc, 0.0) * size, 1.0)).xyz; nW = normalize(mat3(modelMatrix) * (uAlign * vec3(0.0, 0.0, -1.0)));
+  #ifdef UPE_DECAL
+  } else if (uMode == 7) { // yere iz kutusu (vfx-sim.js DECAL_VERT ile aynı); yüzey parça aşamasında derinlikten kurulur
+    vec3 ex, ey, ep;
+    if (uDProj == 1) { mat3 M = mat3(modelMatrix) * uAlign; ex = normalize(M * vec3(1.0, 0.0, 0.0)); ey = normalize(M * vec3(0.0, 1.0, 0.0)); ep = normalize(M * vec3(0.0, 0.0, 1.0)); }
+    else { ex = vec3(-1.0, 0.0, 0.0); ey = vec3(0.0, 0.0, 1.0); ep = vec3(0.0, -1.0, 0.0); }
+    vec3 rx = ex * cs - ey * sn, ry = ex * sn + ey * cs, s3 = uDSize * size, cc = (modelMatrix * vec4(iPos, 1.0)).xyz;
+    wp = cc + rx * position.x * s3.x + ry * position.y * s3.y + ep * position.z * s3.z; nW = -ep;
+    vDC = cc; vDX = rx; vDY = ry; vDP = ep; vDS = s3;
+  #endif
   } else if (uMode == 6) { // mesh (vfx-sim.js ile aynı): yerel mesh × boyut, yerel Z etrafında dönüş, emitter dönüşü
     vec3 lp = position * size; lp.xy = vec2(lp.x * cs + lp.y * sn, -lp.x * sn + lp.y * cs);
     vec3 ln = normal; ln.xy = vec2(ln.x * cs + ln.y * sn, -ln.x * sn + ln.y * cs);
@@ -280,7 +333,7 @@ void main() {
   vPosWS = w; vNormalWS = normalize(upeToU(v.normalOS)); vUv = v.uv; vColor = v.color;
   gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
 }`;
-  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3]), distortion), warnings };
+  return { vertexShader, fragmentShader: fragmentSource(common, user([1, 3]), opts), warnings };
 }
 
 // ── derleme hatalarını yakala ("ERROR: 3:12: ..." → bölüm fragment, satır 12)
@@ -392,15 +445,16 @@ export function createUPEMaterial(shader, values, { meshMap = null, vertexColors
   return { main, outline, uniforms, warnings: main.userData.upeWarnings };
 }
 // VFX emitter materyali: parçacık programı + materyal değerleri + emitter'ın quad uniform'ları (uMode, uTiles…). blend: sıralama için
-export function createUPEParticleMaterial(shader, values, particleUniforms, { onTexture, distortion = false } = {}) {
+export function createUPEParticleMaterial(shader, values, particleUniforms, { onTexture, distortion = false, soft = false, decal = false, depth = false } = {}) {
   const uniforms = { ...shared, ...particleUniforms };
   for (const p of shader.properties) {
     const u = propUniformValue(p, values?.[p.name], null, onTexture);
     if (p.type === 'texture') { uniforms[p.name] = { value: u.tex }; uniforms[p.name + '_ST'] = { value: u.st }; } else uniforms[p.name] = { value: u };
   }
-  const pr = buildParticlePrograms(shader, { distortion });
+  const rs = renderStateOf(shader, values);
+  const pr = buildParticlePrograms(shader, { distortion, soft, softRgb: rs.blend === 'premultiply', decal, depth });
   const m = new THREE.ShaderMaterial({ vertexShader: pr.vertexShader, fragmentShader: pr.fragmentShader, uniforms });
-  const rs = renderStateOf(shader, values); applyState(m, rs);
+  applyState(m, rs);
   if (distortion) { m.transparent = true; m.depthWrite = false; m.blending = THREE.NormalBlending; } // sahne rengini yerine yazar
   m.userData.upeWarnings = pr.warnings;
   return { material: m, blend: rs.blend, warnings: pr.warnings };

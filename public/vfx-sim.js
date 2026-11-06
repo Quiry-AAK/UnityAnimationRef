@@ -91,15 +91,73 @@ void main() {
   vUv = uMode == 5 ? iSRF.zw : uMode == 6 ? (cell + uv) / uTiles : (cell + c + 0.5) / uTiles; vCol = iCol;
 }`;
 const FRAG = /* glsl */`
+#include <packing>
 uniform sampler2D uMap; uniform float uIntensity;
+#ifdef UPE_SOFT
+uniform sampler2D uDepth; uniform vec2 uSceneRes; uniform float uCamNear, uCamFar, uSoft;
+#endif
 varying vec2 vUv; varying vec4 vCol;
 vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
   vec4 t = texture2D(uMap, vUv);
   vec4 col = vec4(toLinear(vCol.rgb) * uIntensity, vCol.a) * t; // Unity (Linear proje) köşe rengini ve _BaseColor'ı doğrusala çevirir: kalibrasyonla ölçüldü
+  #ifdef UPE_SOFT
+  // yumuşak parçacık: arkadaki yüzeyle kamera derinliği farkı / mesafe (Unity Soft Particles, UE DepthFade)
+  float sz = -perspectiveDepthToViewZ(texture2D(uDepth, gl_FragCoord.xy / uSceneRes).x, uCamNear, uCamFar);
+  float pz = -perspectiveDepthToViewZ(gl_FragCoord.z, uCamNear, uCamFar);
+  col.a *= clamp((sz - pz) / uSoft, 0.0, 1.0);
+  #endif
   if (col.a < 0.002) discard;
   gl_FragColor = col;
 }`;
+// yere iz (decal): birim kutu parçacık başına; kutunun arka yüzleri çizilir (derinlik testi yok), parça sahne derinliğinden
+// dünya konumu kurulur, iz kutusunun yereline çevrilir, dışındaysa atılır. Eksenler three dünyasında: ax (en), ay (boy), pr (yansıtma).
+// down: Unity dünyasında en = +X, boy = +Z, yansıtma = −Y; forward: emitter ekseni X, Y, +Z. Dönüş yansıtma ekseni etrafında.
+export const DECAL_VERT = /* glsl */`
+attribute vec3 iPos; attribute vec4 iCol; attribute vec4 iSRF;
+uniform mat3 uAlign; uniform vec3 uDSize; uniform int uDProj; uniform vec2 uTiles;
+varying vec4 vCol; varying vec3 vDC, vDX, vDY, vDP, vDS; varying float vFrame;
+void main() {
+  float size = iSRF.x, rot = iSRF.y, cs = cos(rot), sn = sin(rot);
+  vec3 ex, ey, ep;
+  if (uDProj == 1) { mat3 M = mat3(modelMatrix) * uAlign; ex = normalize(M * vec3(1.0, 0.0, 0.0)); ey = normalize(M * vec3(0.0, 1.0, 0.0)); ep = normalize(M * vec3(0.0, 0.0, 1.0)); }
+  else { ex = vec3(-1.0, 0.0, 0.0); ey = vec3(0.0, 0.0, 1.0); ep = vec3(0.0, -1.0, 0.0); } // Unity +X, +Z, −Y (three = x aynası)
+  vec3 rx = ex * cs - ey * sn, ry = ex * sn + ey * cs; // pozitif açı saat yönü (quad ile aynı)
+  vec3 s = uDSize * size, c = (modelMatrix * vec4(iPos, 1.0)).xyz;
+  vec3 w = c + rx * position.x * s.x + ry * position.y * s.y + ep * position.z * s.z;
+  vDC = c; vDX = rx; vDY = ry; vDP = ep; vDS = s; vCol = iCol; vFrame = iSRF.z;
+  gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
+}`;
+const DECAL_COMMON = /* glsl */`
+uniform sampler2D uDepth; uniform vec2 uSceneRes; uniform mat4 uInvProj, uCamWorld; uniform float uGroundOnly;
+varying vec3 vDC, vDX, vDY, vDP, vDS;
+// sahne yüzeyi → iz yereli (−0,5..0,5); dışındaysa false
+bool upeDecal(out vec3 l, out vec3 wp, out vec3 n) {
+  vec2 suv = gl_FragCoord.xy / uSceneRes; float d = texture2D(uDepth, suv).x;
+  if (d >= 0.99999) return false;
+  vec4 vp = uInvProj * vec4(suv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); vp /= vp.w; wp = (uCamWorld * vp).xyz;
+  vec3 r = wp - vDC; l = vec3(dot(r, vDX) / vDS.x, dot(r, vDY) / vDS.y, dot(r, vDP) / vDS.z);
+  if (any(greaterThan(abs(l), vec3(0.5)))) return false;
+  n = normalize(cross(dFdx(wp), dFdy(wp))); if (dot(n, vDP) > 0.0) n = -n;
+  if (uGroundOnly > 0.5 && dot(-n, vDP) < 0.7) return false; // yansıtma yönüne bakmayan yüzey (kahramanın yanı) atlanır
+  return true;
+}`;
+export const DECAL_FRAG = /* glsl */`
+uniform sampler2D uMap; uniform float uIntensity; uniform vec2 uTiles;
+varying vec4 vCol; varying float vFrame;
+${DECAL_COMMON}
+vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
+void main() {
+  vec3 l, wp, n; if (!upeDecal(l, wp, n)) discard;
+  float tiles = uTiles.x * uTiles.y, fr = mod(floor(vFrame + 0.5), tiles);
+  vec2 cell = vec2(mod(fr, uTiles.x), uTiles.y - 1.0 - floor(fr / uTiles.x));
+  vec4 t = texture2D(uMap, (cell + l.xy + 0.5) / uTiles);
+  vec4 col = vec4(toLinear(vCol.rgb) * uIntensity, vCol.a) * t;
+  col.a *= 1.0 - smoothstep(0.35, 0.5, abs(l.z)); // derinlik ucunda yumuşak
+  if (col.a < 0.002) discard;
+  gl_FragColor = col;
+}`;
+export { DECAL_COMMON };
 const MODE = { billboard: 0, stretched: 1, horizontal: 2, vertical: 3, mesh: 6 };
 // bükülme (renderer.blend = 'distortion'): sahne rengi ayrı hedefe alınır (EffectPlayer.sceneTarget), parçacık o dokuyu ekran
 // konumu + ofsetle örnekler. Ofset = yön × maske (doku alfası × parçacık alfası) × güç; maske kenarında ofset 0 → dikişsiz.
@@ -121,6 +179,9 @@ void main() {
   gl_FragColor = vec4(texture2D(uScene, gl_FragCoord.xy / uSceneRes + dir * mask * uStrength).rgb, 1.0);
 }`;
 export const DIST_MODE = { radial: 0, noise: 1, normal: 2 };
+// oynatıcı ortak uniform'ları: sahne rengi + derinliği (vfx.js sahne hedefi), kamera (decal yeniden kurulumu), zaman
+export const newShared = () => ({ uScene: { value: null }, uDepth: { value: null }, uSceneRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 },
+  uCamNear: { value: 0.1 }, uCamFar: { value: 100 }, uInvProj: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() } });
 // parçacık geometrisi: quad ya da mesh (renderer.mode = 'mesh'); mesh verisi { positions, normals, uvs, indices } (Unity yereli)
 export function meshDataFor(r, meshFor) {
   const m = r.mesh;
@@ -153,7 +214,9 @@ class EmitterSim {
     const g = new THREE.InstancedBufferGeometry();
     const md = r.mode === 'mesh' ? meshDataFor(r, opts.meshFor) : null;
     this.meshPending = r.mode === 'mesh' && !md; // dosya mesh'i yükleniyor: o arada quad çizilir
-    if (md) { // mesh: Unity yerelinde geometri; sarım -Z ön yüz (UPE quad'ı gibi), yerleşik çizim iki yüzlü
+    const decal = r.mode === 'decal'; this.decal = decal;
+    if (decal) { const b = new THREE.BoxGeometry(1, 1, 1); g.setAttribute('position', b.attributes.position); g.setIndex(b.index); }
+    else if (md) { // mesh: Unity yerelinde geometri; sarım -Z ön yüz (UPE quad'ı gibi), yerleşik çizim iki yüzlü
       g.setAttribute('position', new THREE.BufferAttribute(md.positions, 3)); g.setAttribute('normal', new THREE.BufferAttribute(md.normals, 3));
       g.setAttribute('uv', new THREE.BufferAttribute(md.uvs, 2)); g.setIndex(new THREE.BufferAttribute(md.indices, 1));
     } else {
@@ -169,12 +232,24 @@ class EmitterSim {
       uTiles: { value: new THREE.Vector2(ts.enabled ? ts.tilesX : 1, ts.enabled ? ts.tilesY : 1) },
       uAlign: { value: new THREE.Matrix3() } }; // Local/mesh: dünya simülasyonunda emitter dönüşü (step'te), yerelde birim
     this.quad = quad; this.alignM = new THREE.Matrix4();
-    const dist = r.blend === 'distortion'; this.distortion = dist;
-    const shu = opts.shared || { uScene: { value: null }, uSceneRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 } };
-    const dU = { uScene: shu.uScene, uSceneRes: shu.uSceneRes, uTime: shu.uTime, uStrength: { value: r.distortion.strength } };
+    const dist = r.blend === 'distortion' && !decal; this.distortion = dist;
+    const soft = !!r.softParticles?.enabled && !decal && !dist; this.soft = soft;
+    const shu = opts.shared || newShared();
+    const dU = { ...shu, uStrength: { value: r.distortion.strength }, uSoft: { value: Math.max(0.001, r.softParticles?.distance ?? 0.3) },
+      uDSize: { value: new THREE.Vector3(...(r.decal?.size || [1, 1, 0.5])) }, uDProj: { value: r.decal?.projection === 'forward' ? 1 : 0 }, uGroundOnly: { value: r.decal?.groundOnly === false ? 0 : 1 } };
+    if (decal) quad.uMode.value = 7;
+    this.needsDepth = soft || decal || dist || !!(upe && /\.(sceneDepth|softFade)\b/.test(upe.shader.code.common + upe.shader.code.fragment));
     if (upe) {
-      const u = createUPEParticleMaterial(upe.shader, upe.values, { ...quad, ...(dist ? dU : {}) }, { onTexture, distortion: dist });
+      const u = createUPEParticleMaterial(upe.shader, upe.values, { ...quad, ...dU }, { onTexture, distortion: dist, soft, decal, depth: this.needsDepth });
       this.mat = u.material; this.sortBack = dist || ['alpha', 'premultiply', 'multiply'].includes(u.blend);
+      if (decal) { this.mat.side = THREE.BackSide; this.mat.depthTest = false; this.mat.depthWrite = false; this.mat.transparent = true; }
+    } else if (decal) {
+      this.mat = new THREE.ShaderMaterial({
+        vertexShader: DECAL_VERT, fragmentShader: DECAL_FRAG, transparent: true, depthWrite: false, depthTest: false, side: THREE.BackSide,
+        blending: r.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
+        uniforms: { uMap: { value: getTexture(r.texture, onTexture) }, uIntensity: { value: r.intensity }, ...dU, ...quad },
+      });
+      this.sortBack = true;
     } else if (dist) {
       const d = r.distortion;
       this.mat = new THREE.ShaderMaterial({
@@ -185,9 +260,9 @@ class EmitterSim {
       this.sortBack = true;
     } else {
       this.mat = new THREE.ShaderMaterial({
-        vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, defines: soft ? { UPE_SOFT: '' } : {},
         blending: r.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
-        uniforms: { uMap: { value: getTexture(r.texture, onTexture) }, uIntensity: { value: r.intensity }, ...quad },
+        uniforms: { uMap: { value: getTexture(r.texture, onTexture) }, uIntensity: { value: r.intensity }, ...(soft ? dU : {}), ...quad },
       });
       this.sortBack = r.blend === 'alpha';
     }
@@ -469,11 +544,13 @@ export class EffectPlayer {
     this.onTexture = null;
     this.materialFor = null; // (ad) => { shader, values } | null — renderer.material'ı kütüphaneden çözer (yüklenmediyse null)
     this.meshFor = null; // (dosya) => { positions, normals, uvs, indices } | null — meshes/ dosyası (yüklenmediyse null)
-    this.shared = { uScene: { value: null }, uSceneRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 } }; // bükülme
+    this.shared = newShared(); // bükülme / yumuşak parçacık / decal: sahne hedefi + kamera
   }
   setVisible(v) { this.root.visible = this.worldRoot.visible = this.lightRoot.visible = v; }
   get hasDistortion() { return this.sims.some((s) => s?.distortion && s.n > 0); }
-  get distortionMeshes() { return this.sims.filter((s) => s?.distortion).map((s) => s.mesh); }
+  get needsSceneTarget() { return this.sims.some((s) => s?.needsDepth && s.n > 0); } // sahne rengi + derinliği gereken (bükülme, yumuşak, decal)
+  get distortionMeshes() { return this.sims.filter((s) => s?.distortion || s?.decal).map((s) => s.mesh); } // sahne hedefinde gizlenenler
+  get hasDecal() { return this.effect?.emitters.some((e) => e.enabled && e.renderer.mode === 'decal' && !e.bladeTrail?.enabled); }
   setEffect(effect) {
     for (const s of this.sims) s?.dispose(); for (const n of this.nodes) n.removeFromParent();
     for (const l of this.lights) l.light.removeFromParent(); this.lights = [];
@@ -486,7 +563,7 @@ export class EffectPlayer {
       const upe = em.renderer.material ? this.materialFor?.(em.renderer.material) || null : null;
       const sim = em.bladeTrail?.enabled ? new TrailSim(em, () => this.onTexture?.(), upe)
         : new EmitterSim(em, (base ^ hashStr(em.name) ^ Math.imul(i + 1, 2654435761)) >>> 0, () => this.onTexture?.(), upe, { meshFor: this.meshFor, shared: this.shared });
-      sim.mesh.renderOrder = 100 + em.renderer.sortingOrder * 10 + i + (sim.distortion ? 5000 : 0); // bükülme en son çizilir
+      sim.mesh.renderOrder = 100 + em.renderer.sortingOrder * 10 + i + (sim.distortion ? 5000 : sim.decal ? -5000 : 0); // decal önce (yüzeyin parçası), bükülme en son
       (sim.world ? this.worldRoot : node).add(sim.mesh); this.sims.push(sim);
       if (em.light.enabled) {
         const n = em.light.mode === 'perParticle' && !em.bladeTrail?.enabled ? em.light.maxLights : 1;

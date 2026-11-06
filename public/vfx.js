@@ -49,14 +49,18 @@ export function initVfx(ctx) {
   let csz = '', fixedSize = false; // kontak sayfası çizilirken boyut denetimi kapalı
   const resize = () => { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(viewport.clientWidth, viewport.clientHeight); csz = viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio(); };
   // bükülme: sahne (bükülme parçacıkları gizli) ayrı hedefe çizilir; bükülme malzemeleri onu ekran konumu + ofsetle örnekler
+  // sahne hedefi: renk (bükülme) + derinlik dokusu (yumuşak parçacık, yere iz). Parçacıklar derinlik yazmadığı için derinlik = katı sahne.
   const sceneRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType }); const _dsz = new THREE.Vector2();
+  sceneRT.depthTexture = new THREE.DepthTexture(1, 1); sceneRT.depthTexture.type = THREE.UnsignedIntType;
   function renderSceneTarget() {
-    if (!player.hasDistortion) return;
+    if (!player.needsSceneTarget) return;
     renderer.getDrawingBufferSize(_dsz); if (sceneRT.width !== _dsz.x || sceneRT.height !== _dsz.y) sceneRT.setSize(_dsz.x, _dsz.y);
     const ms = player.distortionMeshes; for (const m of ms) m.visible = false;
     const prev = renderer.getRenderTarget(); renderer.setRenderTarget(sceneRT); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(prev);
     for (const m of ms) m.visible = true;
-    player.shared.uScene.value = sceneRT.texture; player.shared.uSceneRes.value.copy(_dsz);
+    const sh = player.shared;
+    sh.uScene.value = sceneRT.texture; sh.uDepth.value = sceneRT.depthTexture; sh.uSceneRes.value.copy(_dsz);
+    sh.uCamNear.value = camera.near; sh.uCamFar.value = camera.far; sh.uInvProj.value.copy(camera.projectionMatrixInverse); sh.uCamWorld.value.copy(camera.matrixWorld);
   }
   function render() { // boyut her karede denetlenir (açılışta düzen oturmadan etkinleşince sıfır boyut kalmasın)
     if (!fixedSize && csz !== viewport.clientWidth + 'x' + viewport.clientHeight + 'x' + renderer.getPixelRatio()) resize();
@@ -174,7 +178,7 @@ export function initVfx(ctx) {
   function applyPreviewSettings() {
     if (!active) return;
     const p = effect.preview;
-    scene.background = new THREE.Color(p.background); ctx.grid.visible = p.showGrid; applyHeroVisibility(p.showHero); ground.visible = p.showGround;
+    scene.background = new THREE.Color(p.background); ctx.grid.visible = p.showGrid; applyHeroVisibility(p.showHero); ground.visible = p.showGround || player.hasDecal; // yere iz yansıyacak yüzey ister
     $('#vfxName').value = document.activeElement === $('#vfxName') ? $('#vfxName').value : effect.name;
   }
 
@@ -488,6 +492,7 @@ export function initVfx(ctx) {
           if (mod.key === 'light' && ['maxLights', 'useParticleColor'].includes(key) && M().mode !== 'perParticle') continue;
           if (mod.key === 'bladeTrail' && key === 'tileLength' && M().uvMode !== 'tile') continue;
           if (key === 'mesh') { body.appendChild(field('group', label, R(M, key), { ...o, hide: (k, g) => (k === 'file' && g.shape !== 'file') || (['innerRadius', 'outerRadius', 'angle', 'segments', 'rings'].includes(k) && g.shape === 'file') || (k === 'height' && g.shape !== 'cylinder') || (['innerRadius', 'outerRadius', 'angle'].includes(k) && g.shape === 'plane') }, 'renderer.mesh')); continue; }
+          if (key === 'softParticles' && (M().mode === 'decal' || M().blend === 'distortion')) continue;
           if (key === 'distortion') { body.appendChild(field('group', label, R(M, key), { ...o, hide: (k, g) => (k === 'frequency' && g.mode !== 'noise') || (k === 'scroll' && g.mode === 'radial') }, 'renderer.distortion')); continue; }
           body.appendChild(type === 'gradient' ? field('gradient', label, { get: M, set: () => {} }) : field(type, label, R(M, key), o, `${mod.key}.${key}`));
         }

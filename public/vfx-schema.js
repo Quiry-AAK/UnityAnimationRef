@@ -55,7 +55,11 @@ export function defaultEmitter() {
     subEmitters: { enabled: false, items: [] }, // item: { emitter, trigger: 'death'|'birth', count:[min,max], inheritColor, inheritSize, inheritVelocity }
     renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'soft', blend: 'additive', intensity: 1, lengthScale: 2, velocityScale: 0, sortingOrder: 0,
       mesh: { shape: 'arc', file: '', innerRadius: 0.4, outerRadius: 1, angle: 180, height: 0.5, segments: 64, rings: 4, rotation: v3() },
-      distortion: { mode: 'radial', strength: 0.03, frequency: 4, scroll: [0, 0.5] } },
+      distortion: { mode: 'radial', strength: 0.03, frequency: 4, scroll: [0, 0.5] },
+      // yumuşak parçacık: sahne yüzeyine distance (m) kala alfa sönümlenir (Unity Soft Particles / UE DepthFade)
+      softParticles: { enabled: false, distance: 0.3 },
+      // yere iz: parçacık başına kutu, sahne yüzeyine yansıtılır (Niagara Decal renderer). size = [en, boy, derinlik] m × parçacık boyutu
+      decal: { size: [1, 1, 0.5], projection: 'down', groundOnly: true } },
   };
 }
 
@@ -162,7 +166,7 @@ export const MODULES = [
   ] },
   { key: 'subEmitters', label: 'Alt emitter (doğum/ölüm)', fields: [['items', 'subList', "Tetiklenecek emitter'lar"]] },
   { key: 'renderer', label: 'Görünüm', always: true, fields: [
-    ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)'], ['mesh', 'Mesh (yay, silindir, düzlem, dosya)']] }],
+    ['mode', 'enum', 'Mod', { options: [['billboard', 'Billboard (kameraya bakar)'], ['stretched', 'Hıza göre uzar'], ['horizontal', 'Yatay (yere paralel)'], ['vertical', 'Dikey (Y ekseninde döner)'], ['mesh', 'Mesh (yay, silindir, düzlem, dosya)'], ['decal', 'Yere iz (decal: yüzeye yansıtılır)']] }],
     ['alignment', 'enum', 'Hizalama (billboard)', { options: [['view', 'Kameraya bakar (View)'], ['local', 'Emitter dönüşüne göre (Local, 3B)']] }],
     ['material', 'material', 'Materyal (kütüphaneden)'],
     ['texture', 'texture', 'Doku'],
@@ -187,6 +191,15 @@ export const MODULES = [
       ['strength', 'num', 'Güç (ekran kesri)', { min: 0, max: 0.5, step: 0.001 }],
       ['frequency', 'num', 'Gürültü frekansı', { min: 0.1, max: 40, step: 0.1 }],
       ['scroll', 'vec2', 'Kayma hızı (UV/sn)', { step: 0.05 }],
+    ] }],
+    ['softParticles', 'group', 'Yumuşak parçacık (derinlik)', { fields: [
+      ['enabled', 'bool', 'Açık (yüzeye değince keskin kesilmesin)'],
+      ['distance', 'num', 'Sönme mesafesi (m)', { min: 0.01, max: 5, step: 0.01 }],
+    ] }],
+    ['decal', 'group', 'Yere iz (decal)', { when: { mode: ['decal'] }, fields: [
+      ['size', 'vec3', 'Boyut: en, boy, derinlik (m × parçacık boyutu)', { min: 0.01, step: 0.05 }],
+      ['projection', 'enum', 'Yansıtma', { options: [['down', 'Aşağı (zemin)'], ['forward', 'İleri (emitter +Z, duvar)']] }],
+      ['groundOnly', 'bool', 'Yalnız yansıtma yönüne bakan yüzeyler (kahramana düşmez)'],
     ] }],
   ] },
 ];
@@ -348,6 +361,8 @@ export function normalizeEmitter(input, warn = () => {}, index = 0) {
     out[mod.key] = m;
   }
   if (out.light.enabled && out.light.shadows) { warn(`${out.name}.light.shadows: parçacık ışıklarında gölge desteklenmez (kapatıldı)`); out.light.shadows = false; }
+  if (out.renderer.mode === 'decal' && out.bladeTrail.enabled) warn(`${out.name}: bladeTrail açıkken renderer.mode decal yok sayılır`);
+  if (out.renderer.mode === 'decal' && out.renderer.blend === 'distortion') { warn(`${out.name}: decal + distortion desteklenmez → alpha`); out.renderer.blend = 'alpha'; }
   if (out.renderer.mode === 'mesh' && out.renderer.mesh.shape === 'file' && !out.renderer.mesh.file) warn(`${out.name}.renderer.mesh.file: dosya seçilmedi (meshes/<ad>.glb|obj)`);
   out.renderer.texture = out.renderer.texture.replace(/\.png$/i, '').replace(/[\\/:]+/g, '_').replace(/^\.+/, '') || 'soft'; // yalnız dosya adı
   if (!(out.renderer.texture in TEXTURES)) warn(`${out.name}.renderer.texture: "${out.renderer.texture}" yerleşik değil; vfx/textures/${out.renderer.texture}.png olmalı`);
@@ -538,6 +553,18 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - renderer.material ile: shader frag() çıkışı rg = ofset yönü (-1..1), a = maske; ofset = rg × a × strength.
 - Unreal: Translucent materyal, Emissive = SceneColor(ekran UV + ofset), Opacity = maske (aynı formül).
 
+## Yumuşak parçacık (renderer.softParticles)
+- { enabled, distance (m) }: parçacık bir yüzeye (zemin, kahraman) distance kala alfası doğrusal söner — duman yere değince keskin kesilmez.
+  UPE-SL'de otomatik uygulanır (alfa; premultiply'da renk de) ve i.softFade (0..1) ile i.sceneDepth (arkadaki yüzeyin kamera derinliği, m) okunabilir.
+  Unreal: materyalde DepthFade (FadeDistance = distance cm).
+
+## Yere iz (renderer.mode = 'decal')
+- renderer.decal: { size [en, boy, derinlik] (m; parçacık boyutuyla çarpılır), projection: down (zemine) | forward (emitter +Z yönüne),
+  groundOnly (yalnız yansıtma yönüne bakan yüzeyler; önizlemede kahramana düşmez) }. Doku/materyal izin UV'si: U = en, V = boy.
+  Renk/alfa startColor × colorOverLifetime (solma), dönüş startRotation/rotationOverLifetime (yansıtma ekseni etrafında).
+  Önizlemede sahne derinliğinden yeniden kurulan yüzeye yansıtılır (zemin görünmüyorsa zemin diski kendiliğinden açılır).
+  Unreal: Niagara Decal renderer + Deferred Decal materyali (DecalColor = parçacık rengi). Karakterlerde "Receives Decals" kapalı olmalı.
+
 ## Işık (emitter.light)
 - { enabled, mode: single (emitter konumunda tek nokta ışığı; curve emitter döngüsü boyunca) | perParticle (ilk maxLights parçacıkta;
   curve parçacık ömrü boyunca), color, useParticleColor (perParticle), intensity (önizlemede three.js kandela; Unreal'de yaklaşık),
@@ -555,7 +582,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 ## Alt emitter (subEmitters)
 - { enabled, items: [{ emitter: hedef ad, trigger: death|birth, count:[min,max], inheritColor, inheritSize, inheritVelocity (0..1) }] } (en çok 4).
   Hedef emitter kendi yayımını yapmaz; olay başına count parçacığı olayın konumunda (şekli emitter dönüşüyle çevresinde) doğurur.
-  Unreal: olay işleyicisi MCP ile kurulamıyor → uyarı (aşağıda, docs/UNREAL.md).
+  Unreal: kaynakta Generate Death/Location Event, hedefte Event Handler (SpawnedParticles) + Receive modülü; miraslar olay yükünden.
 
 ## İpuçları
 - Tek atımlık efekt: main.looping=false, emission.rateOverTime=0, bursts=[{time:0,count:[n,n]}], efekt duration ≈ en uzun ömür.

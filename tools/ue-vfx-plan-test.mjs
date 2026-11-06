@@ -169,6 +169,59 @@ test('alt emitter: hedef yayımsız + uyarı; önizleme şeması başvuruyu doğ
   const b = p.emitters.find((x) => x.source === 'b');
   assert.ok(!b.steps.some((s) => s.asset?.includes('Spawn'))); assert.ok(p.warnings.some((w) => /Event Handler/.test(w)));
 });
+test('alt emitter → Niagara olayları: kaynak Generate*, hedef Event Handler + Receive + ofset/miras', () => {
+  const e = normalizeEffect({ name: 't', emitters: [
+    { ...presetEmitter('sparks'), name: 'a', subEmitters: { enabled: true, items: [{ emitter: 'b', trigger: 'death', count: [2, 4], inheritVelocity: 0.5 }, { emitter: 'c', trigger: 'birth', count: [1, 1], inheritColor: true, inheritSize: true }] } },
+    { ...presetEmitter('embers'), name: 'b' }, { ...presetEmitter('glow'), name: 'c' }] }).effect;
+  const p = effectToNiagaraPlan(e);
+  const a = p.emitters.find((x) => x.source === 'a'), b = p.emitters.find((x) => x.source === 'b'), c = p.emitters.find((x) => x.source === 'c');
+  assert.ok(a.steps.some((s) => s.asset?.endsWith('GenerateDeathEvent') && s.script === 'ParticleUpdateScript'));
+  assert.ok(a.steps.some((s) => s.asset?.endsWith('GenerateLocationEvent') && s.script === 'ParticleSpawnScript'));
+  assert.equal(a.data.bRequiresPersistentIDs, true);
+  const hb = b.eventHandlers[0];
+  assert.equal(hb.sourceEmitter, 'a'); assert.equal(hb.event, 'DeathEvent');
+  assert.deepEqual(hb.props, { ExecutionMode: 'SpawnedParticles', SpawnNumber: 4, bRandomSpawnNumber: true, MinSpawnNumber: 2, MaxEventsPerFrame: 0 });
+  assert.ok(hb.steps[0].asset.endsWith('ReceiveDeathEvent') && hb.steps.every((s) => s.script === 'ParticleEventScript'));
+  assert.equal(hb.steps[1].params[1].hlsl, 'Particles.UPE_V0 + Particles.Velocity * 0.5');
+  assert.ok(b.steps.some((s) => s.alias === 'UPE_EvOff') && !b.steps.some((s) => s.asset?.includes('Spawn')));
+  const hc = c.eventHandlers[0];
+  assert.equal(hc.event, 'LocationEvent'); assert.ok(hc.steps[1].params.some((q) => q.name === 'Particles.UPE_Col0'));
+  assert.ok(p.warnings.some((w) => /inheritSize/.test(w)));
+  for (const s of [...hb.steps, ...hc.steps]) for (const q of s.params || []) assert.ok(balanced(q.hlsl));
+});
+test('yumuşak parçacık: yerleşik AlphaSoft/AdditiveSoft + FadeDistance; UPE-SL DepthFade girdisi', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('smoke', { renderer: { softParticles: { enabled: true, distance: 0.45 } } })));
+  assert.deepEqual([p.materials[0].blend, p.materials[0].instance, p.materials[0].scalars.FadeDistance], ['AlphaSoft', 'MI_UPE_smoke_AlphaSoft45', 45]);
+  const sh = { ...lib.builtins.find((x) => x.name === 'urp_particles_unlit') };
+  sh.code = { ...sh.code, fragment: 'float4 frag(UPEInput i)\n{\n    return float4(i.color.rgb, i.color.a * saturate(i.sceneDepth));\n}\n' };
+  const tr = translateShaderForUE(sh, { values: { _Surface: 1, _Blend: 0 }, soft: true });
+  assert.deepEqual(checkTranslation(tr), []);
+  const df = tr.inputs.find((x) => x.name === 'UPE_DF');
+  assert.equal(df.node.class, 'MaterialExpressionDepthFade'); assert.deepEqual(df.node.connect, { FadeDistance: 'UPE_SoftDistance' });
+  assert.ok(tr.inputs.some((x) => x.name === 'UPE_SD') && tr.code.includes('upeIn.sceneDepth = UPE_SD * 0.01;') && tr.code.includes('upeC.a * upeIn.softFade'));
+  assert.equal(baseMaterialName(sh, renderStateFor(sh, { _Surface: 1, _Blend: 0 }), { soft: true }), 'M_UPE_urp_particles_unlit_Alpha_Soft');
+});
+test('decal: Decal renderer, DecalSize yarı boyut cm, yön (aşağı = UE −Z), Deferred Decal materyali', () => {
+  const p = effectToNiagaraPlan(fx(presetEmitter('glow', { main: { startSize: [2, 2] }, renderer: { mode: 'decal', blend: 'alpha', decal: { size: [1, 0.5, 0.4] } } })));
+  const e = p.emitters[0];
+  assert.equal(e.kind, 'decal'); assert.equal(e.renderer.class, 'NiagaraDecalRendererProperties');
+  assert.equal(p.materials[0].blend, 'DecalAlpha');
+  assert.ok(findP(p, 'Particles.DecalSize').hlsl.startsWith('float3(20.0, 50.0, 25.0) *'));
+  // yön kuaterniyonu: dönüş 0'da yerel X → UE −Z (aşağı), yerel Y → UE +Y (Unity +X)
+  const m = /float4\((-?[\d.e-]+), (-?[\d.e-]+), (-?[\d.e-]+), (-?[\d.e-]+)\)/.exec(findP(p, 'Particles.UPE_QL').hlsl).slice(1).map(Number);
+  closeV(quatRotate(m, [1, 0, 0]), [0, 0, -1]); closeV(quatRotate(m, [0, 1, 0]), [0, 1, 0]);
+  assert.ok(findP(p, 'Particles.DecalOrientation').hlsl.includes('-Engine.Owner.Rotation.xyz')); // yerel uzayda dünya aşağısı
+  const pf = effectToNiagaraPlan(fx(presetEmitter('glow', { rotation: [0, 90, 0], renderer: { mode: 'decal', blend: 'additive', decal: { projection: 'forward' } } })));
+  const mf = /float4\((-?[\d.e-]+), (-?[\d.e-]+), (-?[\d.e-]+), (-?[\d.e-]+)\)/.exec(findP(pf, 'Particles.UPE_QL').hlsl).slice(1).map(Number);
+  closeV(quatRotate(mf, [1, 0, 0]), toUEDir([1, 0, 0]), 1e-6); // emitter Y 90°: +Z → Unity +X
+  assert.equal(pf.materials[0].blend, 'DecalAdditive');
+  const sh = { ...lib.builtins.find((x) => x.name === 'urp_particles_unlit') };
+  const tr = translateShaderForUE(sh, { values: { _Surface: 1, _Blend: 2 }, decal: true });
+  assert.deepEqual(checkTranslation(tr), []);
+  assert.equal(tr.inputs.find((x) => x.name === 'UPE_VC').node.class, 'MaterialExpressionDecalColor');
+  assert.equal(tr.blendMode, 'BLEND_AlphaComposite'); assert.ok(tr.code.includes('return float4(upeC.rgb * upeC.a, 0.0);') && tr.decal);
+  assert.equal(baseMaterialName(sh, renderStateFor(sh, { _Surface: 1, _Blend: 2 }), { decal: true }), 'M_UPE_urp_particles_unlit_Decal_Add');
+});
 test('UPE-SL: i.custom → Dynamic Parameter girdileri; bükülme → _Distort + ofset çıkışı', () => {
   const sh = { ...lib.builtins.find((s) => s.name === 'urp_particles_unlit') };
   sh.code = { ...sh.code, fragment: 'float4 frag(UPEInput i)\n{\n    return float4(i.custom.xy, 0.0, i.custom.w);\n}\n' };
