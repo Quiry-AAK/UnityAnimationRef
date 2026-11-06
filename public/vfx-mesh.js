@@ -16,6 +16,9 @@ const D2R = Math.PI / 180;
 // Normaller -Z (arc/plane: Unity Local hizalı quad gibi -Z tarafından aynasız görünür), silindirde dışa.
 export function proceduralMesh(m) {
   if (m.shape === 'hilal') return crescentMesh(m);
+  if (m.shape === 'ok') return arrowMesh(m);
+  if (m.shape === 'burgu') return twistConeMesh(m);
+  if (m.shape === 'kivrim') return curveLineMesh(m);
   const seg = Math.max(1, Math.round(m.segments || 1)), rings = Math.max(1, Math.round(m.rings || 1));
   const nv = (seg + 1) * (rings + 1);
   const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = new Float32Array(nv * 2);
@@ -195,4 +198,85 @@ function solve3(A, b) { // Gauss (kısmi pivot)
     for (let r = 0; r < 3; r++) if (r !== c) { const k = M[r][c] / d; for (let j = c; j < 4; j++) M[r][j] -= k * M[c][j]; }
   }
   return [0, 1, 2].map((i) => M[i][3] / (M[i][i] || 1e-12));
+}
+
+// ok: delme (thrust) ok ucu. Uç orijinde, gövde yerel -X boyunca outerRadius (m) uzunlukta; innerRadius = yarı genişlik (m).
+// Ekseni (X) çevresinde eşit açılı height (tamsayı, ≥1; < 1 ise 3) adet düz kanat: her yönden ok ucu gibi okunur.
+// UV: U = 0 arka → 1 uç, V = 0..1 enine (0.5 = eksen). Ok biçimini shader keser (ağ dikdörtgen kanatlar).
+function arrowMesh(m) {
+  const L = m.outerRadius, W = m.innerRadius, n = m.height >= 1 ? Math.round(m.height) : 3;
+  const seg = Math.max(4, Math.round(m.segments || 48)), rings = Math.max(2, Math.round(m.rings || 8));
+  const per = (seg + 1) * (rings + 1), nv = per * n;
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = new Float32Array(nv * 2), I = new Uint32Array(n * seg * rings * 6);
+  let k = 0, t = 0;
+  for (let q = 0; q < n; q++) {
+    const r = Math.PI * q / n, cr = Math.cos(r), sr = Math.sin(r), base = q * per;
+    for (let i = 0; i <= seg; i++) {
+      const u = i / seg, x = (u - 1) * L;
+      for (let j = 0; j <= rings; j++, k++) {
+        const v = j / rings, a = (v - 0.5) * 2 * W;
+        P.set([x, a * cr, a * sr], k * 3); N.set([0, -sr, cr], k * 3); UV.set([u, v], k * 2);
+      }
+    }
+    for (let i = 0; i < seg; i++) for (let j = 0; j < rings; j++) {
+      const a = base + i * (rings + 1) + j, b = a + rings + 1;
+      I.set([a, b, b + 1, a, b + 1, a + 1], t); t += 6;
+    }
+  }
+  return { positions: P, normals: N, uvs: UV, indices: I };
+}
+
+// burgu: kıvrımlı delme konisi. Yerel Y ekseni boyunca (taban y=0, uç y=height), taban yarıçapı outerRadius, uç innerRadius.
+// Profil içbükey kavisli (düz koni değil): önde ince uzun iğne, geriye eğriyle açılır. Çevresinde 6 hafif oluk angle derece burulur.
+// UV: U çevre 0..1, V taban 0 → uç 1. Normaller sayısal (dışa).
+function twistConeMesh(m) {
+  const seg = Math.max(12, Math.round(m.segments || 96)), rings = Math.max(8, Math.round(m.rings || 32));
+  const Rb = m.outerRadius, Rt = m.innerRadius, H = m.height, tw = (m.angle || 0) * D2R, F = 6, depth = 0.1;
+  const pt = (u, v) => {
+    const th = u * Math.PI * 2, vv = Math.min(1, Math.max(0, v));
+    const prof = (Rt + (Rb - Rt) * Math.pow(1 - vv, 2.1)) * (1 + 0.08 * Math.sin(vv * Math.PI * 2.2 + 0.4) * (1 - vv));   // kavisli (içbükey) profil: önde ince uzun iğne, geriye kavisle açılır
+    const fl = 0.5 + 0.5 * Math.cos(F * (th + tw * vv));
+    const r = prof * (1 - depth * (1 - fl * fl) * (1 - 0.6 * vv));
+    return [Math.cos(th) * r, vv * H, Math.sin(th) * r];
+  };
+  const nv = (seg + 1) * (rings + 1), P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = new Float32Array(nv * 2);
+  const e = 1e-3; let k = 0;
+  for (let i = 0; i <= seg; i++) { const u = i / seg;
+    for (let j = 0; j <= rings; j++, k++) { const v = j / rings, p = pt(u, v);
+      const a = pt(u + e, v), b = pt(u - e, v), c = pt(u, v + e), d = pt(u, v - e);
+      const du = [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dv = [c[0] - d[0], c[1] - d[1], c[2] - d[2]];
+      let n = [dv[1] * du[2] - dv[2] * du[1], dv[2] * du[0] - dv[0] * du[2], dv[0] * du[1] - dv[1] * du[0]];
+      const l = Math.hypot(...n); n = l > 1e-9 ? n.map((x) => x / l) : [Math.cos(u * Math.PI * 2), 0, Math.sin(u * Math.PI * 2)];
+      P.set(p, k * 3); N.set(n, k * 3); UV.set([u, v], k * 2); } }
+  const I = new Uint32Array(seg * rings * 6); let t = 0;
+  for (let i = 0; i < seg; i++) for (let j = 0; j < rings; j++) { const a = i * (rings + 1) + j, b = a + rings + 1; I.set([a, b, b + 1, a, b + 1, a + 1], t); t += 6; }
+  return { positions: P, normals: N, uvs: UV, indices: I };
+}
+
+// kivrim: uçtan çıkıp önce yerel +X'e (dışa) kavisle açılan, sonra yerel -Z'ye (geriye) kıvrılan ince çizgi şeridi; yol iki eksende organik dalgalı (düz kavis değil).
+// outerRadius = dışa erişim (m), height = geriye uzunluk (m), innerRadius = şerit genişliği (m). Her açıdan görünsün diye
+// eğri boyunca çapraz iki şerit (biri eğri düzleminde, biri ona dik). UV: U eğri boyunca 0 (uç) → 1, V enine (0.5 orta).
+function curveLineMesh(m) {
+  const seg = Math.max(8, Math.round(m.segments || 64)), rings = Math.max(2, Math.round(m.rings || 4));
+  const R = m.outerRadius, B = m.height, W = m.innerRadius;
+  const ph = R * 13.1 + B * 7.3;                                                  // her çizgide farklı dalga (ölçülerden tohum)
+  const wob = (s, f) => (Math.sin(s * f + ph) * 0.6 + Math.sin(s * f * 2.3 + ph * 1.7) * 0.4) * s;
+  const c = (s) => [R * (1 - Math.pow(1 - s, 2.6)) + wob(s, 9) * 0.05 * (R + B), wob(s, 7) * 0.07 * (R + B), -B * Math.pow(s, 1.7)];   // organik: düz kavis değil, iki eksende dalgalı
+  const per = (seg + 1) * (rings + 1), P = new Float32Array(per * 2 * 3), N = new Float32Array(per * 2 * 3), UV = new Float32Array(per * 2 * 2);
+  const I = new Uint32Array(seg * rings * 6 * 2); let k = 0, t = 0;
+  for (let q = 0; q < 2; q++) {
+    for (let i = 0; i <= seg; i++) {
+      const s = i / seg, p = c(s), a = c(Math.min(1, s + 1e-3)), b = c(Math.max(0, s - 1e-3));
+      let tg = [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; const tl = Math.hypot(...tg) || 1; tg = tg.map((x) => x / tl);
+      const side = q === 0 ? [0, 1, 0] : [-tg[2], 0, tg[0]];                     // q0: eğri düzlemine dik (Y), q1: düzlem içinde normal
+      const nrm = q === 0 ? [-tg[2], 0, tg[0]] : [0, 1, 0];
+      for (let j = 0; j <= rings; j++, k++) {
+        const v = j / rings, o = (v - 0.5) * W;
+        P.set([p[0] + side[0] * o, p[1] + side[1] * o, p[2] + side[2] * o], k * 3); N.set(nrm, k * 3); UV.set([s, v], k * 2);
+      }
+    }
+    const base = q * per;
+    for (let i = 0; i < seg; i++) for (let j = 0; j < rings; j++) { const a = base + i * (rings + 1) + j, b = a + rings + 1; I.set([a, b, b + 1, a, b + 1, a + 1], t); t += 6; }
+  }
+  return { positions: P, normals: N, uvs: UV, indices: I };
 }

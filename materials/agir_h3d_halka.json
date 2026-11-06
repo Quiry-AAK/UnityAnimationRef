@@ -1,0 +1,17 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h3d_halka",
+ "shader": "UnityPreview/sok_halka",
+ "values": {
+  "_Core": {
+   "color": "#eef8ff",
+   "intensity": 0.75
+  },
+  "_Glow": {
+   "color": "#5aa8ff",
+   "intensity": 0.3
+  },
+  "_Width": 0.08
+ },
+ "renderQueue": -1
+}

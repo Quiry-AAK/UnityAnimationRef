@@ -1,0 +1,5502 @@
+{
+ "name": "agir_h3_delme",
+ "duration": 1.4,
+ "loop": true,
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#141a26",
+  "bloom": 0.65,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "toplanma",
+   "position": [
+    0.12,
+    1.26,
+    1.34
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3,
+    "startLifetime": [
+     0.1,
+     0.13
+    ],
+    "startSpeed": [
+     0.2,
+     0.4
+    ],
+    "startSize": [
+     0.03,
+     0.05
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#a8d0ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 24
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       16,
+       20
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.5,
+    "radiusThickness": 0.4,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.1
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.3
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   }
+  },
+  {
+   "name": "bukulme",
+   "position": [
+    0.1,
+    1.05,
+    -0.15
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.43,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     25,
+     25
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      0.28,
+      0
+     ],
+     [
+      0.72,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8
+     ],
+     [
+      0.15,
+      1
+     ],
+     [
+      1,
+      1.06
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "burgu",
+     "file": "",
+     "innerRadius": 0.015,
+     "outerRadius": 1,
+     "angle": 120,
+     "height": 3.6,
+     "segments": 128,
+     "rings": 40,
+     "rotation": [
+      90,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_bukulme",
+    "texture": "soft",
+    "blend": "distortion",
+    "intensity": 1,
+    "sortingOrder": 0,
+    "distortion": {
+     "mode": "noise",
+     "strength": 0.045,
+     "frequency": 7,
+     "scroll": [
+      0,
+      -4
+     ]
+    }
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "limit": 0,
+    "dampen": 0.283,
+    "drag": 0
+   }
+  },
+  {
+   "name": "kabuk",
+   "position": [
+    0.1,
+    1.05,
+    -0.15
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.43,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     25,
+     25
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      0.28,
+      0
+     ],
+     [
+      0.72,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8
+     ],
+     [
+      0.15,
+      1
+     ],
+     [
+      1,
+      1.06
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "burgu",
+     "file": "",
+     "innerRadius": 0.015,
+     "outerRadius": 0.95,
+     "angle": 70,
+     "height": 3.6,
+     "segments": 128,
+     "rings": 40,
+     "rotation": [
+      90,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_kabuk",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 3
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "limit": 0,
+    "dampen": 0.283,
+    "drag": 0
+   }
+  },
+  {
+   "name": "sarmal",
+   "position": [
+    0.1,
+    1.05,
+    0.1
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.43,
+    "startLifetime": [
+     0.48,
+     0.48
+    ],
+    "startSpeed": [
+     25,
+     25
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      0.28,
+      0
+     ],
+     [
+      0.72,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8
+     ],
+     [
+      0.15,
+      1
+     ],
+     [
+      1,
+      1.06
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "burgu",
+     "file": "",
+     "innerRadius": 0.015,
+     "outerRadius": 0.72,
+     "angle": -150,
+     "height": 3.3,
+     "segments": 128,
+     "rings": 40,
+     "rotation": [
+      90,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_sarmal",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 4
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "limit": 0,
+    "dampen": 0.283,
+    "drag": 0
+   }
+  },
+  {
+   "name": "cekirdek",
+   "position": [
+    0.1,
+    1.05,
+    0.5
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.43,
+    "startLifetime": [
+     0.42,
+     0.42
+    ],
+    "startSpeed": [
+     25,
+     25
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      0.28,
+      0
+     ],
+     [
+      0.72,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8
+     ],
+     [
+      0.15,
+      1
+     ],
+     [
+      1,
+      1.06
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "burgu",
+     "file": "",
+     "innerRadius": 0.015,
+     "outerRadius": 0.3,
+     "angle": 220,
+     "height": 2.9,
+     "segments": 128,
+     "rings": 40,
+     "rotation": [
+      90,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cekirdek",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 5
+   },
+   "light": {
+    "enabled": true,
+    "mode": "single",
+    "color": "#9cc0ff",
+    "useParticleColor": false,
+    "intensity": 0.5,
+    "radius": 2.5,
+    "curve": [
+     [
+      0,
+      0.2
+     ],
+     [
+      0.1,
+      0.7
+     ],
+     [
+      0.2,
+      1
+     ],
+     [
+      0.45,
+      0.4
+     ],
+     [
+      0.8,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "maxLights": 1,
+    "shadows": false
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "limit": 0,
+    "dampen": 0.283,
+    "drag": 0
+   }
+  },
+  {
+   "name": "akinti0",
+   "position": [
+    0.1,
+    1.05,
+    2
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.45,
+    "startLifetime": [
+     0.2,
+     0.45
+    ],
+    "startSpeed": [
+     0.8,
+     2.2
+    ],
+    "startSize": [
+     0.025,
+     0.055
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#8fbaff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 30
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       16,
+       22
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.55,
+    "radiusThickness": 0.3,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 3,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   },
+   "velocity": {
+    "enabled": true,
+    "linear": [
+     0,
+     0,
+     -4
+    ],
+    "orbital": [
+     0,
+     0,
+     0
+    ],
+    "radial": 0,
+    "space": "world",
+    "speedModifier": 1
+   }
+  },
+  {
+   "name": "akinti1",
+   "position": [
+    0.1,
+    1.05,
+    2.8
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.48,
+    "startLifetime": [
+     0.2,
+     0.45
+    ],
+    "startSpeed": [
+     0.8,
+     2.2
+    ],
+    "startSize": [
+     0.025,
+     0.055
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#8fbaff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 30
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       16,
+       22
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.55,
+    "radiusThickness": 0.3,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 3,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   },
+   "velocity": {
+    "enabled": true,
+    "linear": [
+     0,
+     0,
+     -4
+    ],
+    "orbital": [
+     0,
+     0,
+     0
+    ],
+    "radial": 0,
+    "space": "world",
+    "speedModifier": 1
+   }
+  },
+  {
+   "name": "akinti2",
+   "position": [
+    0.1,
+    1.05,
+    3.6
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.51,
+    "startLifetime": [
+     0.2,
+     0.45
+    ],
+    "startSpeed": [
+     0.8,
+     2.2
+    ],
+    "startSize": [
+     0.025,
+     0.055
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#8fbaff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 30
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       16,
+       22
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.55,
+    "radiusThickness": 0.3,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 3,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   },
+   "velocity": {
+    "enabled": true,
+    "linear": [
+     0,
+     0,
+     -4
+    ],
+    "orbital": [
+     0,
+     0,
+     0
+    ],
+    "radial": 0,
+    "space": "world",
+    "speedModifier": 1
+   }
+  },
+  {
+   "name": "cizgi0",
+   "position": [
+    0.219,
+    1.157,
+    4.587
+   ],
+   "rotation": [
+    -8.9,
+    11.2,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.511,
+    "startLifetime": [
+     0.466,
+     0.466
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.37,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.33
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9334913063251838
+     ],
+     [
+      1,
+      1.07878905552383
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.211,
+     "outerRadius": 0.42,
+     "angle": 360,
+     "height": 5.15,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi1",
+   "position": [
+    0.004,
+    0.964,
+    4.281
+   ],
+   "rotation": [
+    9.6,
+    5.2,
+    29.8
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.505,
+    "startLifetime": [
+     0.443,
+     0.443
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f4f9ff",
+     "#f4f9ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.49,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.71
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8611947261780476
+     ],
+     [
+      1,
+      1.1623221558343257
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.109,
+     "outerRadius": 0.48,
+     "angle": 360,
+     "height": 3.42,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi2",
+   "position": [
+    0.089,
+    1.16,
+    4.304
+   ],
+   "rotation": [
+    23.9,
+    -18.6,
+    41.8
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.521,
+    "startLifetime": [
+     0.319,
+     0.319
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#eef6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.37,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.61
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1.027517846868149
+     ],
+     [
+      1,
+      1.156839234734345
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.138,
+     "outerRadius": 0.35,
+     "angle": 360,
+     "height": 4.58,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi3",
+   "position": [
+    0.082,
+    1.072,
+    4.216
+   ],
+   "rotation": [
+    11.5,
+    16.3,
+    70.6
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.468,
+    "startLifetime": [
+     0.476,
+     0.476
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f8fbff",
+     "#f8fbff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.54,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.7
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9055064334792581
+     ],
+     [
+      1,
+      1.1224706144176753
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.176,
+     "outerRadius": 0.67,
+     "angle": 360,
+     "height": 3.31,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi4",
+   "position": [
+    0.038,
+    1.153,
+    4.116
+   ],
+   "rotation": [
+    -23.8,
+    1.4,
+    74.7
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.461,
+    "startLifetime": [
+     0.38,
+     0.38
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.49,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.48
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9433030242534834
+     ],
+     [
+      1,
+      1.1579464712217202
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.152,
+     "outerRadius": 0.56,
+     "angle": 360,
+     "height": 3.04,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi5",
+   "position": [
+    0.21,
+    0.96,
+    4.21
+   ],
+   "rotation": [
+    4.9,
+    15.6,
+    92.2
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.471,
+    "startLifetime": [
+     0.407,
+     0.407
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f4f9ff",
+     "#f4f9ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.35,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.67
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1.0455546077320141
+     ],
+     [
+      1,
+      1.1147191139705104
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.114,
+     "outerRadius": 0.51,
+     "angle": 360,
+     "height": 2.74,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi6",
+   "position": [
+    0.146,
+    1.149,
+    3.987
+   ],
+   "rotation": [
+    -23.4,
+    -23.5,
+    118.8
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.458,
+    "startLifetime": [
+     0.332,
+     0.332
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#eef6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.35,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.69
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9122871722384762
+     ],
+     [
+      1,
+      1.095377859051981
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.163,
+     "outerRadius": 0.5,
+     "angle": 360,
+     "height": 3.62,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi7",
+   "position": [
+    0.017,
+    1.095,
+    4.586
+   ],
+   "rotation": [
+    5.9,
+    1.2,
+    135.1
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.519,
+    "startLifetime": [
+     0.376,
+     0.376
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f8fbff",
+     "#f8fbff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.44,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.66
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.910621735202438
+     ],
+     [
+      1,
+      1.1021276605325414
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.131,
+     "outerRadius": 0.67,
+     "angle": 360,
+     "height": 3.52,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi8",
+   "position": [
+    0.001,
+    1.038,
+    4.646
+   ],
+   "rotation": [
+    -24,
+    -6.7,
+    158.1
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.524,
+    "startLifetime": [
+     0.302,
+     0.302
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.48,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.38
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1.0370389528512205
+     ],
+     [
+      1,
+      1.1727604278469275
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.125,
+     "outerRadius": 0.35,
+     "angle": 360,
+     "height": 2.92,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi9",
+   "position": [
+    0.024,
+    0.968,
+    4.135
+   ],
+   "rotation": [
+    -9.2,
+    13,
+    179
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.46,
+    "startLifetime": [
+     0.427,
+     0.427
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f4f9ff",
+     "#f4f9ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.5,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.38
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9174365335458128
+     ],
+     [
+      1,
+      1.054364478357306
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.164,
+     "outerRadius": 0.46,
+     "angle": 360,
+     "height": 2.73,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi10",
+   "position": [
+    0.175,
+    0.974,
+    4.197
+   ],
+   "rotation": [
+    21.3,
+    -16.9,
+    183.4
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.468,
+    "startLifetime": [
+     0.3,
+     0.3
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#eef6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.43,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.78
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9166527444807127
+     ],
+     [
+      1,
+      1.0745073655035846
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.129,
+     "outerRadius": 0.42,
+     "angle": 360,
+     "height": 3.03,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi11",
+   "position": [
+    0.07,
+    1.003,
+    4.58
+   ],
+   "rotation": [
+    20.7,
+    23.9,
+    216.8
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.514,
+    "startLifetime": [
+     0.461,
+     0.461
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f8fbff",
+     "#f8fbff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.39,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.57
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8718559838001877
+     ],
+     [
+      1,
+      1.150139797315998
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.139,
+     "outerRadius": 0.46,
+     "angle": 360,
+     "height": 4.74,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi12",
+   "position": [
+    0.181,
+    1.141,
+    4.033
+   ],
+   "rotation": [
+    -10.2,
+    -8.9,
+    224.9
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.469,
+    "startLifetime": [
+     0.438,
+     0.438
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.49,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.61
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9540041599907
+     ],
+     [
+      1,
+      1.1984377227716325
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.175,
+     "outerRadius": 0.49,
+     "angle": 360,
+     "height": 3.03,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi13",
+   "position": [
+    0.037,
+    1.123,
+    3.946
+   ],
+   "rotation": [
+    20.1,
+    18.1,
+    253.1
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.456,
+    "startLifetime": [
+     0.459,
+     0.459
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f4f9ff",
+     "#f4f9ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.31,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.35
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.8981582098864755
+     ],
+     [
+      1,
+      1.1962751714961022
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.108,
+     "outerRadius": 0.22,
+     "angle": 360,
+     "height": 5.05,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi14",
+   "position": [
+    0.06,
+    1.132,
+    4.678
+   ],
+   "rotation": [
+    14.1,
+    -8.6,
+    266.5
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.519,
+    "startLifetime": [
+     0.421,
+     0.421
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#eef6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.43,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.8
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9845897580192376
+     ],
+     [
+      1,
+      1.0875472719955945
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.125,
+     "outerRadius": 0.69,
+     "angle": 360,
+     "height": 2.71,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi15",
+   "position": [
+    0.1,
+    1.048,
+    4.037
+   ],
+   "rotation": [
+    -1.8,
+    3.2,
+    275.2
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.468,
+    "startLifetime": [
+     0.408,
+     0.408
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f8fbff",
+     "#f8fbff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.51,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.44
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1.039005783753938
+     ],
+     [
+      1,
+      1.0651556643262299
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.202,
+     "outerRadius": 0.41,
+     "angle": 360,
+     "height": 5.11,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi16",
+   "position": [
+    0.143,
+    1.166,
+    3.933
+   ],
+   "rotation": [
+    -11.5,
+    -23.8,
+    295.1
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.46,
+    "startLifetime": [
+     0.494,
+     0.494
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.31,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.65
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1.0141469183210967
+     ],
+     [
+      1,
+      1.0629421670050092
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.151,
+     "outerRadius": 0.23,
+     "angle": 360,
+     "height": 3.04,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi17",
+   "position": [
+    -0.009,
+    1.169,
+    4.427
+   ],
+   "rotation": [
+    -8.8,
+    15.6,
+    313.1
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.484,
+    "startLifetime": [
+     0.345,
+     0.345
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f4f9ff",
+     "#f4f9ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.49,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.68
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9146985393318806
+     ],
+     [
+      1,
+      1.191262913188554
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.121,
+     "outerRadius": 0.71,
+     "angle": 360,
+     "height": 4.95,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi18",
+   "position": [
+    0.136,
+    1.138,
+    3.841
+   ],
+   "rotation": [
+    3.4,
+    22.6,
+    330
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.458,
+    "startLifetime": [
+     0.363,
+     0.363
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#eef6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.42,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.73
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.91253354226357
+     ],
+     [
+      1,
+      1.0509336178661015
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.179,
+     "outerRadius": 0.64,
+     "angle": 360,
+     "height": 5.16,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "cizgi19",
+   "position": [
+    0.216,
+    1.042,
+    4.395
+   ],
+   "rotation": [
+    3.9,
+    -16.6,
+    357.4
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.5,
+    "startLifetime": [
+     0.335,
+     0.335
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f8fbff",
+     "#f8fbff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.55,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0.31
+     ],
+     [
+      0.3,
+      0.15
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.9572598984033148
+     ],
+     [
+      1,
+      1.137834348384214
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "kivrim",
+     "file": "",
+     "innerRadius": 0.133,
+     "outerRadius": 0.52,
+     "angle": 360,
+     "height": 3.44,
+     "segments": 72,
+     "rings": 4,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_cizgi_ince",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 7
+   }
+  },
+  {
+   "name": "toz0",
+   "position": [
+    0.1,
+    0.05,
+    1.9
+   ],
+   "rotation": [
+    -90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.45,
+    "startLifetime": [
+     0.5,
+     0.9
+    ],
+    "startSpeed": [
+     1.2,
+     2.6
+    ],
+    "startSize": [
+     0.3,
+     0.6
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eef3ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 8
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       4,
+       6
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.3,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.3
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 4,
+    "limit": 12,
+    "dampen": 0
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.2,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.1,
+      0.3
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.5
+     ],
+     [
+      1,
+      1.6
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -40,
+     40
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h3d_sis",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  },
+  {
+   "name": "toz1",
+   "position": [
+    0.1,
+    0.05,
+    2.5
+   ],
+   "rotation": [
+    -90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.49,
+    "startLifetime": [
+     0.5,
+     0.9
+    ],
+    "startSpeed": [
+     1.2,
+     2.6
+    ],
+    "startSize": [
+     0.3,
+     0.6
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#eef3ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 8
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       4,
+       6
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.3,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.3
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 4,
+    "limit": 12,
+    "dampen": 0
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.2,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.1,
+      0.3
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.5
+     ],
+     [
+      1,
+      1.6
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -40,
+     40
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h3d_sis",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  },
+  {
+   "name": "halka1",
+   "position": [
+    0.1,
+    1.05,
+    4.449999999999999
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.52,
+    "startLifetime": [
+     0.35,
+     0.35
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.4
+     ],
+     [
+      0.35,
+      1.05
+     ],
+     [
+      1,
+      1.55
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.1,
+     "outerRadius": 0.75,
+     "angle": 360,
+     "height": 0.5,
+     "segments": 96,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_halka",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 9
+   }
+  },
+  {
+   "name": "halka2",
+   "position": [
+    0.1,
+    1.05,
+    4.85
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.56,
+    "startLifetime": [
+     0.35,
+     0.35
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#f0f6ff",
+     "#f0f6ff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.4
+     ],
+     [
+      0.35,
+      1.05
+     ],
+     [
+      1,
+      1.55
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.1,
+     "outerRadius": 0.75,
+     "angle": 360,
+     "height": 0.5,
+     "segments": 96,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h3d_halka",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 9
+   }
+  },
+  {
+   "name": "uc_zerre",
+   "position": [
+    0.1,
+    1.05,
+    4.6
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.52,
+    "startLifetime": [
+     0.3,
+     0.6
+    ],
+    "startSpeed": [
+     2,
+     6
+    ],
+    "startSize": [
+     0.03,
+     0.06
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#8fbaff"
+    ],
+    "gravity": 0.3,
+    "simulationSpace": "world",
+    "maxParticles": 50
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       34,
+       44
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0.15,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 1
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 8,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   }
+  },
+  {
+   "name": "uc_cakma",
+   "position": [
+    0.1,
+    1.05,
+    4.6
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.51,
+    "startLifetime": [
+     0.16,
+     0.16
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.3,
+     0.3
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#d8eaff",
+     "#d8eaff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 0,
+    "radiusThickness": 0,
+    "arc": 1,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.3
+     ],
+     [
+      0.2,
+      1
+     ],
+     [
+      1,
+      1.1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif_isik",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 9
+   }
+  }
+ ]
+}

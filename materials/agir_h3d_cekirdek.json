@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h3d_cekirdek",
+ "shader": "UnityPreview/delme_koni",
+ "values": {
+  "_Core": {
+   "color": "#f4fbff",
+   "intensity": 0.96
+  },
+  "_Mid": {
+   "color": "#8fcaff",
+   "intensity": 0.88
+  },
+  "_Edge": {
+   "color": "#a8d4ff",
+   "intensity": 0.72
+  },
+  "_Count": 6,
+  "_Twist": -1.2,
+  "_Spin": -3,
+  "_Flow": 8,
+  "_Thr": 0.55,
+  "_FresPow": 1.6,
+  "_Fill": 0.08
+ },
+ "renderQueue": -1
+}

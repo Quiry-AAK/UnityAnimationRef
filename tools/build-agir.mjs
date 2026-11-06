@@ -20,6 +20,10 @@ const FITS = {
   h2: { anim: 'arpg_attack_combo2_from_b2', normal: [0.786, 0.6161, 0.0508], center: [0.0876, 1.1783, 1.4487], rotation: [-38.032, 86.3, 59.078],
     radius: 0.9606, angle: 190.57, inner: 0.3339, impact: 0.6, axes: { X: [-0.4943, 0.6757, -0.5469], Y: [-0.3713, 0.4048, 0.8356] },
     progress: [[0.4, 0], [0.4083, 0.1184], [0.4167, 0.2464], [0.425, 0.4045], [0.4333, 0.5587], [0.4417, 0.7957], [0.45, 1]] },
+  // H3: atılışla birlikte kesiş (kare 24–31); uç yolu atılış yüzünden büyük yarıçaplı, neredeyse düz bir yay
+  h3: { anim: 'arpg_attack_combo3_from_b3', normal: [-0.6663, 0.6942, -0.2723], center: [2.2059, 3.3036, 3.3631], rotation: [-43.966, -112.226, -108.481],
+    radius: 3.1679, angle: 45.56, inner: 0.92, impact: 0.5, axes: { X: [-0.4896, -0.6826, -0.5425], Y: [-0.5625, -0.2282, 0.7947] },
+    progress: [[0.4, 0], [0.4167, 0.047], [0.4333, 0.121], [0.45, 0.2228], [0.4583, 0.3545], [0.4667, 0.4868], [0.475, 0.6223], [0.4833, 0.7838], [0.4917, 0.8606], [0.5, 0.9325], [0.5167, 1]] },
 };
 
 const once = (count) => ({ rateOverTime: 0, bursts: [{ time: 0, count, cycles: 1, interval: 0.01 }] });
@@ -81,6 +85,172 @@ function build(key, variant) {
     curve: [[0, 0.2], [0.1, 0.7], [0.2, 1], [0.45, 0.4], [0.8, 0], [1, 0]], maxLights: 1, shadows: false } } });
   const M = (v, n) => `agir_${key}${v}_${n}`;
   const prev = { withAnimation: true, startFrame: 0, background: '#141a26', bloom: 0.65, showHero: true, showGrid: true };
+  if (variant === 'delme') {
+    // H3 "delme" (sıfırdan, BDO dili): kahraman katanayla birlikte havayı delip geçer. Atılış düz +Z (kalça z 1.57 → 2.82,
+    // 0.43–0.55 sn; UPE'de kemik dünya konumundan ölçüldü). Kahramanı saran, önde sivrilen hacimli rüzgâr konisi onunla birlikte
+    // ilerler (parçacık hızı 25 m/sn, kare başı sönüm → ~1.25 m'de durur): dış şok kabuğu (fresnel siluet) + sarmal rüzgâr
+    // şeritleri + sıcak iç çekirdek + hava bükülmesi. Önceden kılıca zerre toplanır; uçta iki ses duvarı halkası + zerre patlaması;
+    // yol boyunca geriye akan zerreler ve yandan kalkan toz. Koni arkadan öne çözülerek söner. H1 yarık / H2 hilal dilinden ayrı.
+    const T0 = 0.43, V0 = 25, DAMP = 0.283, AXX = 0.1, AXY = 1.05;
+    const cone = (name, mat, { Rb, L, back, life, order, tw = 120, blend = 'additive', extra = {} }) => {
+      const e = arc(name, mat, { blend, order, dt: T0 - t0, life, extra,
+        mesh: { shape: 'burgu', file: '', innerRadius: 0.015, outerRadius: Rb, angle: tw, height: L, segments: 128, rings: 40 } });
+      e.renderer.mesh.rotation = [90, 0, 0];                       // koni ekseni (yerel Y) → +Z
+      e.position = [AXX, AXY, back]; e.rotation = [0, 0, 0];
+      e.main.startSpeed = [V0, V0];                                  // shape kapalı → +Z
+      e.limitVelocity = { enabled: true, limit: 0, dampen: DAMP, drag: 0 };
+      e.customData.x = [[0, 1], [1, 1]];
+      e.customData.y = [[0, 0], [0.28, 0], [0.72, 1], [1, 1]];   // kahraman durunca (~0.55 sn) arkadan çözülmeye başlar
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.8], [0.15, 1], [1, 1.06]] };
+      return e;
+    };
+    const flowBack = (sp) => ({ enabled: true, linear: [0, 0, -sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
+    const trail = [[2.0, 0.45], [2.8, 0.48], [3.6, 0.51]].map(([z, d], k) => {
+      const e = emitAt('akinti' + k, [AXX, AXY, z], [0, 0, 0], { delay: d, life: [0.2, 0.45], speed: [0.8, 2.2], size: [0.025, 0.055], color: ['#eef6ff', '#8fbaff'],
+        max: 30, count: [16, 22], r: 0.55, thick: 0.3, arc: 360, from: 0, rand: 0.2, drag: 3, mat: 'zerre_hafif', order: 8 });
+      e.velocity = flowBack(4); return e;
+    });
+    const dust = [[1.9, 0.45], [2.5, 0.49]].map(([z, d], k) => {
+      const e = emitAt('toz' + k, [AXX, 0.05, z], [-90, 0, 0], { delay: d, life: [0.5, 0.9], speed: [1.2, 2.6], size: [0.3, 0.6], srot: [0, 360], color: ['#ffffff', '#eef3ff'],
+        max: 8, count: [4, 6], r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.3, noise: 0.2, drag: 4, angv: [-40, 40], sizeCurve: [[0, 0.5], [1, 1.6]],
+        alpha: [[0, 0], [0.1, 0.3], [1, 0]], blend: 'alpha', mat: M('d', 'sis'), order: 1 });
+      return e;
+    });
+    const ring = (name, z, d, s) => {
+      const e = arc(name, M('d', 'halka'), { order: 9, dt: d - t0, life: 0.35, color: s,
+        mesh: { shape: 'arc', file: '', innerRadius: 0.1, outerRadius: 0.75, angle: 360, height: 0.5, segments: 96, rings: 8 } });
+      e.position = [AXX, AXY, z]; e.rotation = [0, 0, 0];
+      e.customData.x = [[0, 1], [1, 1]];
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.4], [0.35, 1.05], [1, 1.55]] };
+      return e;
+    };
+    // uçtan çıkıp koninin kavisini izleyerek geriye akan ince çizgi parçacıklar (uç kahramanla hareket eder: z(t) sönüm modelinden)
+    const TAU = 1 / (60 * -Math.log(1 - DAMP)), TIP0 = -0.15 + 3.6;
+    const tipAt = (t) => +(TIP0 + V0 * TAU * (1 - Math.exp(-(t - T0) / TAU))).toFixed(3);
+    // çizgiler: uçtan çıkar, önce hızla dışa geniş yay çizer (dışa hız sürtünmeyle söner), sonra geriye kıvrılır (sabit geri akış).
+    // Her çizgi sabit yönlü kısa bir akış: ardışık parçacıklar aynı kıvrık yolu izler → kesintisiz çizgi okunur.
+    const streaks = [];
+    // rastgele uçuşan çizgiler: düzensiz açı, erişim, geri uzunluk, kalınlık, ömür, doğuş anı; eksene yatık, çıkış noktası uçtan sapmış
+    let sd = 41; const rr = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+    for (let k = 0; k < 20; k++) {
+      const main = k % 3 === 0;                                           // hiyerarşi: az sayıda parlak ana çizgi, aralarında soluk ince ikincil çizgiler
+      const deg = +(k * 18.3 + rr() * 16).toFixed(1), reach = +(0.22 + rr() * 0.5).toFixed(2), backL = +(2.6 + rr() * 2.6).toFixed(2);   // dar açılır, uzun geriye gider
+      const t = +(0.455 + rr() * 0.07).toFixed(3), life = +(0.28 + rr() * 0.22).toFixed(3);
+      const jit = [(rr() - 0.5) * 0.25, (rr() - 0.5) * 0.25, (rr() - 0.5) * 0.4];
+      const e = arc('cizgi' + k, M('d', main ? 'cizgi' : 'cizgi_ince'), { order: 7, dt: t - t0, life, color: ['#ffffff', '#f4f9ff', '#eef6ff', '#f8fbff'][k % 4],
+        mesh: { shape: 'kivrim', file: '', innerRadius: +(main ? 0.16 + rr() * 0.06 : 0.1 + rr() * 0.06).toFixed(3), outerRadius: reach, angle: 360, height: backL, segments: 72, rings: 4 } });
+      e.position = [AXX + jit[0], AXY + jit[1], +(tipAt(t) + jit[2]).toFixed(3)].map((x) => +x.toFixed(3));
+      e.rotation = [+((rr() - 0.5) * 50).toFixed(1), +((rr() - 0.5) * 50).toFixed(1), deg];
+      e.customData.x = [[0, 0], [+(0.3 + rr() * 0.25).toFixed(2), 1], [1, 1]];
+      e.customData.y = [[0, +(0.3 + rr() * 0.5).toFixed(2)], [0.3, 0.15], [1, 0]];
+      e.customData.z = [[0, 0], [1, 0]];
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.85 + rr() * 0.2], [1, 1.05 + rr() * 0.15]] };
+      streaks.push(e);
+    }
+    const tipZ = 4.6;
+    return {
+      name: 'agir_' + key + '_delme', duration: 1.4, loop: true, preview: prev,
+      emitters: [
+        emitAt('toplanma', [0.12, 1.26, 1.34], [0, 0, 0], { delay: 0.3, life: [0.1, 0.13], speed: [0.2, 0.4], size: [0.03, 0.05], color: ['#eef6ff', '#a8d0ff'],
+          max: 24, count: [16, 20], r: 0.5, thick: 0.4, arc: 360, from: 0, rand: 0.1, sizeCurve: [[0, 1], [1, 0.3]], mat: 'zerre_hafif', order: 8 }),
+        cone('bukulme', M('d', 'bukulme'), { Rb: 1.0, L: 3.6, back: -0.15, life: 0.5, order: 0, blend: 'distortion',
+          extra: { renderer: { distortion: { mode: 'noise', strength: 0.045, frequency: 7, scroll: [0, -4] } } } }),
+        cone('kabuk', M('d', 'kabuk'), { Rb: 0.95, L: 3.6, back: -0.15, life: 0.5, order: 3, tw: 70 }),
+        cone('sarmal', M('d', 'sarmal'), { Rb: 0.72, L: 3.3, back: 0.1, life: 0.48, order: 4, tw: -150 }),
+        cone('cekirdek', M('d', 'cekirdek'), { Rb: 0.3, L: 2.9, back: 0.5, life: 0.42, order: 5, tw: 220, extra: light(0.5, 2.5) }),
+        ...trail, ...streaks, ...dust,
+        ring('halka1', tipZ - 0.15, 0.52, '#ffffff'), ring('halka2', tipZ + 0.25, 0.56, '#f0f6ff'),
+        emitAt('uc_zerre', [AXX, AXY, tipZ], [0, 0, 0], { delay: 0.52, life: [0.3, 0.6], speed: [2, 6], size: [0.03, 0.06], color: ['#eef6ff', '#8fbaff'], gravity: 0.3,
+          max: 50, count: [34, 44], r: 0.15, thick: 1, arc: 360, from: 0, rand: 1, drag: 8, mat: 'zerre_hafif', order: 8 }),
+        emitAt('uc_cakma', [AXX, AXY, tipZ], [0, 0, 0], { delay: 0.51, life: [0.16, 0.16], speed: [0, 0], size: [0.3, 0.3], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
+          r: 0, arc: 1, from: 0, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+      ],
+    };
+  }
+  if (variant === 'delis') {
+    // H3 "delme": kahraman katanayla birlikte öne delip geçer. Ok karakterden çıkar: eksen göğüs hizasında atılış yönünde (+Z,
+    // kalça z 1.5 → 2.8, 0.43–0.55 sn; UPE'de kemik dünya konumundan ölçüldü), uç göğsün ~1.6 m önünde ve kahramanla birlikte
+    // uzanır; gövde atılış yolunu ve kahramanı sarar. İç içe üç ok (dış geniş-soluk, ana, iç parlak-dar), eksen çevresinde kanatlı.
+    const rot = [0, -90, 0];                                   // yerel +X → dünya +Z
+    const AXX = 0.1, AXY = 1.0, TIPZ = 4.4;
+    const tip = [AXX, AXY, TIPZ];
+    const lead = [[0.42, 3.15], [0.46, 3.43], [0.5, 4.12], [0.55, 4.29], [0.58, 4.4]];   // [t, uç z] = kalça z + 1.6
+    const ok = (name, mat, { L, W, n, roll = 0, delay, life, order, extra = {} }) => {
+      const e = arc(name, mat, { order, dt: delay - t0, life, mesh: { shape: 'ok', file: '', innerRadius: W, outerRadius: L, angle: 360, height: n, segments: 72, rings: 24 }, extra });
+      e.renderer.mesh.rotation = [roll, 0, 0];
+      e.position = tip; e.rotation = rot;
+      const x = [[0, +Math.max(0, 1 + (lead[0][1] - TIPZ) / L).toFixed(4)]];
+      for (const [t, z] of lead) { const f = (t - delay) / life; if (f > x[x.length - 1][0] + 1e-3 && f < 1) x.push([+f.toFixed(4), +Math.min(1, 1 + (z - TIPZ) / L).toFixed(4)]); }
+      x.push([1, 1]);
+      e.customData.x = x;
+      e.customData.y = [[0, 0], [0.35, 0], [0.9, 1], [1, 1]];
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.96], [0.3, 1], [1, 1.03]] };
+      e.colorOverLifetime = { enabled: true, color: [[0, '#ffffff'], [1, '#ffffff']], alpha: [[0, 1], [1, 0]] };
+      return e;
+    };
+    const flow = { enabled: true, linear: [0, 0, -5], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 };
+    const zer = emitAt('akinti', [AXX, AXY, 2.6], [0, -90, 0], { delay: 0.45, life: [0.25, 0.5], speed: [0.2, 0.8], size: [0.03, 0.06], color: ['#eef6ff', '#8fbaff'],
+      max: 60, count: [40, 50], r: 0.7, thick: 1, arc: 360, from: 0, rand: 0.8, drag: 1, mat: 'zerre_hafif', order: 8 });
+    zer.velocity = flow;
+    return {
+      name: 'agir_' + key + '_delis', duration: 1.4, loop: true, preview: prev,
+      emitters: [
+        ok('ok_dis', M('o', 'dis'), { L: 5.4, W: 1.4, n: 3, roll: 0, delay: 0.42, life: 0.75, order: 3 }),
+        ok('ok_ana', M('o', 'ana'), { L: 4.6, W: 0.95, n: 3, roll: 30, delay: 0.42, life: 0.7, order: 4, extra: light(1.0, 3) }),
+        ok('ok_ic', M('o', 'ic'), { L: 3.6, W: 0.42, n: 2, roll: 45, delay: 0.42, life: 0.6, order: 5 }),
+        emitAt('uc', tip, [0, 0, 0], { delay: 0.55, life: [0.18, 0.18], speed: [0, 0], size: [0.6, 0.6], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
+          r: 0, arc: 1, from: 0, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+        zer,
+      ],
+    };
+  }
+  if (variant === 'gecikme') {
+    // H3 "atılarak geçiş kesiği": atılışla birlikte kılıç ucunun havada bıraktığı ince kesik hattı bıçağın arkasından açılır,
+    // kahraman bitiş duruşunda beklerken asıl patlama gecikmeli gelir: hat beyazlaşıp kalınlaşır, yol boyunca sırayla
+    // kısa çapraz kesikler çakar, zerre ve sis saçılır, hava bükülür. H1'in yarığı ve H2'nin uçan hilalinden ayrı.
+    const D2R = Math.PI / 180;
+    const tB = 0.64, L = 0.8, b = +((tB - t0) / L).toFixed(4);
+    const band = { shape: 'arc', file: '', innerRadius: +(R - 0.25).toFixed(4), outerRadius: +(R + 0.25).toFixed(4), angle: A, height: 0.5, segments: 128, rings: 8 };
+    const main = arc('kesik', M('g', 'kesik'), { order: 6, life: L, mesh: band,
+      cy: () => [[0, 0], [b - 0.01, 0], [b, 1], [+(b + 0.08).toFixed(4), 0.35], [0.7, 0.1], [1, 0]] });
+    main.customData.z = [[0, 0], [b - 0.01, 0], [+(b + 0.02).toFixed(4), 1], [+(b + 0.25).toFixed(4), 0.5], [1, 0.2]];
+    const buk = arc('bukulme', M('g', 'bukulme'), { blend: 'distortion', order: 0, dt: tB - t0, life: 0.35, mesh: band,
+      extra: { renderer: { distortion: { mode: 'noise', strength: 0.05, frequency: 8, scroll: [0, 3] } } } });
+    buk.customData.x = [[0, 1], [1, 1]];
+    // Unity Euler (R = Ry·Rx·Rz) → yerel X sütunu
+    const colX = ([x, y, z]) => { const [cx, sx, cy, sy, cz, sz] = [Math.cos(x * D2R), Math.sin(x * D2R), Math.cos(y * D2R), Math.sin(y * D2R), Math.cos(z * D2R), Math.sin(z * D2R)];
+      return [cy * cz + sy * sx * sz, cx * sz, -sy * cz + cy * sx * sz]; };
+    let s = 7; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const cuts = [], fr = [0.12, 0.27, 0.45, 0.56, 0.74, 0.88];
+    fr.forEach((f, k) => {
+      // ana kesikle aynı düzlemde, yolu ±(40–65)° çaprazlayan kısa yaylar (rastgele 3B açıda kenardan görünüp leke oluyordu)
+      const th = f * A, phi = (k % 2 ? -1 : 1) * (35 + rnd() * 35), beta = th + phi, r2 = 0.4 + rnd() * 0.35, span = 50 + rnd() * 35;
+      const p = arcPoint(th), br = beta * D2R;
+      const dir = [0, 1, 2].map((i) => Math.cos(br) * AX.X[i] + Math.sin(br) * AX.Y[i]);
+      const pos = p.map((c, i) => +(c - r2 * dir[i]).toFixed(4));
+      const e = arc('capraz' + k, M('g', 'kesik2'), { order: 7, dt: tB - t0 + k * 0.018, life: 0.4, rotZ: +(beta - span / 2).toFixed(2),
+        mesh: { shape: 'arc', file: '', innerRadius: +(r2 - 0.3).toFixed(3), outerRadius: +(r2 + 0.3).toFixed(3), angle: +span.toFixed(1), height: 0.5, segments: 48, rings: 6 },
+        color: ['#ffffff', '#f2f8ff', '#e8f2ff', '#ffffff', '#eef6ff', '#f6faff'][k],
+        cy: () => [[0, 1], [0.3, 0.3], [1, 0]] });
+      e.position = pos;
+      e.customData.x = [[0, 0], [0.12, 1], [1, 1]];
+      e.customData.z = [[0, 0.6], [0.4, 0.3], [1, 0.1]];
+      cuts.push(e);
+    });
+    const mid = arcPoint(A * 0.5);
+    return {
+      name: `agir_${key}_gecikme`, duration: 1.4, loop: true, preview: prev,
+      emitters: [
+        main, buk, ...cuts,
+        emitAt('cakma', mid, [0, 0, 0], { delay: tB, life: [0.22, 0.22], speed: [0, 0], size: [0.55, 0.55], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
+          r: 0, arc: 1, from: 0, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+        onArc('zerre', { delay: tB, life: [0.3, 0.7], speed: [1.5, 4.5], size: [0.03, 0.065], color: ['#eef6ff', '#8fbaff'], gravity: 0.4,
+          max: 70, count: [45, 60], r: R, thick: 0, arc: A, from: 0, rand: 1, drag: 3, mat: 'zerre_hafif', order: 8 }),
+        onArc('sis', { delay: tB + 0.04, life: [0.6, 1.0], speed: [0.2, 0.6], size: [0.4, 0.8], srot: [0, 360], color: ['#ffffff', '#e8f0ff'], max: 14, count: [9, 12],
+          r: R, thick: 0, arc: A, from: 0, rand: 0.7, noise: 0.25, angv: [-40, 40], sizeCurve: [[0, 0.6], [1, 1.5]], blend: 'alpha', mat: M('g', 'sis'), order: 1 }),
+      ],
+    };
+  }
   if (variant === 'yarik') {
     // savunma kırma: havada açılan yarık; isabette tam açılır, kenarlarından kavisli çatlaklar yayılır, kırık parçalar kopar, sonra kapanır
     const open = (delay, life) => { const h = life01(delay, life, tHit); return [[0, 0], [Math.max(0.01, h - 0.12), 0.25], [h, 1], [Math.min(0.95, h + 0.3), 0.85], [Math.min(0.97, h + 0.55), 0], [1, 0]]; };

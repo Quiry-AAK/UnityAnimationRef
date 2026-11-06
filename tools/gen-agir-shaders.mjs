@@ -586,6 +586,190 @@ shaders.yer_cizik = {
 shaders.duman_enerji = smoke('alpha');
 shaders.duman_enerji_isik = smoke('additive');
 
+shaders.gecikme_kesik = {
+  description: 'H3 gecikmeli kesik (additive, mesh yay bandı: U yol boyunca, V enine 0→1). Bandın ortasında ince, keskin, hafif dalgalı bir kesik hattı; i.custom.x = açılma (u < x görünür, bıçağın arkasından), i.custom.y = patlama parlaması (0 sakin, 1 tepe), i.custom.z = genişleme (hat patlamada kalınlaşır, kenarlarından lifler taşar). Sakin hâlde kıl inceliğinde ve ılımlı; patlamada çekirdek beyazlaşır. Uçlar sivri. Siyah yok. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Çekirdek', '#f4faff', 1.6), P.hdr('_Glow', 'Hale', '#6fb0ff', 0.8), P.rng('_Width', 'Hat kalınlığı (V)', 0.005, 0.3, 0.035),
+    P.rng('_Open', 'Patlamada kalınlaşma', 0, 8, 1.6), P.rng('_Flash', 'Patlama parlaması', 0, 6, 0.9), P.rng('_Wave', 'Dalgalanma', 0, 1, 0.35), P.rng('_TailFade', 'Yol boyunca sönme (0 yok → 1 sonda biter)', 0, 1, 0)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float reveal = i.custom.x;
+    float flash = i.custom.y;
+    float widen = i.custom.z;
+    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 20.0;
+    float vis = 1.0 - smoothstep(reveal - 0.02, reveal + 0.005, u);
+    float cN = 0.5 + (fbm(float2(u * 5.0 + seed, 3.0)) - 0.5) * 0.18 * _Wave;
+    float sU = sin(3.14159 * saturate(u));
+    float w = _Width * (0.2 + 0.8 * pow(sU, 0.7)) * (1.0 + widen * 0.25);   // çekirdek patlamada da ince kalır
+    float d = abs(v - cN) / max(w, 0.0005);
+    float core = 1.0 - smoothstep(0.35, 1.0, d);
+    float dg = abs(v - cN) / max(_Width * (0.2 + 0.8 * pow(sU, 0.7)), 0.0005);   // hale genişlemeden bağımsız: patlamada bulut olmasın
+    float glow = exp(-dg * dg * 0.12);
+    // patlamada kenardan taşan lifler (enine değil, yol boyunca uzanan)
+    float fib = fbm(float2(u * 3.0 - i.time * 1.5 + seed, v * 26.0));
+    float fibers = smoothstep(0.55, 0.85, fib) * exp(-dg / max(1.0 + widen * _Open * 4.0, 1.0)) * widen;   // lifler hattın iki yanına taşar
+    float3 col = _Core.rgb * core * (0.55 + flash * _Flash) + _Glow.rgb * glow * (0.25 + 0.35 * flash) + _Glow.rgb * fibers * 0.6;
+    float fade = (1.0 - smoothstep(0.7, 1.0, life)) * (1.0 - _TailFade * smoothstep(0.0, 0.7, u));   // başta dolu, yol sonuna doğru saydamlaşır
+    return float4(col * vis * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.delis_ok = {
+  description: 'H3 delme ok ucu (additive, renderer.mesh shape "ok": U arka 0 → uç 1, V enine 0.5 eksen). Ok biçimini shader keser. Gürültü saçı değil, tasarlanmış katmanlar: (1) hafif dolu hacim (zarf içinde yumuşak doluluk), (2) uca yakınsayan 7 ayrı keskin alev-bıçak (her biri farklı başlangıç, kalınlık, yan; ortası sıcak çizgi, kenarı keskin, uca doğru incelir, hafif kıvrılır), (3) zarfın keskin dış hattı, (4) eksende omurga ve uçta parıltı, (5) uca doğru akan hafif nabız. Arka uç bıçaklara ayrılarak biter. i.custom.x = uzanma (u < x görünür), i.custom.y = arkadan öne çözülme. Renk derin mavi → mavi → beyaz-camgöbeği; siyah yok. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Omurga / uç', '#eef8ff', 1.0), P.hdr('_Mid', 'Bıçaklar', '#5aa6ff', 0.9), P.hdr('_Edge', 'Hacim / kenar', '#2160e0', 0.6),
+    P.rng('_Flow', 'Akış (uca doğru)', 0, 10, 4), P.rng('_Fill', 'Hacim doluluğu', 0, 1, 0.22), P.rng('_Sharp', 'Sivrilik', 0.3, 3, 0.9), P.rng('_Seed', 'Desen tohumu', 0, 50, 3)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float sa = (i.uv.y - 0.5) * 2.0;
+    float life = 1.0 - i.color.a;
+    float t = i.time;
+    float h = pow(saturate(1.0 - u), _Sharp) * (0.3 + 0.7 * smoothstep(0.0, 0.45, u));
+    float s = sa / max(h, 0.002);                       // -1..1 zarf içinde; çizgiler uçta birleşir
+    float sab = abs(s);
+    float pulse = 0.75 + 0.25 * fbm(float2(u * 3.0 - t * _Flow, 1.7 + _Seed));
+    // (1) hacim
+    float fill = pow(saturate(1.0 - sab * sab), 1.5) * smoothstep(0.05, 0.55, u) * _Fill;
+    // (2) ayrı alev-bıçaklar
+    float blades = 0.0;
+    float hot = 0.0;
+    for (int k = 0; k < 7; k++)
+    {
+        float fk = float(k);
+        float r1 = hash21(float2(fk, _Seed));
+        float r2 = hash21(float2(fk + 11.0, _Seed));
+        float r3 = hash21(float2(fk + 23.0, _Seed));
+        float side = (fmod(fk, 2.0) < 0.5) ? 1.0 : -1.0;
+        float sk = side * (0.12 + 0.8 * r1);
+        float u0 = 0.02 + 0.5 * r2;
+        float along = saturate((u - u0) / (1.0 - u0));
+        sk += (vnoise(float2(u * 2.5 - t * _Flow * 0.3, fk * 3.1)) - 0.5) * 0.12 * (1.0 - along);
+        float wk = (0.05 + 0.08 * r3) * pow(1.0 - along, 0.35);
+        float dk = abs(s - sk);
+        float onk = smoothstep(u0, u0 + 0.12, u);
+        blades += (1.0 - smoothstep(wk * 0.55, wk, dk)) * onk * (0.45 + 0.55 * along);
+        hot += exp(-pow(dk / max(wk * 0.22, 0.002), 2.0)) * onk * along;
+    }
+    // (3) dış hat, (4) omurga + uç
+    float rim = exp(-pow((sab - 0.96) / 0.035, 2.0)) * smoothstep(0.2, 0.7, u);
+    float spine = exp(-s * s * 140.0) * smoothstep(0.3, 0.85, u);
+    float tipG = smoothstep(0.88, 1.0, u) * exp(-s * s * 12.0);
+    float inside = 1.0 - smoothstep(0.98, 1.06, sab);
+    float3 col = _Edge.rgb * fill + _Mid.rgb * blades * 0.55 * pulse + _Core.rgb * hot * 0.5 + _Mid.rgb * rim * 0.6;
+    col *= inside;
+    col += _Core.rgb * (spine * 0.6 + tipG * 0.8);
+    float grow = 1.0 - smoothstep(i.custom.x - 0.03, i.custom.x, u);
+    float n2 = vnoise(float2(u * 8.0, s * 3.0 + _Seed));
+    float dis = smoothstep(i.custom.y * 1.3 - 0.15, i.custom.y * 1.3, u + (n2 - 0.5) * 0.3);
+    float fade = 1.0 - smoothstep(0.85, 1.0, life);
+    return float4(col * grow * dis * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.delme_koni = {
+  description: 'H3 delme konisi (additive, renderer.mesh shape "cylinder" koni: U çevre 0..1, V arka 0 → uç 1; mesh dönüşüyle ekseni +Z). Hacimli 3B ok: siluet fresnel ile keskin okunur (kenara dönen yüzey parlak, kameraya dönük iç yarı saydam); yüzeyde sarmal (helis) rüzgâr şeritleri arkaya doğru akar ve döner (düz değil, gürültüyle kıvrık, keskin sınırlı); uca doğru yoğunlaşır, uçta sıcak beyaz; arka uç şeritlere ayrılıp söner. i.custom.y = arkadan öne çözülme. Siyah yok. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Uç / çekirdek', '#eef8ff', 1.2), P.hdr('_Mid', 'Şeritler', '#5aa8ff', 0.9), P.hdr('_Edge', 'Siluet', '#3478f0', 0.8),
+    P.rng('_Count', 'Şerit sayısı (çevre)', 1, 24, 7), P.rng('_Twist', 'Sarmal', -6, 6, 1.6), P.rng('_Spin', 'Dönüş hızı', -10, 10, 2.5), P.rng('_Flow', 'Arkaya akış', 0, 20, 6),
+    P.rng('_Thr', 'Şerit eşiği (ince ↔ dolu)', 0.2, 0.9, 0.55), P.rng('_FresPow', 'Siluet keskinliği', 0.5, 8, 2.5), P.rng('_Fill', 'İç doluluk', 0, 1, 0.12)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float t = i.time;
+    float3 N = normalize(i.normalWS);
+    float3 Vd = normalize(i.viewDirWS);
+    float facing = abs(dot(N, Vd));
+    float fres = pow(1.0 - facing, _FresPow);
+    // sarmal koordinat (çevre periyodik: u * sayı tam sayı turu)
+    float a = u * _Count + v * _Twist - t * _Spin;
+    float n = fbm(float2(a, v * 2.5 + t * _Flow));
+    float n2 = fbm(float2(a * 2.0 + 7.3, v * 6.0 + t * _Flow * 1.6));
+    float band = n * 0.7 + n2 * 0.4;
+    float detail = 0.5 + 0.5 * smoothstep(0.32, 0.72, fbm(float2(a * 7.0 + 3.1, v * 20.0 + t * _Flow * 2.2)));   // şerit içinde ince akış lifleri (düz bant olmasın)
+    float vol = 0.45 + 0.55 * pow(1.0 - facing, 0.6);                                         // kenara dönen yüzey yoğun: hacim okunur
+    float streak = smoothstep(_Thr, _Thr + 0.12, band) * detail * vol;
+    float hotLine = smoothstep(_Thr + 0.2, _Thr + 0.3, band);
+    float tipW = smoothstep(0.0, 1.0, v);
+    float back = smoothstep(0.0, 0.4, v + (n - 0.5) * 0.5);
+    float3 col = _Edge.rgb * fres * (0.35 + 0.65 * tipW) * (0.45 + 0.55 * smoothstep(0.3, 0.7, n2)) * detail;   // siluet de liflere bölünür, düz plastik yüzey olmasın
+    col += _Mid.rgb * streak * (0.25 + 0.75 * tipW) + _Core.rgb * hotLine * tipW * 0.6;
+    col += _Mid.rgb * _Fill * tipW;
+    col += _Core.rgb * pow(v, 16.0) * 0.35;
+    float dis = smoothstep(i.custom.y * 1.3 - 0.15, i.custom.y * 1.3, v + (n2 - 0.5) * 0.3);
+    float fade = (1.0 - smoothstep(0.8, 1.0, life)) * smoothstep(0.0, 0.06, life);
+    return float4(col * back * dis * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.sok_halka = {
+  description: 'H3 ses duvarı halkası (additive, mesh arc 360°: U çevre, V iç 0 → dış 1). İnce, keskin bir ışık halkası; çevresi gürültüyle kırık (düz daire değil), içe doğru yumuşak hale; yaşla incelir, parçalanır ve söner. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Halka', '#eef8ff', 1.4), P.hdr('_Glow', 'Hale', '#5aa8ff', 0.7), P.rng('_Width', 'Kalınlık (V)', 0.02, 0.5, 0.12)],
+  renderState: rs('additive', 4),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 20.0;
+    float wob = (fbm(float2(u * 9.0 + seed, life * 2.0)) - 0.5) * 0.25;
+    float w = _Width * (1.0 - life * 0.6);
+    float d = abs(v - 0.65 - wob) / max(w, 0.001);
+    float core = 1.0 - smoothstep(0.3, 1.0, d);
+    float glow = exp(-d * d * 0.15) * smoothstep(0.0, 0.65, v);
+    float brk = smoothstep(0.1 + life * 0.55, 0.4 + life * 0.55, fbm(float2(u * 16.0 + seed, 3.0 + life * 1.5)));
+    float3 col = (_Core.rgb * core + _Glow.rgb * glow * 0.5) * brk;
+    float fade = 1.0 - smoothstep(0.4, 1.0, life);
+    return float4(col * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
+shaders.delme_cizgi = {
+  description: 'H3 delme çizgisi (additive, renderer.mesh shape "kivrim": U 0 çıkış → 1 son, V enine 0.5 orta). Profesyonel enerji çizgisi: çıkışta kalın, sona doğru kıl inceliğinde incelir; keskin sıcak çekirdek + renkli yumuşak hale; boyunca renk geçişi (beyaz → camgöbeği → derin mavi, siyah yok); içinde geriye akan ışık nabızları; çizilirken önde parlayan baş (i.custom.x = çizilme, u < x görünür); son kısımda enerji parçalarına bölünür ve _TailFade ile söner. life = 1 - alfa.',
+  properties: [P.hdr('_Core', 'Çekirdek', '#f4faff', 1.5), P.hdr('_Mid', 'Hale (orta)', '#68b4ff', 0.8), P.hdr('_Deep', 'Hale (son)', '#2a5cd8', 0.6),
+    P.rng('_Width', 'Kalınlık (V)', 0.01, 0.4, 0.09), P.rng('_Speed', 'Nabız hızı', 0, 20, 7), P.rng('_Wave', 'Kıvrılma', 0, 1, 0.5), P.rng('_TailFade', 'Sona doğru sönme', 0, 1, 1), P.rng('_Break', 'Sonda kopukluk', 0, 1, 0.6)],
+  renderState: rs('additive', 3),
+  common: NOISE,
+  fragment: `float4 frag(UPEInput i)
+{
+    float u = i.uv.x;
+    float v = i.uv.y;
+    float life = 1.0 - i.color.a;
+    float t = i.time;
+    float reveal = i.custom.x;
+    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 20.0;
+    float taper = pow(saturate(1.0 - u), 0.65) * smoothstep(0.0, 0.035, u);
+    float w = _Width * max(taper, 0.02);
+    float cN = 0.5 + (fbm(float2(u * 4.0 + seed, 2.0)) - 0.5) * 0.18 * _Wave;
+    float d = abs(v - cN) / w;
+    float core = exp(-d * d * 7.0);
+    float glow = exp(-d * d * 0.45);
+    float3 hue = lerp(_Mid.rgb, _Deep.rgb, smoothstep(0.25, 0.95, u));
+    float pulse = 0.6 + 0.4 * smoothstep(0.45, 0.85, fbm(float2(u * 6.0 - t * _Speed + seed, 1.3)));
+    float brk = lerp(1.0, smoothstep(0.3, 0.55, vnoise(float2(u * 28.0 + seed, 0.7))), _Break * smoothstep(0.35, 0.85, u));
+    float head = exp(-pow((u - reveal) / 0.035, 2.0)) * step(reveal, 0.995);
+    float vis = 1.0 - smoothstep(reveal - 0.005, reveal + 0.005, u);
+    float3 col = (_Core.rgb * core * (1.0 - 0.5 * smoothstep(0.3, 1.0, u)) + hue * glow * 0.55) * pulse * brk;
+    col += _Core.rgb * head * core * 1.6;
+    float fade = (1.0 - smoothstep(0.7, 1.0, life)) * (1.0 - _TailFade * smoothstep(0.0, 0.85, u));
+    return float4(col * vis * fade * i.color.rgb, 1.0);
+}
+`,
+};
+
 for (const [name, s] of Object.entries(shaders)) {
   const out = { name, description: s.description, properties: s.properties, renderState: s.renderState,
     lighting: { receiveShadows: false, castShadows: false }, outline: { enabled: false }, code: { common: s.common, vertex: '', fragment: s.fragment, outlineFragment: '' } };

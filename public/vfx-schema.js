@@ -176,7 +176,7 @@ export const MODULES = [
     ['velocityScale', 'num', 'Uzama: hız çarpanı', { min: 0, max: 5, step: 0.01 }],
     ['sortingOrder', 'int', 'Çizim sırası', { min: -100, max: 100, step: 1 }],
     ['mesh', 'group', 'Mesh', { when: { mode: ['mesh'] }, fields: [
-      ['shape', 'enum', 'Şekil', { options: [['arc', 'Yay / halka dilimi (kesik)'], ['cylinder', 'Silindir / koni kesiti'], ['plane', 'Düzlem (1×1)'], ['hilal', 'Hacimli 3B hilal'], ['file', 'Dosya (meshes/ GLB/OBJ)']] }],
+      ['shape', 'enum', 'Şekil', { options: [['arc', 'Yay / halka dilimi (kesik)'], ['cylinder', 'Silindir / koni kesiti'], ['plane', 'Düzlem (1×1)'], ['hilal', 'Hacimli 3B hilal'], ['ok', 'Delme ok ucu (kanatlı)'], ['burgu', 'Kıvrımlı burgu konisi'], ['kivrim', 'Kıvrılan çizgi şeridi'], ['file', 'Dosya (meshes/ GLB/OBJ)']] }],
       ['file', 'meshfile', 'Dosya (meshes/)'],
       ['innerRadius', 'num', 'İç yarıçap (m) · silindirde üst', { min: 0, max: 50, step: 0.01 }],
       ['outerRadius', 'num', 'Dış yarıçap (m) · silindirde alt', { min: 0, max: 50, step: 0.01 }],
@@ -536,11 +536,14 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
   i.custom = customData eğrileri (aşağıda). Mesh modunda i.uv = mesh UV'si, v.normalOS = mesh normali (dünya).
 
 ## Mesh parçacıkları (renderer.mode = 'mesh')
-- renderer.mesh: { shape: arc|cylinder|plane|file, file (meshes/<dosya>.glb|gltf|obj|fbx), innerRadius, outerRadius, angle (°),
+- renderer.mesh: { shape: arc|cylinder|plane|hilal|ok|burgu|kivrim|file, file (meshes/<dosya>.glb|gltf|obj|fbx), innerRadius, outerRadius, angle (°),
   height, segments, rings, rotation (° Unity Euler, mesh'in parçacığa göre sabit dönüşü) }. Birim metre; parçacık boyutu
   (startSize × sizeOverLifetime) mesh'i düzgün ölçekler (kesik için startSize 1 → yarıçaplar gerçek metre).
   arc: emitter'ın yerel XY düzleminde halka dilimi; açı 0 = yerel +X, +Y'ye doğru angle derece. UV: U yay boyunca 0→1, V iç→dış 0→1.
   cylinder: yerel Y ekseni etrafında, taban y=0, tepe y=height; alt yarıçap outerRadius, üst innerRadius (koni/hortum); U açı, V alttan üste.
+  hilal: uçlara incelen kalın kapalı 3B hilal (U yay boyunca, V iç 0 → ön 1). ok: delme ok ucu, uç orijinde, gövde -X boyunca outerRadius uzunlukta, yarı genişlik innerRadius, X çevresinde height (tamsayı, varsayılan 3) kanat; U arka 0 → uç 1, V enine (0.5 eksen).
+  burgu: kıvrımlı koni, yerel Y boyunca (taban y=0 outerRadius → uç y=height innerRadius), 6 oluk angle derece burulur, profil dalgalı; U çevre, V taban→uç.
+  kivrim: uçtan (orijin) +X'e kavisle açılıp -Z'ye kıvrılan çizgi şeridi; outerRadius erişim, height geriye uzunluk, innerRadius şerit genişliği; çapraz 2 şerit; U uç→son, V enine.
   plane: XY'de 1×1 kare. Mesh'in yönü = emitter dönüşü (Local hizalama gibi) × mesh.rotation; startRotation/rotationOverLifetime
   yerel Z etrafında döndürür. Doku mesh UV'siyle örneklenir (flipbook da). 'soft' doku yayda iki ucu incelen hilal bant verir.
 - Animasyondan yay: fit_arc_from_animation aracı kılıç ucu (+ tutuş) yolunu örnekler, düzlem + çember oturtur; emitter position/rotation,

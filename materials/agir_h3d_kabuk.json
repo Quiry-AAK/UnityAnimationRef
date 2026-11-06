@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h3d_kabuk",
+ "shader": "UnityPreview/delme_koni",
+ "values": {
+  "_Core": {
+   "color": "#dcefff",
+   "intensity": 0.8
+  },
+  "_Mid": {
+   "color": "#4a92f0",
+   "intensity": 0.72
+  },
+  "_Edge": {
+   "color": "#5a9cff",
+   "intensity": 1.44
+  },
+  "_Count": 15,
+  "_Twist": 0.6,
+  "_Spin": 1,
+  "_Flow": 9,
+  "_Thr": 0.64,
+  "_FresPow": 3.5,
+  "_Fill": 0.04
+ },
+ "renderQueue": -1
+}

@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h3d_sarmal",
+ "shader": "UnityPreview/delme_koni",
+ "values": {
+  "_Count": 9,
+  "_Twist": 2.2,
+  "_Spin": 4,
+  "_Flow": 5,
+  "_Thr": 0.6,
+  "_FresPow": 2.5,
+  "_Fill": 0.08,
+  "_Core": {
+   "color": "#eef8ff",
+   "intensity": 1.7
+  },
+  "_Mid": {
+   "color": "#5aa8ff",
+   "intensity": 1.4
+  },
+  "_Edge": {
+   "color": "#3478f0",
+   "intensity": 1.2
+  }
+ },
+ "renderQueue": -1
+}
