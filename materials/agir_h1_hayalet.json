@@ -1,0 +1,28 @@
+{
+ "name": "agir_h1_hayalet",
+ "shader": "UnityPreview/kesik_agir",
+ "values": {
+  "_Width": 0.35,
+  "_Core": {
+   "color": "#8fb4ff",
+   "intensity": 0.3
+  },
+  "_ColA": {
+   "color": "#3f7dff",
+   "intensity": 0.6
+  },
+  "_ColB": {
+   "color": "#2a45c0",
+   "intensity": 0.5
+  },
+  "_ColC": {
+   "color": "#4a2aa0",
+   "intensity": 0.4
+  },
+  "_Gain": 0.45,
+  "_Tail": 0.5,
+  "_Eat": 0.05,
+  "_CoreW": 0.03
+ },
+ "renderQueue": -1
+}

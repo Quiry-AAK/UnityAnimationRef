@@ -1,0 +1,12 @@
+{
+ "name": "agir_h1_ana",
+ "shader": "UnityPreview/kesik_agir",
+ "values": {
+  "_Gain": 0.75,
+  "_Core": {
+   "color": "#eef6ff",
+   "intensity": 1.9
+  }
+ },
+ "renderQueue": -1
+}

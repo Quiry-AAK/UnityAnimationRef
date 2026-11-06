@@ -1,0 +1,79 @@
+{
+ "name": "kesik_agir_golge",
+ "description": "Ağır kesiğin koyu gövdesi (alfa, mesh yay): parlak katmanların arkasında lacivert-siyah, lifli, kontrast verir. kesik_agir ile aynı iz/açılma.",
+ "properties": [
+  {
+   "name": "_Dark",
+   "type": "color",
+   "label": "Koyu",
+   "default": "#03081c"
+  },
+  {
+   "name": "_Mid",
+   "type": "color",
+   "label": "Orta",
+   "default": "#0e2470"
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Kalınlık (V)",
+   "min": 0.05,
+   "max": 0.9,
+   "default": 0.7
+  },
+  {
+   "name": "_Opacity",
+   "type": "range",
+   "label": "Opaklık",
+   "min": 0,
+   "max": 1,
+   "default": 0.7
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Lif sıklığı",
+   "min": 4,
+   "max": 80,
+   "default": 26
+  },
+  {
+   "name": "_Tail",
+   "type": "range",
+   "label": "İz uzunluğu (yay kesri)",
+   "min": 0.1,
+   "max": 1,
+   "default": 0.8
+  },
+  {
+   "name": "_Eat",
+   "type": "range",
+   "label": "Kuyruktan yenme başı (ömür)",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.2
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n\nfloat3 trail(float u, float head, float life)\n{\n    float eat = saturate((life - _Eat) / max(1.0 - _Eat, 0.001));\n    float tailS = max(head - _Tail, eat * 1.02);\n    float len = max(head - tailS, 0.001);\n    float k = (u - tailS) / len;\n    float m = smoothstep(0.0, 0.1, k) * (1.0 - smoothstep(head, head + 0.012, u)) * step(tailS, u);\n    float tipT = 1.0 - smoothstep(0.8, 1.0, u / max(head, 0.001)) * step(0.995, head);\n    float lead = 1.0 - smoothstep(head - 0.06, head, u) * (1.0 - step(0.995, head));\n    return float3(k, m, tipT * lead);\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float life = 1.0 - i.color.a;\n    float3 tr = trail(u, i.custom.x, life);\n    float k = saturate(tr.x);\n    float fib = fbm(float2(v * _Fiber, u * 5.0 - i.time * 2.0));\n    float w = _Width * (0.3 + 0.7 * k) * tr.z;\n    float inner = 1.0 - w * (0.8 + (fib - 0.5) * 0.7);\n    float band = smoothstep(inner - 0.01, inner + 0.1, v) * (1.0 - smoothstep(0.96, 1.0, v));\n    float d = saturate((v - inner) / max(1.0 - inner, 0.001));\n    float er = fbm(float2(u * 7.0, v * 6.0 - i.time));\n    float erodeM = saturate((er + 0.5 - life * 1.2) * 5.0);\n    float3 col = lerp(_Dark.rgb, _Mid.rgb, d * (0.5 + 0.5 * fib));\n    float a = band * tr.y * erodeM * (0.4 + 0.6 * fib) * _Opacity * (1.0 - smoothstep(0.55, 1.0, life));\n    return float4(col, saturate(a));\n}\n",
+  "outlineFragment": ""
+ }
+}

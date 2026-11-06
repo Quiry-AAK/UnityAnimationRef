@@ -1,0 +1,30 @@
+{
+ "name": "agir_h1_dis",
+ "shader": "UnityPreview/kesik_agir",
+ "values": {
+  "_Width": 0.16,
+  "_CoreW": 0.012,
+  "_Core": {
+   "color": "#e8f6ff",
+   "intensity": 1.8
+  },
+  "_ColA": {
+   "color": "#6fd8ff",
+   "intensity": 1.4
+  },
+  "_ColB": {
+   "color": "#3d6dff",
+   "intensity": 1
+  },
+  "_ColC": {
+   "color": "#8a4dff",
+   "intensity": 0.9
+  },
+  "_Fiber": 70,
+  "_Scroll": 6.5,
+  "_Gain": 0.65,
+  "_Tail": 0.6,
+  "_Eat": 0.25
+ },
+ "renderQueue": -1
+}

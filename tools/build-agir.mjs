@@ -1,0 +1,116 @@
+// Ağır saldırı kesikleri (H*): süslü ama en süslü değil (en süslüsü skill'lerde). Docs/VFX_Kurallari.md:
+// hazır doku/düz çizgi yok; hepsi özel shader (gen-agir-shaders.mjs + kesik_hafif_kabuk/bukulme + zerre_yumusak).
+// Yay ölçüsü fit_arc_from_animation (ARPG Samurai combo*_from_b*). Katmanlar:
+//  koyu gövde · 2 hayalet iz · iç (mor-mavi geniş) · ana (beyaz çekirdek→camgöbeği→mavi→mor) · dış (ince camgöbeği) ·
+//  enerji telleri · kabuk (yandan bakış) · bükülme · isabet çakması + genişleyen enerji halkası · yay boyunca zerreler ·
+//  savrulan zerreler · koyu + parlak enerji dumanı · güçlü mavi ışık.
+// Çalıştır: node tools/build-agir.mjs [h1 …] → vfx/agir_<h>.json
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// fit sonuçları. progress: [t sn, uç yolunun yay kesri]; impact: çakmanın yay kesri (düşmanın göğüs hizası)
+const FITS = {
+  h1: { anim: 'arpg_attack_combo1_from_b1', normal: [0.999, 0.0437, 0.0111], center: [0.1309, 1.1479, 0.4289], rotation: [-2.507, 89.366, 17.828],
+    radius: 1.1627, angle: 195.3, inner: 0.369, impact: 0.846,
+    progress: [[0.2917, 0], [0.3, 0.0416], [0.3083, 0.1045], [0.3167, 0.1717], [0.325, 0.2402], [0.3333, 0.3115], [0.3417, 0.3972],
+      [0.35, 0.4859], [0.3583, 0.6178], [0.3667, 0.7514], [0.375, 0.8757], [0.3833, 1]] },
+};
+
+const once = (count) => ({ rateOverTime: 0, bursts: [{ time: 0, count, cycles: 1, interval: 0.01 }] });
+const lifeAlpha = { enabled: true, color: [[0, '#ffffff'], [1, '#ffffff']], alpha: [[0, 1], [1, 0]] }; // shader: life = 1 - alfa
+const timeAt = (F, frac) => { const p = F.progress; for (let i = 1; i < p.length; i++) if (p[i][1] >= frac) { const [t0, a] = p[i - 1], [t1, b] = p[i]; return t0 + (t1 - t0) * (frac - a) / Math.max(b - a, 1e-6); } return p[p.length - 1][0]; };
+
+function build(key) {
+  const F = FITS[key], A = F.angle, R = F.radius;
+  const t0 = F.progress[0][0], tEnd = F.progress[F.progress.length - 1][0], tHit = timeAt(F, F.impact);
+  const lead = 0.006; // yay bıçağın bir adım önünde açılsın (önizleme kare adımı)
+  const at = { position: F.center, rotation: F.rotation };
+  // açılma eğrisi: ömür kesri → uç kesri (i.custom.x)
+  const reveal = (delay, life) => {
+    const k = F.progress.map(([t, v]) => [+Math.min(0.999, Math.max(0, (t - delay - lead) / life)).toFixed(4), v]);
+    const out = [[0, 0]]; for (const p of k) if (p[0] > out[out.length - 1][0]) out.push(p);
+    if (out[out.length - 1][0] < 1) out.push([1, 1]); return out;
+  };
+  const arcMesh = (outerMul = 1.06, innerMul = 1) => ({ shape: 'arc', file: '', innerRadius: +(F.inner * R * innerMul).toFixed(4), outerRadius: +(R * outerMul).toFixed(4),
+    angle: A, height: 0.5, segments: 128, rings: 8, rotation: [0, 0, 0] });
+  const arc = (name, material, { blend = 'additive', order = 3, dt = 0, life = 0.5, size = 1, rotZ = 0, mesh, color = '#ffffff', extra = {} } = {}) => {
+    const delay = +(t0 + dt).toFixed(4);
+    return {
+      name, ...at,
+      main: { duration: 1.2, looping: false, startDelay: delay, startLifetime: [life, life], startSpeed: [0, 0], startSize: [size, size],
+        startRotation: [0, 0], startColor: [color, color], gravity: 0, simulationSpace: 'local', maxParticles: 2 },
+      emission: once([1, 1]), shape: { enabled: false }, colorOverLifetime: lifeAlpha,
+      customData: { enabled: true, x: reveal(delay, life), y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] },
+      sizeOverLifetime: { enabled: true, curve: [[0, 0.99], [1, 1.03]] },
+      renderer: { mode: 'mesh', mesh: { ...(mesh || arcMesh()), rotation: [0, 0, rotZ] }, alignment: 'view', material, texture: 'soft', blend, intensity: 1, sortingOrder: order, ...(extra.renderer || {}) },
+      ...(extra.root || {}),
+    };
+  };
+  // yay üzerinde (açı derece, 0 = ilk uç) doğan parçacık
+  const onArc = (name, o) => ({
+    name, ...at,
+    main: { duration: 1.2, looping: false, startDelay: +o.delay.toFixed(4), startLifetime: o.life, startSpeed: o.speed, startSize: o.size,
+      startRotation: o.srot || [0, 0], startColor: o.color, gravity: o.gravity || 0, simulationSpace: 'world', maxParticles: o.max },
+    emission: once(o.count),
+    shape: { enabled: true, type: 'circle', radius: o.r ?? R, radiusThickness: o.thick ?? 0, arc: o.arc, position: [0, 0, 0], rotation: [0, 0, o.from], randomDirection: o.rand ?? 0 },
+    ...(o.drag ? { limitVelocity: { enabled: true, drag: o.drag, limit: 12, dampen: 0 } } : {}),
+    ...(o.noise ? { noise: { enabled: true, strength: o.noise, frequency: 1.3, scrollSpeed: 0.6, octaves: 2 } } : {}),
+    colorOverLifetime: { enabled: true, color: o.grad || [[0, '#ffffff'], [1, '#ffffff']], alpha: o.alpha || [[0, 1], [1, 0]] },
+    ...(o.sizeCurve ? { sizeOverLifetime: { enabled: true, curve: o.sizeCurve } } : {}),
+    ...(o.angv ? { rotationOverLifetime: { enabled: true, angularVelocity: o.angv } } : {}),
+    renderer: { mode: 'billboard', alignment: 'view', material: o.mat, texture: 'soft', blend: o.blend || 'additive', intensity: 1, sortingOrder: o.order ?? 5 },
+  });
+  const H = 0.2; // kabuk bandı (m)
+  const kabuk = arc('kabuk', `agir_${key}_kabuk`, { life: 0.5, order: 3, mesh: { shape: 'cylinder', file: '', innerRadius: +(R * 1.03).toFixed(4), outerRadius: +(R * 1.03).toFixed(4), angle: A, height: H, segments: 128, rings: 6 } });
+  kabuk.renderer.mesh.rotation = [-90, 0, 0];
+  kabuk.position = F.center.map((c, i) => +(c + F.normal[i] * H / 2).toFixed(4));
+  const hitAng = +(A * F.impact).toFixed(1);
+
+  return {
+    name: 'agir_' + key, duration: 1.6, loop: true,
+    preview: { withAnimation: true, startFrame: 0, background: '#141a26', bloom: 0.65, showHero: true, showGrid: true },
+    emitters: [
+      arc('bukulme', `agir_${key}_bukulme`, { blend: 'distortion', order: 0, life: 0.5, extra: { renderer: { distortion: { mode: 'noise', strength: 0.025, frequency: 10, scroll: [0, 3] } } } }),
+      arc('golge', `agir_${key}_golge`, { blend: 'alpha', order: 1, life: 0.6, mesh: arcMesh(1.05, 0.9) }),
+      // hayalet izler: bıçağın biraz gerisinden gelen sönük kopyalar
+      arc('hayalet2', `agir_${key}_hayalet`, { order: 2, dt: 0.018, life: 0.26, size: 0.965, rotZ: -10, color: '#8796b0' }),
+      arc('hayalet1', `agir_${key}_hayalet`, { order: 2, dt: 0.01, life: 0.3, size: 0.985, rotZ: -5, color: '#b4c2d8' }),
+      arc('ic', `agir_${key}_ic`, { order: 3, life: 0.6, size: 0.97 }),
+      arc('ana', `agir_${key}_ana`, { order: 4, life: 0.5, extra: { root: { light: { enabled: true, mode: 'single', color: '#9cc0ff', useParticleColor: false, intensity: 1.7, radius: 3.5,
+        curve: [[0, 0.2], [0.1, 0.7], [0.2, 1], [0.45, 0.4], [0.8, 0], [1, 0]], maxLights: 1, shadows: false } } } }),
+      arc('dis', `agir_${key}_dis`, { order: 5, dt: 0.008, life: 0.4, size: 1.05 }),
+      arc('tel', `agir_${key}_tel`, { order: 6, dt: 0.004, life: 0.45, size: 1.0 }),
+      kabuk,
+      // isabet: çakma + genişleyen enerji halkası (düşmanın göğüs hizası)
+      onArc('cakma', { delay: tHit, life: [0.16, 0.16], speed: [0, 0], size: [0.75, 0.75], color: ['#c8dcf4', '#c8dcf4'], max: 2, count: [1, 1],
+        arc: 2, from: hitAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+      onArc('halka', { delay: tHit + 0.01, life: [0.26, 0.26], speed: [0, 0], size: [1.9, 1.9], color: ['#ffffff', '#ffffff'], max: 2, count: [1, 1],
+        arc: 2, from: hitAng, sizeCurve: [[0, 0.15], [0.35, 0.75], [1, 1]], mat: `agir_${key}_halka`, order: 8 }),
+      // yay boyunca bir an asılı kalan zerreler + isabetten savrulanlar
+      onArc('zerre', { delay: tEnd - 0.01, life: [0.3, 0.6], speed: [0.2, 0.7], size: [0.05, 0.1], srot: [0, 45], color: ['#dcecff', '#8fb8ff'], gravity: -0.05,
+        max: 70, count: [45, 60], r: R * 0.98, thick: 0.22, arc: +(A * 0.9).toFixed(1), from: +(A * 0.08).toFixed(1), rand: 0.6, drag: 2,
+        grad: [[0, '#ffffff'], [1, '#9cc4ff']], alpha: [[0, 0], [0.08, 1], [0.35, 0.5], [0.45, 1], [1, 0]], mat: 'zerre_hafif', order: 6 }),
+      onArc('savrulan', { delay: tHit, life: [0.2, 0.45], speed: [2.5, 6], size: [0.05, 0.09], color: ['#eef6ff', '#8fb8ff'], gravity: 0.4,
+        max: 40, count: [25, 35], thick: 0.06, arc: 40, from: +(hitAng - 20).toFixed(1), rand: 0.45, drag: 7,
+        grad: [[0, '#ffffff'], [1, '#7fa8ff']], alpha: [[0, 1], [0.6, 0.8], [1, 0]], sizeCurve: [[0, 1], [1, 0.5]], mat: 'zerre_hafif', order: 6 }),
+      // enerji dumanı: koyu (kontrast) + parlak tutam, yaydan kopup kıvrılır
+      onArc('duman', { delay: tEnd, life: [0.6, 1.0], speed: [0.25, 0.7], size: [0.45, 0.9], srot: [0, 360], color: ['#c8d0e8', '#b8bde0'], max: 24, count: [12, 16],
+        r: R * 0.95, thick: 0.2, arc: +(A * 0.85).toFixed(1), from: +(A * 0.12).toFixed(1), rand: 0.7, noise: 0.25, angv: [-40, 40],
+        sizeCurve: [[0, 0.6], [1, 1.5]], blend: 'alpha', mat: `agir_${key}_duman`, order: 1 }),
+      onArc('duman_isik', { delay: tEnd - 0.005, life: [0.45, 0.75], speed: [0.3, 0.9], size: [0.35, 0.7], srot: [0, 360], color: ['#c0cff0', '#c8c0f0'], max: 16, count: [6, 9],
+        r: R * 0.98, thick: 0.15, arc: +(A * 0.8).toFixed(1), from: +(A * 0.18).toFixed(1), rand: 0.7, noise: 0.3, angv: [-60, 60],
+        sizeCurve: [[0, 0.6], [1, 1.4]], mat: `agir_${key}_duman_isik`, order: 3 }),
+    ],
+  };
+}
+
+const keys = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(FITS);
+for (const k of keys) {
+  if (!FITS[k]) { console.error('bilinmeyen saldırı:', k); process.exit(1); }
+  const e = build(k);
+  fs.writeFileSync(path.join(ROOT, 'vfx', e.name + '.json'), JSON.stringify(e, null, 1));
+  console.log('yazıldı vfx/' + e.name + '.json', '(' + FITS[k].anim + ')');
+}

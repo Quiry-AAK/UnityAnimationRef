@@ -1,0 +1,17 @@
+{
+ "name": "agir_h1_duman_isik",
+ "shader": "UnityPreview/duman_enerji_isik",
+ "values": {
+  "_Tint": {
+   "color": "#4766c8",
+   "intensity": 0.8
+  },
+  "_EdgeCol": {
+   "color": "#a9c2f0",
+   "intensity": 0.9
+  },
+  "_Density": 0.45,
+  "_Curl": 1.4
+ },
+ "renderQueue": -1
+}

@@ -1,0 +1,2644 @@
+{
+ "name": "agir_h1",
+ "duration": 1.6,
+ "loop": true,
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "background": "#141a26",
+  "bloom": 0.65,
+  "showHero": true,
+  "showGrid": true
+ },
+ "emitters": [
+  {
+   "name": "bukulme",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0046,
+      0.0416
+     ],
+     [
+      0.0212,
+      0.1045
+     ],
+     [
+      0.038,
+      0.1717
+     ],
+     [
+      0.0546,
+      0.2402
+     ],
+     [
+      0.0712,
+      0.3115
+     ],
+     [
+      0.088,
+      0.3972
+     ],
+     [
+      0.1046,
+      0.4859
+     ],
+     [
+      0.1212,
+      0.6178
+     ],
+     [
+      0.138,
+      0.7514
+     ],
+     [
+      0.1546,
+      0.8757
+     ],
+     [
+      0.1712,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_bukulme",
+    "texture": "soft",
+    "blend": "distortion",
+    "intensity": 1,
+    "sortingOrder": 0,
+    "distortion": {
+     "mode": "noise",
+     "strength": 0.025,
+     "frequency": 10,
+     "scroll": [
+      0,
+      3
+     ]
+    }
+   }
+  },
+  {
+   "name": "golge",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.6,
+     0.6
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0038,
+      0.0416
+     ],
+     [
+      0.0177,
+      0.1045
+     ],
+     [
+      0.0317,
+      0.1717
+     ],
+     [
+      0.0455,
+      0.2402
+     ],
+     [
+      0.0593,
+      0.3115
+     ],
+     [
+      0.0733,
+      0.3972
+     ],
+     [
+      0.0872,
+      0.4859
+     ],
+     [
+      0.101,
+      0.6178
+     ],
+     [
+      0.115,
+      0.7514
+     ],
+     [
+      0.1288,
+      0.8757
+     ],
+     [
+      0.1427,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.3861,
+     "outerRadius": 1.2208,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_golge",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  },
+  {
+   "name": "hayalet2",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3097,
+    "startLifetime": [
+     0.26,
+     0.26
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.965,
+     0.965
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#8796b0",
+     "#8796b0"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0038,
+      0.1717
+     ],
+     [
+      0.0358,
+      0.2402
+     ],
+     [
+      0.0677,
+      0.3115
+     ],
+     [
+      0.1,
+      0.3972
+     ],
+     [
+      0.1319,
+      0.4859
+     ],
+     [
+      0.1638,
+      0.6178
+     ],
+     [
+      0.1962,
+      0.7514
+     ],
+     [
+      0.2281,
+      0.8757
+     ],
+     [
+      0.26,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      -10
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_hayalet",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "hayalet1",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3017,
+    "startLifetime": [
+     0.3,
+     0.3
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.985,
+     0.985
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#b4c2d8",
+     "#b4c2d8"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.002,
+      0.1045
+     ],
+     [
+      0.03,
+      0.1717
+     ],
+     [
+      0.0577,
+      0.2402
+     ],
+     [
+      0.0853,
+      0.3115
+     ],
+     [
+      0.1133,
+      0.3972
+     ],
+     [
+      0.141,
+      0.4859
+     ],
+     [
+      0.1687,
+      0.6178
+     ],
+     [
+      0.1967,
+      0.7514
+     ],
+     [
+      0.2243,
+      0.8757
+     ],
+     [
+      0.252,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      -5
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_hayalet",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 2
+   }
+  },
+  {
+   "name": "ic",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.6,
+     0.6
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.97,
+     0.97
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0038,
+      0.0416
+     ],
+     [
+      0.0177,
+      0.1045
+     ],
+     [
+      0.0317,
+      0.1717
+     ],
+     [
+      0.0455,
+      0.2402
+     ],
+     [
+      0.0593,
+      0.3115
+     ],
+     [
+      0.0733,
+      0.3972
+     ],
+     [
+      0.0872,
+      0.4859
+     ],
+     [
+      0.101,
+      0.6178
+     ],
+     [
+      0.115,
+      0.7514
+     ],
+     [
+      0.1288,
+      0.8757
+     ],
+     [
+      0.1427,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_ic",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "ana",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0046,
+      0.0416
+     ],
+     [
+      0.0212,
+      0.1045
+     ],
+     [
+      0.038,
+      0.1717
+     ],
+     [
+      0.0546,
+      0.2402
+     ],
+     [
+      0.0712,
+      0.3115
+     ],
+     [
+      0.088,
+      0.3972
+     ],
+     [
+      0.1046,
+      0.4859
+     ],
+     [
+      0.1212,
+      0.6178
+     ],
+     [
+      0.138,
+      0.7514
+     ],
+     [
+      0.1546,
+      0.8757
+     ],
+     [
+      0.1712,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_ana",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 4
+   },
+   "light": {
+    "enabled": true,
+    "mode": "single",
+    "color": "#9cc0ff",
+    "useParticleColor": false,
+    "intensity": 1.7,
+    "radius": 3.5,
+    "curve": [
+     [
+      0,
+      0.2
+     ],
+     [
+      0.1,
+      0.7
+     ],
+     [
+      0.2,
+      1
+     ],
+     [
+      0.45,
+      0.4
+     ],
+     [
+      0.8,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "maxLights": 1,
+    "shadows": false
+   }
+  },
+  {
+   "name": "dis",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2997,
+    "startLifetime": [
+     0.4,
+     0.4
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1.05,
+     1.05
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0065,
+      0.1045
+     ],
+     [
+      0.0275,
+      0.1717
+     ],
+     [
+      0.0482,
+      0.2402
+     ],
+     [
+      0.069,
+      0.3115
+     ],
+     [
+      0.09,
+      0.3972
+     ],
+     [
+      0.1107,
+      0.4859
+     ],
+     [
+      0.1315,
+      0.6178
+     ],
+     [
+      0.1525,
+      0.7514
+     ],
+     [
+      0.1732,
+      0.8757
+     ],
+     [
+      0.194,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_dis",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "tel",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2957,
+    "startLifetime": [
+     0.45,
+     0.45
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0147,
+      0.1045
+     ],
+     [
+      0.0333,
+      0.1717
+     ],
+     [
+      0.0518,
+      0.2402
+     ],
+     [
+      0.0702,
+      0.3115
+     ],
+     [
+      0.0889,
+      0.3972
+     ],
+     [
+      0.1073,
+      0.4859
+     ],
+     [
+      0.1258,
+      0.6178
+     ],
+     [
+      0.1444,
+      0.7514
+     ],
+     [
+      0.1629,
+      0.8757
+     ],
+     [
+      0.1813,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_tel",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "kabuk",
+   "position": [
+    0.2308,
+    1.1523,
+    0.43
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.5,
+     0.5
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0046,
+      0.0416
+     ],
+     [
+      0.0212,
+      0.1045
+     ],
+     [
+      0.038,
+      0.1717
+     ],
+     [
+      0.0546,
+      0.2402
+     ],
+     [
+      0.0712,
+      0.3115
+     ],
+     [
+      0.088,
+      0.3972
+     ],
+     [
+      0.1046,
+      0.4859
+     ],
+     [
+      0.1212,
+      0.6178
+     ],
+     [
+      0.138,
+      0.7514
+     ],
+     [
+      0.1546,
+      0.8757
+     ],
+     [
+      0.1712,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "cylinder",
+     "file": "",
+     "innerRadius": 1.1976,
+     "outerRadius": 1.1976,
+     "angle": 195.3,
+     "height": 0.2,
+     "segments": 128,
+     "rings": 6,
+     "rotation": [
+      -90,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1_kabuk",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  },
+  {
+   "name": "cakma",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.373,
+    "startLifetime": [
+     0.16,
+     0.16
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.75,
+     0.75
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#c8dcf4",
+     "#c8dcf4"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.1627,
+    "radiusThickness": 0,
+    "arc": 2,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     165.2
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.3
+     ],
+     [
+      0.2,
+      1
+     ],
+     [
+      1,
+      1.1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif_isik",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 9
+   }
+  },
+  {
+   "name": "halka",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.383,
+    "startLifetime": [
+     0.26,
+     0.26
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1.9,
+     1.9
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.1627,
+    "radiusThickness": 0,
+    "arc": 2,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     165.2
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.15
+     ],
+     [
+      0.35,
+      0.75
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h1_halka",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 8
+   }
+  },
+  {
+   "name": "zerre",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3733,
+    "startLifetime": [
+     0.3,
+     0.6
+    ],
+    "startSpeed": [
+     0.2,
+     0.7
+    ],
+    "startSize": [
+     0.05,
+     0.1
+    ],
+    "startRotation": [
+     0,
+     45
+    ],
+    "startColor": [
+     "#dcecff",
+     "#8fb8ff"
+    ],
+    "gravity": -0.05,
+    "simulationSpace": "world",
+    "maxParticles": 70
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       45,
+       60
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.139446,
+    "radiusThickness": 0.22,
+    "arc": 175.8,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     15.6
+    ],
+    "randomDirection": 0.6
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 2,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#9cc4ff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.08,
+      1
+     ],
+     [
+      0.35,
+      0.5
+     ],
+     [
+      0.45,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "savrulan",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.373,
+    "startLifetime": [
+     0.2,
+     0.45
+    ],
+    "startSpeed": [
+     2.5,
+     6
+    ],
+    "startSize": [
+     0.05,
+     0.09
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#eef6ff",
+     "#8fb8ff"
+    ],
+    "gravity": 0.4,
+    "simulationSpace": "world",
+    "maxParticles": 40
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       25,
+       35
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.1627,
+    "radiusThickness": 0.06,
+    "arc": 40,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     145.2
+    ],
+    "randomDirection": 0.45
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 7,
+    "limit": 12,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#7fa8ff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.6,
+      0.8
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.5
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "duman",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3833,
+    "startLifetime": [
+     0.6,
+     1
+    ],
+    "startSpeed": [
+     0.25,
+     0.7
+    ],
+    "startSize": [
+     0.45,
+     0.9
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#c8d0e8",
+     "#b8bde0"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 24
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       12,
+       16
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.104565,
+    "radiusThickness": 0.2,
+    "arc": 166,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     23.4
+    ],
+    "randomDirection": 0.7
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.25,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.5
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -40,
+     40
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h1_duman",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1
+   }
+  },
+  {
+   "name": "duman_isik",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.3783,
+    "startLifetime": [
+     0.45,
+     0.75
+    ],
+    "startSpeed": [
+     0.3,
+     0.9
+    ],
+    "startSize": [
+     0.35,
+     0.7
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#c0cff0",
+     "#c8c0f0"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 16
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       6,
+       9
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "circle",
+    "radius": 1.139446,
+    "radiusThickness": 0.15,
+    "arc": 156.2,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     35.2
+    ],
+    "randomDirection": 0.7
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.4
+     ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -60,
+     60
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "agir_h1_duman_isik",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 3
+   }
+  }
+ ]
+}
