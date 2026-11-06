@@ -3,17 +3,17 @@
  "name": "agir_h1y_ic",
  "shader": "UnityPreview/yarik_ic",
  "values": {
-  "_Open": 0.13,
-  "_Center": 0.9,
-  "_Tail": 0.95,
-  "_Eat": 0.5,
-  "_Hit": 0.846,
-  "_Void": "#1a2a44",
+  "_Void": "#a8c4ec",
   "_Swirl": {
-   "color": "#3a5a86",
-   "intensity": 1
+   "color": "#e2eeff",
+   "intensity": 1.2
   },
-  "_Opacity": 0.5
+  "_Opacity": 0.45,
+  "_Center": 0.9,
+  "_Open": 0.13,
+  "_Hit": 0.846,
+  "_Tail": 0.95,
+  "_Eat": 0.5
  },
  "renderQueue": -1
 }

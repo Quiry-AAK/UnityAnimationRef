@@ -1,20 +1,20 @@
 {
  "name": "yarik_ic",
- "description": "Yarığın içi (alfa, mesh yay): havada açılan yarığın yarı saydam, soğuk koyu mavi-gri içi (siyah/mor karanlık boşluk değil: o Karanlık elementine ait), içinde yavaş akan açık mavi-gri. Açıklık i.custom.y, iz/açılma i.custom.x (kesik_agir ile aynı).",
+ "description": "Yarığın içi (alfa, mesh yay): iki kenar arasını dolduran yarı saydam açık mavi-beyaz sis, içinde yavaş akan açık akış (siyah/koyu boşluk değil: o Karanlık elementine ait). Açıklık i.custom.y, iz/açılma i.custom.x (kesik_agir ile aynı).",
  "properties": [
   {
    "name": "_Void",
    "type": "color",
    "label": "İç",
-   "default": "#1a2a44"
+   "default": "#a8c4ec"
   },
   {
    "name": "_Swirl",
    "type": "hdrColor",
    "label": "İç akış",
    "default": {
-    "color": "#3a5a86",
-    "intensity": 1
+    "color": "#e2eeff",
+    "intensity": 1.2
    }
   },
   {
@@ -23,7 +23,7 @@
    "label": "Opaklık",
    "min": 0,
    "max": 1,
-   "default": 0.5
+   "default": 0.45
   },
   {
    "name": "_Center",

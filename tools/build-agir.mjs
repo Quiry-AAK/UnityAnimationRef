@@ -87,7 +87,8 @@ function build(key, variant) {
       emitters: [
         arc('bukulme', M('y', 'bukulme'), { blend: 'distortion', order: 0, life: 0.7, extra: { renderer: { distortion: { mode: 'noise', strength: 0.035, frequency: 8, scroll: [0, 2] } } } }),
         arc('iz', M('y', 'iz'), { order: 3, life: 0.3, extra: light(1.6) }),
-        // yarığın içi yok: koyu/siyah boşluk Karanlık elementinin dili (kullanıcı); yarık kenar + çatlak + bükülmeyle okunur
+        // yarığın içi açık mavi sisle dolu (boş kalınca arka plan siyah şerit gibi okunuyordu; koyu/siyah Karanlık elementinin dili)
+        arc('yarik_ic', M('y', 'ic'), { blend: 'alpha', order: 5, life: 0.9, cy: open }),
         arc('yarik_kenar', M('y', 'kenar'), { order: 6, life: 0.9, cy: open }),
         onArc('cakma', { delay: tHit, life: [0.14, 0.14], speed: [0, 0], size: [0.6, 0.6], color: ['#cfe4ff', '#cfe4ff'], max: 2, count: [1, 1], r: rr,
           arc: 2, from: hitAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),

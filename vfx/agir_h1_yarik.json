@@ -467,6 +467,227 @@
    }
   },
   {
+   "name": "yarik_ic",
+   "position": [
+    0.1309,
+    1.1479,
+    0.4289
+   ],
+   "rotation": [
+    -2.507,
+    89.366,
+    17.828
+   ],
+   "main": {
+    "duration": 1.2,
+    "looping": false,
+    "startDelay": 0.2917,
+    "startLifetime": [
+     0.9,
+     0.9
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     1,
+     1
+    ],
+    "startRotation": [
+     0,
+     0
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 2
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": false
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "customData": {
+    "enabled": true,
+    "x": [
+     [
+      0,
+      0
+     ],
+     [
+      0.0026,
+      0.0416
+     ],
+     [
+      0.0118,
+      0.1045
+     ],
+     [
+      0.0211,
+      0.1717
+     ],
+     [
+      0.0303,
+      0.2402
+     ],
+     [
+      0.0396,
+      0.3115
+     ],
+     [
+      0.0489,
+      0.3972
+     ],
+     [
+      0.0581,
+      0.4859
+     ],
+     [
+      0.0673,
+      0.6178
+     ],
+     [
+      0.0767,
+      0.7514
+     ],
+     [
+      0.0859,
+      0.8757
+     ],
+     [
+      0.0951,
+      1
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "y": [
+     [
+      0,
+      0
+     ],
+     [
+      0.01,
+      0.25
+     ],
+     [
+      0.0904,
+      1
+     ],
+     [
+      0.39039999999999997,
+      0.85
+     ],
+     [
+      0.6404000000000001,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "z": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "w": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.99
+     ],
+     [
+      1,
+      1.03
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "mesh",
+    "mesh": {
+     "shape": "arc",
+     "file": "",
+     "innerRadius": 0.429,
+     "outerRadius": 1.2325,
+     "angle": 195.3,
+     "height": 0.5,
+     "segments": 128,
+     "rings": 8,
+     "rotation": [
+      0,
+      0,
+      0
+     ]
+    },
+    "alignment": "view",
+    "material": "agir_h1y_ic",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
    "name": "yarik_kenar",
    "position": [
     0.1309,
