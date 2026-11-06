@@ -1,0 +1,29 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_hafif",
+ "shader": "UnityPreview/kesik_hafif",
+ "values": {
+  "_Edge": {
+   "color": "#e9f3ff",
+   "intensity": 1.6
+  },
+  "_Body": {
+   "color": "#7c9cc8",
+   "intensity": 1.5
+  },
+  "_Width": 0.42,
+  "_EdgeW": 0.022,
+  "_Tail": 0.75,
+  "_Eat": 0.08,
+  "_Fiber": 34,
+  "_Scroll": 3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

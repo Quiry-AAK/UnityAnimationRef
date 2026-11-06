@@ -1,0 +1,19 @@
+{
+ "format": "upe-material-1",
+ "name": "kesik_hafif_bukulme",
+ "shader": "UnityPreview/kesik_hafif_bukulme",
+ "values": {
+  "_Width": 0.4,
+  "_Tail": 0.6,
+  "_Eat": 0.1,
+  "_Freq": 14
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

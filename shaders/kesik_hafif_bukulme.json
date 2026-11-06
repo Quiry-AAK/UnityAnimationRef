@@ -1,0 +1,65 @@
+{
+ "format": "upe-shader-1",
+ "name": "kesik_hafif_bukulme",
+ "description": "Hafif kesiğin arkasındaki ince hava bükülmesi (renderer.blend distortion ile): rg = ofset yönü (kayan gürültü), a = maske (kesik_hafif ile aynı iz bölümü, gövde bandı). Yerleşim kesik_hafif ile aynı mesh yayı.",
+ "builtin": false,
+ "unityName": "UnityPreview/kesik_hafif_bukulme",
+ "properties": [
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Bant kalınlığı (V)",
+   "min": 0.05,
+   "max": 0.8,
+   "default": 0.4
+  },
+  {
+   "name": "_Tail",
+   "type": "range",
+   "label": "İz uzunluğu",
+   "min": 0.1,
+   "max": 1,
+   "default": 0.6
+  },
+  {
+   "name": "_Eat",
+   "type": "range",
+   "label": "Kuyruktan yenme başı",
+   "min": 0,
+   "max": 0.9,
+   "default": 0.1
+  },
+  {
+   "name": "_Freq",
+   "type": "range",
+   "label": "Gürültü sıklığı",
+   "min": 1,
+   "max": 40,
+   "default": 14
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float head = i.custom.x;\n    float life = 1.0 - i.color.a;\n    float eat = saturate((life - _Eat) / max(1.0 - _Eat, 0.001));\n    float tailS = max(head - _Tail, eat * 1.02);\n    float k = saturate((u - tailS) / max(head - tailS, 0.001));\n    float m = smoothstep(0.0, 0.15, k) * (1.0 - smoothstep(head - 0.02, head + 0.01, u)) * step(tailS, u);\n    float band = smoothstep(1.0 - _Width, 1.0 - _Width * 0.6, v) * (1.0 - smoothstep(0.9, 1.0, v));\n    float2 p = float2(u * _Freq, v * _Freq * 0.5 - i.time * 3.0);\n    float2 dir = float2(vnoise(p) - 0.5, vnoise(p + float2(13.1, 4.7)) - 0.5) * 2.0;\n    return float4(dir, 0.0, saturate(m * band * (1.0 - life)));\n}\n",
+  "outlineFragment": ""
+ }
+}
