@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } from '../public/vfx-schema.js';
 import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
-import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings, splitFollowEffects } from '../lib/unreal-vfx.js';
+import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings, splitFollowEffects, chunkEffect } from '../lib/unreal-vfx.js';
 import { proceduralMesh, meshToOBJ, fitArc } from '../public/vfx-mesh.js';
 
 let fails = 0, n = 0;
@@ -152,6 +152,15 @@ test('follow: izleyen katmanlar ayrı _iz sistemine, diğerleri ana sistemde; ş
   const p = effectToNiagaraPlan(parts[1]);
   assert.ok(findP(p, 'Particles.RibbonWidth').hlsl.startsWith('length(Particles.UPE_Tip - Particles.UPE_Root)'));
   assert.deepEqual(splitFollowEffects({ ...effect, emitters: parts[0].emitters }).length, 1);
+});
+test('çok emitter: 30 üstü _2, _3 sistemlerine bölünür, sıra ve adlar korunur', () => {
+  const { effect } = normalizeEffect(JSON.parse(fs.readFileSync(path.join(root, 'vfx', 'agir_h2_hilal.json'), 'utf8')));
+  const ch = chunkEffect(effect, 30);
+  assert.equal(ch.length, Math.ceil(effect.emitters.length / 30));
+  assert.deepEqual(ch.map((c) => c.name), ['agir_h2_hilal', 'agir_h2_hilal_2']);
+  assert.deepEqual(ch.flatMap((c) => c.emitters.map((e) => e.name)), effect.emitters.map((e) => e.name));
+  assert.ok(ch.every((c) => c.emitters.length <= 30));
+  assert.equal(chunkEffect({ ...effect, emitters: effect.emitters.slice(0, 5) }).length, 1);
 });
 test('mesh: dünya uzayı → Engine.Owner.Rotation ile çarpılır', () => {
   const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { main: { simulationSpace: 'world' } })));
