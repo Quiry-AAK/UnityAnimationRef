@@ -580,7 +580,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
   Parameter (Particles.DynamicMaterialParameter). Örnek: x = yay açılması (i.uv.x < i.custom.x görünür), y = silinme.
 
 ## Alt emitter (subEmitters)
-- { enabled, items: [{ emitter: hedef ad, trigger: death|birth, count:[min,max], inheritColor, inheritSize, inheritVelocity (0..1) }] } (en çok 4).
+- { enabled, items: [{ emitter: hedef ad, trigger: death|birth, count:[min,max], inheritColor (RGB; alfa çocuğun kendi eğrisinden), inheritSize, inheritVelocity (0..1) }] } (en çok 4).
   Hedef emitter kendi yayımını yapmaz; olay başına count parçacığı olayın konumunda (şekli emitter dönüşüyle çevresinde) doğurur.
   Unreal: kaynakta Generate Death/Location Event, hedefte Event Handler (SpawnedParticles) + Receive modülü; miraslar olay yükünden.
 

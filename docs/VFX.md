@@ -123,8 +123,17 @@ Hepsi şemada (`VFX_REFERENCE`), önizlemede, MCP'de ve Niagara dönüştürüc�
 - **İz** — `bladeTrail.width` (yaş eğrisi), `taper: tip|center|root`, `uvMode: stretch|tile` + `tileLength` (döşenen doku ayrı RepeatWrapping önbelleği).
 - **Özel veri** — `customData { x, y, z, w }` ömür eğrileri → UPE-SL `i.custom` (`UPEInput.custom`; Unity şablonunda 0).
 - **Alt emitter** — `subEmitters { enabled, items: [{ emitter, trigger: death|birth, count, inheritColor, inheritSize, inheritVelocity }] }`.
-  Hedef kendi yayımını yapmaz; kaynak adımlandıktan sonra olaylar hedefe verilir (hedef sırada önceyse bir sonraki adımda).
-- Unity dönüştürücüsü bunları henüz bilmez: mesh → billboard, distortion → additive, ışık/alt emitter/özel veri yok sayılır.
-- Örnekler: `vfx/_ornek_mesh_yay.json`, `_ornek_bukulme_isik.json`, `_ornek_iz_alt_emitter.json`, `_ornek_yay_animasyondan.json`.
-- Ertelenen: Niagara alt emitter olayları (yukarıda), hareket bulanıklığı (stretched + velocityScale hıza göre uzatmayı zaten veriyor; gerçek
+  Hedef kendi yayımını yapmaz; kaynak adımlandıktan sonra olaylar hedefe verilir (hedef sırada önceyse bir sonraki adımda). inheritColor
+  yalnız RGB (ölümde ömür alfası ~0 olduğundan alfa çocuğun kendi eğrisinden). Niagara: Event Handler (UNREAL.md).
+- **Yumuşak parçacık** — `renderer.softParticles { enabled, distance }`. Sahne hedefine derinlik dokusu eklendi (`player.shared.uDepth`;
+  parçacıklar derinlik yazmadığı için = katı sahne); alfa × `clamp((sahne derinliği − parçacık derinliği) / distance)`. UPE-SL: `i.softFade`
+  (otomatik uygulanır), `i.sceneDepth` (m).
+- **Yere iz (decal)** — `renderer.mode: 'decal'`, `renderer.decal { size, projection: down|forward, groundOnly }`. Parçacık başına birim kutu,
+  arka yüzleri derinlik testsiz çizilir; parça sahne derinliğinden dünya konumu kurulur (`uInvProj`, `uCamWorld`), iz yereline çevrilir, dışı
+  atılır; groundOnly yansıtma yönüne bakmayan yüzeyleri (kahramanın yanları) atar. UPE-SL'de `i.uv` iz UV'si, `i.positionWS/normalWS` yüzey.
+  Efektte decal varsa zemin diski kendiliğinden görünür.
+- Unity dönüştürücüsü bunları henüz bilmez: mesh/decal → billboard, distortion → additive, ışık/alt emitter/özel veri/yumuşaklık yok sayılır.
+- Örnekler: `vfx/_ornek_mesh_yay.json`, `_ornek_bukulme_isik.json`, `_ornek_iz_alt_emitter.json`, `_ornek_yay_animasyondan.json`,
+  `_ornek_yumusak_decal.json`, `_ornek_alt_emitter.json`.
+- Ertelenen: hareket bulanıklığı (stretched + velocityScale hıza göre uzatmayı zaten veriyor; gerçek
   motion blur UE post-process işi), flipbook kare karışımı (BDO kesikleri flipbook'tan çok mesh + kayan doku kullanıyor; gerekirse sonra).

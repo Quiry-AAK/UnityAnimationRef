@@ -334,7 +334,7 @@ class EmitterSim {
     const o = i * 3; _ev.set(this.P[o], this.P[o + 1], this.P[o + 2]); _evv.set(this.D[o], this.D[o + 1], this.D[o + 2]);
     if (!this.world) { _ev.applyMatrix4(E); _evv.applyQuaternion(EQ); }
     const tn = this.age[i] / this.life[i], col = this.em.colorOverLifetime, c = [0, 1, 2, 3].map((k) => this.col[i * 4 + k]);
-    if (col.enabled) { const cs = col.color.map(([tt, h]) => [tt, parseColor(h) || [1, 1, 1, 1]]); for (let k = 0; k < 3; k++) c[k] *= evalCurve(cs.map(([tt, x]) => [tt, x[k]]), tn); c[3] *= evalCurve(col.alpha, tn); }
+    if (col.enabled) { const cs = col.color.map(([tt, h]) => [tt, parseColor(h) || [1, 1, 1, 1]]); for (let k = 0; k < 3; k++) c[k] *= evalCurve(cs.map(([tt, x]) => [tt, x[k]]), tn); } // alfa mirası yok: ölümde ömür alfası ~0 olur, çocuk görünmez kalırdı
     const sz = this.em.sizeOverLifetime;
     this.events.push({ trigger, p: _ev.toArray(), v: _evv.toArray(), col: c, size: this.size[i] * (sz.enabled ? evalCurve(sz.curve, tn) : 1) });
   }
