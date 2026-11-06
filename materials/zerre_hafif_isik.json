@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "zerre_hafif_isik",
+ "shader": "UnityPreview/zerre_yumusak",
+ "values": {
+  "_Core": {
+   "color": "#f4f9ff",
+   "intensity": 2.4
+  },
+  "_Halo": {
+   "color": "#8fb8ff",
+   "intensity": 1
+  },
+  "_CoreSize": 40,
+  "_HaloSize": 3.2,
+  "_Wobble": 0.35,
+  "_Twinkle": 0
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

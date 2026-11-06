@@ -560,8 +560,8 @@
      0
     ],
     "startSize": [
-     0.22,
-     0.22
+     0.34,
+     0.34
     ],
     "startRotation": [
      12,
@@ -650,10 +650,10 @@
    "renderer": {
     "mode": "billboard",
     "alignment": "view",
-    "material": "",
-    "texture": "bdo_parilti",
+    "material": "zerre_hafif_isik",
+    "texture": "soft",
     "blend": "additive",
-    "intensity": 1.8,
+    "intensity": 1,
     "sortingOrder": 5
    }
   },
@@ -682,8 +682,8 @@
      0.45
     ],
     "startSize": [
-     0.02,
-     0.036
+     0.045,
+     0.08
     ],
     "startRotation": [
      0,
@@ -773,10 +773,10 @@
    "renderer": {
     "mode": "billboard",
     "alignment": "view",
-    "material": "",
-    "texture": "bdo_parilti",
+    "material": "zerre_hafif",
+    "texture": "soft",
     "blend": "additive",
-    "intensity": 1.5,
+    "intensity": 1,
     "sortingOrder": 4
    }
   },
@@ -797,16 +797,16 @@
     "looping": false,
     "startDelay": 0.303,
     "startLifetime": [
-     0.1,
-     0.22
+     0.14,
+     0.28
     ],
     "startSpeed": [
-     1.5,
-     3.5
+     1.2,
+     3
     ],
     "startSize": [
-     0.01,
-     0.02
+     0.035,
+     0.06
     ],
     "startRotation": [
      0,
@@ -899,14 +899,12 @@
     ]
    },
    "renderer": {
-    "mode": "stretched",
+    "mode": "billboard",
     "alignment": "view",
-    "material": "",
-    "texture": "bdo_cizgi",
+    "material": "zerre_hafif",
+    "texture": "soft",
     "blend": "additive",
-    "intensity": 1.6,
-    "lengthScale": 3,
-    "velocityScale": 0.025,
+    "intensity": 1,
     "sortingOrder": 4
    }
   }

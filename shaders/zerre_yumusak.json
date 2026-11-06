@@ -1,0 +1,83 @@
+{
+ "format": "upe-shader-1",
+ "name": "zerre_yumusak",
+ "description": "Yumuşak ışık zerresi (additive parçacık): parlak küçük çekirdek + yumuşak hale, kenarı gürültüyle hafif düzensiz (her parçacıkta farklı, tohum parçacık renginden), hafif titreme. Hazır yıldız/spark dokusu ve düz çizgi yerine. Renk ve alfa parçacıktan.",
+ "builtin": false,
+ "unityName": "UnityPreview/zerre_yumusak",
+ "properties": [
+  {
+   "name": "_Core",
+   "type": "hdrColor",
+   "label": "Çekirdek",
+   "default": {
+    "color": "#ffffff",
+    "intensity": 2
+   }
+  },
+  {
+   "name": "_Halo",
+   "type": "hdrColor",
+   "label": "Hale",
+   "default": {
+    "color": "#8fb8ff",
+    "intensity": 0.8
+   }
+  },
+  {
+   "name": "_CoreSize",
+   "type": "range",
+   "label": "Çekirdek darlığı",
+   "min": 4,
+   "max": 60,
+   "default": 24
+  },
+  {
+   "name": "_HaloSize",
+   "type": "range",
+   "label": "Hale yayılımı",
+   "min": 1,
+   "max": 10,
+   "default": 4.5
+  },
+  {
+   "name": "_Wobble",
+   "type": "range",
+   "label": "Kenar düzensizliği",
+   "min": 0,
+   "max": 0.6,
+   "default": 0.25
+  },
+  {
+   "name": "_Twinkle",
+   "type": "range",
+   "label": "Titreme",
+   "min": 0,
+   "max": 1,
+   "default": 0.3
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": true,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false,
+  "width": "_OutlineWidth",
+  "color": "_OutlineColor"
+ },
+ "urpSurface": false,
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float2 p = i.uv * 2.0 - 1.0;\n    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7);\n    float ang = atan2(p.y, p.x);\n    // açı boyunca sürekli gürültü (dikissiz: sin/cos üzerinden)\n    float2 q = float2(cos(ang), sin(ang)) * 1.3 + seed * 11.0;\n    float wob = 1.0 + _Wobble * (vnoise(q) - 0.5) * 2.0;\n    float r = length(p) / max(wob, 0.2);\n    float core = exp(-r * r * _CoreSize);\n    float halo = exp(-r * _HaloSize) * 0.4;\n    float edge = 1.0 - smoothstep(0.75, 1.0, length(p));\n    float tw = 1.0 - _Twinkle * 0.5 * (1.0 + sin(i.time * (16.0 + seed * 14.0) + seed * 30.0));\n    float3 col = (_Core.rgb * core + _Halo.rgb * halo) * edge * tw * i.color.rgb * i.color.a;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}
