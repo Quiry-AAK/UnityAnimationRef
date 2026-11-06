@@ -41,11 +41,37 @@ const effect = {
       root: { light: { enabled: true, mode: 'single', color: '#a9c8ff', useParticleColor: false, intensity: 0.7, radius: 2.2,
         curve: [[0, 0], [0.08, 1], [0.3, 0.2], [0.5, 0], [1, 0]], maxLights: 1, shadows: false } },
     }),
+    // eko: biraz dışta, bir kare geriden gelen ince camgöbeği ikinci çizgi (çift darbe hissi)
+    (() => { const e = arcEmitter('eko', 'kesik_hafif_eko', 'additive', 2);
+      e.main = { ...e.main, startDelay: FIT.delay + 0.012, startLifetime: [0.16, 0.16], startSize: [1.05, 1.05] };
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 1], [1, 1.03]] }; return e; })(),
+    // bıçak ucunun vardığı yerde küçük yıldız parıltısı
+    {
+      name: 'parilti', position: FIT.position, rotation: FIT.rotation,
+      main: { duration: 0.6, looping: false, startDelay: FIT.delay + 0.004, startLifetime: [0.1, 0.1], startSpeed: [0, 0], startSize: [0.22, 0.22],
+        startRotation: [12, 12], startColor: ['#f2f8ff', '#f2f8ff'], gravity: 0, simulationSpace: 'world', maxParticles: 2 },
+      emission: once([1, 1]),
+      shape: { enabled: true, type: 'circle', radius: FIT.radius, radiusThickness: 0, arc: 6, position: [0, 0, 0], rotation: [0, 0, 122], randomDirection: 0 },
+      colorOverLifetime: { enabled: true, color: [[0, '#ffffff'], [1, '#bcdcff']], alpha: [[0, 1], [1, 0]] },
+      sizeOverLifetime: { enabled: true, curve: [[0, 0.4], [0.25, 1], [1, 0.7]] },
+      renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'bdo_parilti', blend: 'additive', intensity: 1.8, sortingOrder: 5 },
+    },
+    // yay boyunca havada bir an asılı kalan ince zerreler (göz kırpar)
+    {
+      name: 'zerre', position: FIT.position, rotation: FIT.rotation,
+      main: { duration: 0.6, looping: false, startDelay: FIT.delay + 0.01, startLifetime: [0.22, 0.42], startSpeed: [0.15, 0.45], startSize: [0.02, 0.036],
+        startRotation: [0, 45], startColor: ['#dcecff', '#8fb8ff'], gravity: -0.05, simulationSpace: 'world', maxParticles: 24 },
+      emission: once([12, 18]),
+      shape: { enabled: true, type: 'circle', radius: FIT.radius * 0.97, radiusThickness: 0.18, arc: 80, position: [0, 0, 0], rotation: [0, 0, 45], randomDirection: 0.5 },
+      limitVelocity: { enabled: true, drag: 2, limit: 5, dampen: 0 },
+      colorOverLifetime: { enabled: true, color: [[0, '#ffffff'], [1, '#9cc4ff']], alpha: [[0, 0], [0.1, 1], [0.4, 0.5], [0.5, 1], [1, 0]] },
+      renderer: { mode: 'billboard', alignment: 'view', material: '', texture: 'bdo_parilti', blend: 'additive', intensity: 1.5, sortingOrder: 4 },
+    },
     {
       name: 'kivilcim', position: FIT.position, rotation: FIT.rotation,
       main: { duration: 0.6, looping: false, startDelay: FIT.delay + 0.018, startLifetime: [0.1, 0.22], startSpeed: [1.5, 3.5], startSize: [0.01, 0.02],
         startRotation: [0, 0], startColor: ['#eef6ff', '#9cc4ff'], gravity: 0.3, simulationSpace: 'world', maxParticles: 12 },
-      emission: once([5, 8]),
+      emission: once([8, 12]),
       shape: { enabled: true, type: 'circle', radius: FIT.radius, radiusThickness: 0.04, arc: 30, position: [0, 0, 0], rotation: [0, 0, 100], randomDirection: 0.35 },
       limitVelocity: { enabled: true, drag: 10, limit: 10, dampen: 0 },
       colorOverLifetime: { enabled: true, color: [[0, '#ffffff'], [1, '#9cc4ff']], alpha: [[0, 1], [0.6, 0.8], [1, 0]] },

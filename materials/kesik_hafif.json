@@ -4,14 +4,14 @@
  "shader": "UnityPreview/kesik_hafif",
  "values": {
   "_Edge": {
-   "color": "#e9f3ff",
-   "intensity": 1.6
+   "color": "#eef6ff",
+   "intensity": 1.8
   },
   "_Body": {
-   "color": "#7c9cc8",
-   "intensity": 1.5
+   "color": "#7fa4d6",
+   "intensity": 1.9
   },
-  "_Width": 0.42,
+  "_Width": 0.5,
   "_EdgeW": 0.022,
   "_Tail": 0.75,
   "_Eat": 0.08,
