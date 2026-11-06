@@ -15,8 +15,8 @@
    "name": "cikis_sis",
    "position": [
     0.12,
-    1.087,
-    3
+    1.162,
+    3.1
    ],
    "rotation": [
     0,
@@ -147,7 +147,7 @@
    "name": "hilal_buk",
    "position": [
     0.12,
-    1.087,
+    1.162,
     1.6
    ],
    "rotation": [
@@ -288,8 +288,8 @@
     "mesh": {
      "shape": "arc",
      "file": "",
-     "innerRadius": 0.7,
-     "outerRadius": 1.4,
+     "innerRadius": 0.3,
+     "outerRadius": 1.5,
      "angle": 140,
      "height": 0.5,
      "segments": 128,
@@ -337,7 +337,7 @@
    "name": "hilal",
    "position": [
     0.12,
-    1.087,
+    1.162,
     1.6
    ],
    "rotation": [
@@ -478,8 +478,8 @@
     "mesh": {
      "shape": "arc",
      "file": "",
-     "innerRadius": 0.7,
-     "outerRadius": 1.4,
+     "innerRadius": 0.3,
+     "outerRadius": 1.5,
      "angle": 140,
      "height": 0.5,
      "segments": 128,
@@ -553,8 +553,8 @@
   {
    "name": "hilal_kabuk",
    "position": [
-    -0.0808,
-    0.9381,
+    -0.2013,
+    0.9238,
     1.6
    ],
    "rotation": [
@@ -695,10 +695,10 @@
     "mesh": {
      "shape": "cylinder",
      "file": "",
-     "innerRadius": 1.379,
-     "outerRadius": 1.379,
+     "innerRadius": 1.4775,
+     "outerRadius": 1.4775,
      "angle": 140,
-     "height": 0.5,
+     "height": 0.8,
      "segments": 128,
      "rings": 6,
      "rotation": [
@@ -735,7 +735,7 @@
    "name": "iz1",
    "position": [
     0.12,
-    1.087,
+    1.162,
     2.05
    ],
    "rotation": [
@@ -788,7 +788,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -855,7 +855,7 @@
    "name": "iz2",
    "position": [
     0.12,
-    1.087,
+    1.162,
     2.5
    ],
    "rotation": [
@@ -908,7 +908,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -975,7 +975,7 @@
    "name": "iz3",
    "position": [
     0.12,
-    1.087,
+    1.162,
     2.95
    ],
    "rotation": [
@@ -1028,7 +1028,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1095,7 +1095,7 @@
    "name": "iz4",
    "position": [
     0.12,
-    1.087,
+    1.162,
     3.4
    ],
    "rotation": [
@@ -1148,7 +1148,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1215,7 +1215,7 @@
    "name": "iz5",
    "position": [
     0.12,
-    1.087,
+    1.162,
     3.85
    ],
    "rotation": [
@@ -1268,7 +1268,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1335,7 +1335,7 @@
    "name": "iz6",
    "position": [
     0.12,
-    1.087,
+    1.162,
     4.3
    ],
    "rotation": [
@@ -1388,7 +1388,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1455,7 +1455,7 @@
    "name": "iz7",
    "position": [
     0.12,
-    1.087,
+    1.162,
     4.75
    ],
    "rotation": [
@@ -1508,7 +1508,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1575,7 +1575,7 @@
    "name": "iz8",
    "position": [
     0.12,
-    1.087,
+    1.162,
     5.2
    ],
    "rotation": [
@@ -1628,7 +1628,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1695,7 +1695,7 @@
    "name": "iz9",
    "position": [
     0.12,
-    1.087,
+    1.162,
     5.65
    ],
    "rotation": [
@@ -1748,7 +1748,7 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 1.008,
+    "radius": 1.08,
     "radiusThickness": 0.35,
     "arc": 140,
     "position": [
@@ -1814,9 +1814,9 @@
   {
    "name": "temas",
    "position": [
-    0.903,
+    0.959,
     0.03,
-    2.079
+    2.113
    ],
    "rotation": [
     0,
@@ -1924,9 +1924,9 @@
   {
    "name": "cizik0",
    "position": [
-    0.942,
+    0.998,
     0.015,
-    2.079
+    2.113
    ],
    "rotation": [
     0,
@@ -2014,9 +2014,9 @@
   {
    "name": "toz0",
    "position": [
-    0.942,
+    0.998,
     0.015,
-    2.079
+    2.113
    ],
    "rotation": [
     0,
@@ -2146,9 +2146,9 @@
   {
    "name": "kirinti0",
    "position": [
-    0.942,
+    0.998,
     0.015,
-    2.079
+    2.113
    ],
    "rotation": [
     0,
@@ -2257,9 +2257,9 @@
   {
    "name": "cizik1",
    "position": [
-    0.934,
+    0.99,
     0.015,
-    2.499
+    2.533
    ],
    "rotation": [
     0,
@@ -2347,9 +2347,9 @@
   {
    "name": "kirinti1",
    "position": [
-    0.934,
+    0.99,
     0.015,
-    2.499
+    2.533
    ],
    "rotation": [
     0,
@@ -2458,9 +2458,9 @@
   {
    "name": "cizik2",
    "position": [
-    0.923,
+    0.979,
     0.015,
-    2.919
+    2.953
    ],
    "rotation": [
     0,
@@ -2548,9 +2548,9 @@
   {
    "name": "toz2",
    "position": [
-    0.923,
+    0.979,
     0.015,
-    2.919
+    2.953
    ],
    "rotation": [
     0,
@@ -2680,9 +2680,9 @@
   {
    "name": "kirinti2",
    "position": [
-    0.923,
+    0.979,
     0.015,
-    2.919
+    2.953
    ],
    "rotation": [
     0,
@@ -2791,9 +2791,9 @@
   {
    "name": "cizik3",
    "position": [
-    0.801,
+    0.857,
     0.015,
-    3.339
+    3.373
    ],
    "rotation": [
     0,
@@ -2881,9 +2881,9 @@
   {
    "name": "kirinti3",
    "position": [
-    0.801,
+    0.857,
     0.015,
-    3.339
+    3.373
    ],
    "rotation": [
     0,
@@ -2992,9 +2992,9 @@
   {
    "name": "cizik4",
    "position": [
-    0.974,
+    1.03,
     0.015,
-    3.759
+    3.793
    ],
    "rotation": [
     0,
@@ -3082,9 +3082,9 @@
   {
    "name": "toz4",
    "position": [
-    0.974,
+    1.03,
     0.015,
-    3.759
+    3.793
    ],
    "rotation": [
     0,
@@ -3214,9 +3214,9 @@
   {
    "name": "kirinti4",
    "position": [
-    0.974,
+    1.03,
     0.015,
-    3.759
+    3.793
    ],
    "rotation": [
     0,
@@ -3325,9 +3325,9 @@
   {
    "name": "cizik5",
    "position": [
-    0.923,
+    0.979,
     0.015,
-    4.179
+    4.213
    ],
    "rotation": [
     0,
@@ -3415,9 +3415,9 @@
   {
    "name": "kirinti5",
    "position": [
-    0.923,
+    0.979,
     0.015,
-    4.179
+    4.213
    ],
    "rotation": [
     0,
@@ -3526,9 +3526,9 @@
   {
    "name": "cizik6",
    "position": [
-    0.889,
+    0.945,
     0.015,
-    4.599
+    4.633
    ],
    "rotation": [
     0,
@@ -3616,9 +3616,9 @@
   {
    "name": "toz6",
    "position": [
-    0.889,
+    0.945,
     0.015,
-    4.599
+    4.633
    ],
    "rotation": [
     0,
@@ -3748,9 +3748,9 @@
   {
    "name": "kirinti6",
    "position": [
-    0.889,
+    0.945,
     0.015,
-    4.599
+    4.633
    ],
    "rotation": [
     0,
@@ -3859,9 +3859,9 @@
   {
    "name": "cizik7",
    "position": [
-    0.826,
+    0.882,
     0.015,
-    5.019
+    5.053
    ],
    "rotation": [
     0,
@@ -3949,9 +3949,9 @@
   {
    "name": "kirinti7",
    "position": [
-    0.826,
+    0.882,
     0.015,
-    5.019
+    5.053
    ],
    "rotation": [
     0,
@@ -4060,9 +4060,9 @@
   {
    "name": "cizik8",
    "position": [
-    0.996,
+    1.052,
     0.015,
-    5.439
+    5.473
    ],
    "rotation": [
     0,
@@ -4150,9 +4150,9 @@
   {
    "name": "toz8",
    "position": [
-    0.996,
+    1.052,
     0.015,
-    5.439
+    5.473
    ],
    "rotation": [
     0,
@@ -4282,9 +4282,9 @@
   {
    "name": "kirinti8",
    "position": [
-    0.996,
+    1.052,
     0.015,
-    5.439
+    5.473
    ],
    "rotation": [
     0,
@@ -4393,9 +4393,9 @@
   {
    "name": "cizik9",
    "position": [
-    0.899,
+    0.955,
     0.015,
-    5.859
+    5.893
    ],
    "rotation": [
     0,
@@ -4483,9 +4483,9 @@
   {
    "name": "kirinti9",
    "position": [
-    0.899,
+    0.955,
     0.015,
-    5.859
+    5.893
    ],
    "rotation": [
     0,
@@ -4594,9 +4594,9 @@
   {
    "name": "cizik10",
    "position": [
-    0.867,
+    0.923,
     0.015,
-    6.279
+    6.313
    ],
    "rotation": [
     0,
@@ -4684,9 +4684,9 @@
   {
    "name": "toz10",
    "position": [
-    0.867,
+    0.923,
     0.015,
-    6.279
+    6.313
    ],
    "rotation": [
     0,
@@ -4816,9 +4816,9 @@
   {
    "name": "kirinti10",
    "position": [
-    0.867,
+    0.923,
     0.015,
-    6.279
+    6.313
    ],
    "rotation": [
     0,

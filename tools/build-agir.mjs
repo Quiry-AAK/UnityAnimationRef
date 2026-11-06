@@ -160,7 +160,7 @@ function build(key, variant) {
     const D2R = Math.PI / 180;
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     const toEuler = (X, Y, Z) => { const x = Math.asin(Math.max(-1, Math.min(1, -Z[1]))) / D2R, y = Math.atan2(Z[0], Z[2]) / D2R, z = Math.atan2(X[1], Y[1]) / D2R; return [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)]; };
-    const spd = 9, fly = 0.55, HR = 1.4, span = 140, from = 90 - span / 2;   // yay yerelde +Y'ye (ileri) bombeli
+    const spd = 9, fly = 0.55, HR = 1.5, span = 140, from = 90 - span / 2;   // yay yerelde +Y'ye (ileri) bombeli
     // savruluşun arkadan görünen kirişi (uç yolunun XY izdüşümü, baştan sona)
     const proj = (a) => { const r = a * D2R; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
     const pS = proj(0), pE = proj(A); let cx = pE[0] - pS[0], cy = pE[1] - pS[1]; const cl = Math.hypot(cx, cy) || 1; cx /= cl; cy /= cl;
@@ -174,7 +174,7 @@ function build(key, variant) {
     const C = [0.12, +(0.03 - at3([0, 0, 0], low)[1]).toFixed(3), 1.6];           // en alçak nokta yerden 3 cm
     const contact = at3(C, low).map((c, i) => +(i === 1 ? 0.03 : c).toFixed(3));
     const t1 = +(tEnd - 0.005).toFixed(4);
-    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.5).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
+    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.2).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
     const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
     const fwd = (sp) => ({ enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
     const moon = (name, mat, blend, order, extra = {}) => {
@@ -185,7 +185,7 @@ function build(key, variant) {
     };
     const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 7, scroll: [0, 3] } } });
     // hilal kabuğu: silindir dilimi, ekseni hilal normali; açı hilalin başlangıç açısından (from) başlar
-    const KH = 0.5, fr = from * D2R;
+    const KH = 0.8, fr = from * D2R;
     const kabukRot = toEuler([Math.cos(fr), Math.sin(fr), 0], [0, 0, -1], [-Math.sin(fr), Math.cos(fr), 0]);
     const hilalKabuk = moon('hilal_kabuk', M('h', 'kabuk'), 'additive', 4);
     hilalKabuk.renderer.mesh = { shape: 'cylinder', file: '', innerRadius: +(HR * 0.985).toFixed(4), outerRadius: +(HR * 0.985).toFixed(4), angle: span, height: KH, segments: 128, rings: 6, rotation: kabukRot };
