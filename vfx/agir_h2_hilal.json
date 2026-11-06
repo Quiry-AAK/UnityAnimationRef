@@ -12,229 +12,44 @@
  },
  "emitters": [
   {
-   "name": "iz",
+   "name": "cikis_sis",
    "position": [
-    0.0876,
-    1.1783,
-    1.4487
+    0.719,
+    1.303,
+    2.665
    ],
    "rotation": [
-    -38.032,
-    86.3,
-    59.078
+    0,
+    0,
+    0
    ],
    "main": {
     "duration": 1.2,
     "looping": false,
-    "startDelay": 0.4,
+    "startDelay": 0.445,
     "startLifetime": [
-     0.3,
-     0.3
+     0.35,
+     0.6
     ],
     "startSpeed": [
-     0,
-     0
+     0.6,
+     1.6
     ],
     "startSize": [
-     1,
-     1
+     0.35,
+     0.7
     ],
     "startRotation": [
      0,
-     0
+     360
     ],
     "startColor": [
      "#ffffff",
-     "#ffffff"
-    ],
-    "gravity": 0,
-    "simulationSpace": "local",
-    "maxParticles": 2
-   },
-   "emission": {
-    "rateOverTime": 0,
-    "bursts": [
-     {
-      "time": 0,
-      "count": [
-       1,
-       1
-      ],
-      "cycles": 1,
-      "interval": 0.01
-     }
-    ]
-   },
-   "shape": {
-    "enabled": false
-   },
-   "colorOverLifetime": {
-    "enabled": true,
-    "color": [
-     [
-      0,
-      "#ffffff"
-     ],
-     [
-      1,
-      "#ffffff"
-     ]
-    ],
-    "alpha": [
-     [
-      0,
-      1
-     ],
-     [
-      1,
-      0
-     ]
-    ]
-   },
-   "customData": {
-    "enabled": true,
-    "x": [
-     [
-      0,
-      0
-     ],
-     [
-      0.0077,
-      0.1184
-     ],
-     [
-      0.0357,
-      0.2464
-     ],
-     [
-      0.0633,
-      0.4045
-     ],
-     [
-      0.091,
-      0.5587
-     ],
-     [
-      0.119,
-      0.7957
-     ],
-     [
-      0.1467,
-      1
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "y": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ],
-    "z": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ],
-    "w": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ]
-   },
-   "sizeOverLifetime": {
-    "enabled": true,
-    "curve": [
-     [
-      0,
-      0.99
-     ],
-     [
-      1,
-      1.03
-     ]
-    ]
-   },
-   "renderer": {
-    "mode": "mesh",
-    "mesh": {
-     "shape": "arc",
-     "file": "",
-     "innerRadius": 0.3207,
-     "outerRadius": 1.0182,
-     "angle": 190.57,
-     "height": 0.5,
-     "segments": 128,
-     "rings": 8,
-     "rotation": [
-      0,
-      0,
-      0
-     ]
-    },
-    "alignment": "view",
-    "material": "agir_h2h_iz",
-    "texture": "soft",
-    "blend": "additive",
-    "intensity": 1,
-    "sortingOrder": 3
-   }
-  },
-  {
-   "name": "cikis",
-   "position": [
-    0.0876,
-    1.1783,
-    1.4487
-   ],
-   "rotation": [
-    -38.032,
-    86.3,
-    59.078
-   ],
-   "main": {
-    "duration": 1.2,
-    "looping": false,
-    "startDelay": 0.435,
-    "startLifetime": [
-     0.14,
-     0.14
-    ],
-    "startSpeed": [
-     0,
-     0
-    ],
-    "startSize": [
-     0.8,
-     0.8
-    ],
-    "startRotation": [
-     0,
-     0
-    ],
-    "startColor": [
-     "#d8eaff",
-     "#d8eaff"
+     "#eef3ff"
     ],
     "gravity": 0,
     "simulationSpace": "world",
-    "maxParticles": 2
+    "maxParticles": 10
    },
    "emission": {
     "rateOverTime": 0,
@@ -242,8 +57,8 @@
      {
       "time": 0,
       "count": [
-       1,
-       1
+       5,
+       7
       ],
       "cycles": 1,
       "interval": 0.01
@@ -253,9 +68,9 @@
    "shape": {
     "enabled": true,
     "type": "circle",
-    "radius": 0.9606,
-    "radiusThickness": 0,
-    "arc": 1,
+    "radius": 0.3,
+    "radiusThickness": 1,
+    "arc": 360,
     "position": [
      0,
      0,
@@ -264,9 +79,16 @@
     "rotation": [
      0,
      0,
-     114.3
+     0
     ],
-    "randomDirection": 0
+    "randomDirection": 0.8
+   },
+   "noise": {
+    "enabled": true,
+    "strength": 0.3,
+    "frequency": 1.3,
+    "scrollSpeed": 0.6,
+    "octaves": 2
    },
    "colorOverLifetime": {
     "enabled": true,
@@ -296,39 +118,42 @@
     "curve": [
      [
       0,
-      0.3
-     ],
-     [
-      0.2,
-      1
+      0.5
      ],
      [
       1,
-      1.1
+      1.5
      ]
+    ]
+   },
+   "rotationOverLifetime": {
+    "enabled": true,
+    "angularVelocity": [
+     -60,
+     60
     ]
    },
    "renderer": {
     "mode": "billboard",
     "alignment": "view",
-    "material": "zerre_hafif_isik",
+    "material": "agir_h2h_sis",
     "texture": "soft",
-    "blend": "additive",
+    "blend": "alpha",
     "intensity": 1,
-    "sortingOrder": 9
+    "sortingOrder": 1
    }
   },
   {
    "name": "hilal_buk",
    "position": [
     0.12,
-    1.28,
-    2
+    0.859,
+    1.6
    ],
    "rotation": [
-    0,
-    0,
-    0
+    29.197,
+    -48.924,
+    -66.965
    ],
    "main": {
     "duration": 1.2,
@@ -446,15 +271,15 @@
     "curve": [
      [
       0,
-      0.85
+      0.9
      ],
      [
-      0.25,
-      1.05
+      0.2,
+      1
      ],
      [
       1,
-      1.2
+      1.04
      ]
     ]
    },
@@ -463,16 +288,16 @@
     "mesh": {
      "shape": "arc",
      "file": "",
-     "innerRadius": 0.6,
-     "outerRadius": 1.25,
-     "angle": 150,
+     "innerRadius": 0.585,
+     "outerRadius": 1.3,
+     "angle": 140,
      "height": 0.5,
      "segments": 128,
-     "rings": 10,
+     "rings": 12,
      "rotation": [
       0,
       0,
-      -218.5
+      20
      ]
     },
     "alignment": "view",
@@ -483,11 +308,11 @@
     "sortingOrder": 0,
     "distortion": {
      "mode": "noise",
-     "strength": 0.05,
-     "frequency": 8,
+     "strength": 0.06,
+     "frequency": 7,
      "scroll": [
       0,
-      2
+      3
      ]
     }
    },
@@ -509,16 +334,16 @@
    }
   },
   {
-   "name": "hilal_govde",
+   "name": "hilal_ruzgar",
    "position": [
     0.12,
-    1.28,
-    2
+    0.859,
+    1.6
    ],
    "rotation": [
-    0,
-    0,
-    0
+    29.197,
+    -48.924,
+    -66.965
    ],
    "main": {
     "duration": 1.2,
@@ -636,15 +461,15 @@
     "curve": [
      [
       0,
-      0.85
+      0.9
      ],
      [
-      0.25,
-      1.05
+      0.2,
+      1
      ],
      [
       1,
-      1.2
+      1.04
      ]
     ]
    },
@@ -653,212 +478,31 @@
     "mesh": {
      "shape": "arc",
      "file": "",
-     "innerRadius": 0.6,
-     "outerRadius": 1.25,
-     "angle": 150,
+     "innerRadius": 0.585,
+     "outerRadius": 1.3,
+     "angle": 140,
      "height": 0.5,
      "segments": 128,
-     "rings": 10,
+     "rings": 12,
      "rotation": [
       0,
       0,
-      -218.5
+      20
      ]
     },
     "alignment": "view",
-    "material": "agir_h2h_govde",
+    "material": "agir_h2h_ruzgar",
     "texture": "soft",
     "blend": "additive",
     "intensity": 1,
     "sortingOrder": 4
-   },
-   "velocity": {
-    "enabled": true,
-    "linear": [
-     0,
-     0,
-     9
-    ],
-    "orbital": [
-     0,
-     0,
-     0
-    ],
-    "radial": 0,
-    "space": "world",
-    "speedModifier": 1
-   }
-  },
-  {
-   "name": "hilal_kenar",
-   "position": [
-    0.12,
-    1.28,
-    2
-   ],
-   "rotation": [
-    0,
-    0,
-    0
-   ],
-   "main": {
-    "duration": 1.2,
-    "looping": false,
-    "startDelay": 0.445,
-    "startLifetime": [
-     0.55,
-     0.55
-    ],
-    "startSpeed": [
-     0,
-     0
-    ],
-    "startSize": [
-     1,
-     1
-    ],
-    "startRotation": [
-     0,
-     0
-    ],
-    "startColor": [
-     "#ffffff",
-     "#ffffff"
-    ],
-    "gravity": 0,
-    "simulationSpace": "local",
-    "maxParticles": 2
-   },
-   "emission": {
-    "rateOverTime": 0,
-    "bursts": [
-     {
-      "time": 0,
-      "count": [
-       1,
-       1
-      ],
-      "cycles": 1,
-      "interval": 0.01
-     }
-    ]
-   },
-   "shape": {
-    "enabled": false
-   },
-   "colorOverLifetime": {
-    "enabled": true,
-    "color": [
-     [
-      0,
-      "#ffffff"
-     ],
-     [
-      1,
-      "#ffffff"
-     ]
-    ],
-    "alpha": [
-     [
-      0,
-      1
-     ],
-     [
-      1,
-      0
-     ]
-    ]
-   },
-   "customData": {
-    "enabled": true,
-    "x": [
-     [
-      0,
-      1
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "y": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ],
-    "z": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ],
-    "w": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      0
-     ]
-    ]
-   },
-   "sizeOverLifetime": {
-    "enabled": true,
-    "curve": [
-     [
-      0,
-      0.85
-     ],
-     [
-      0.25,
-      1.05
-     ],
-     [
-      1,
-      1.2
-     ]
-    ]
-   },
-   "renderer": {
-    "mode": "mesh",
-    "mesh": {
-     "shape": "arc",
-     "file": "",
-     "innerRadius": 0.6,
-     "outerRadius": 1.25,
-     "angle": 150,
-     "height": 0.5,
-     "segments": 128,
-     "rings": 10,
-     "rotation": [
-      0,
-      0,
-      -218.5
-     ]
-    },
-    "alignment": "view",
-    "material": "agir_h2h_kenar",
-    "texture": "soft",
-    "blend": "additive",
-    "intensity": 1,
-    "sortingOrder": 5
    },
    "light": {
     "enabled": true,
     "mode": "single",
     "color": "#9cc0ff",
     "useParticleColor": false,
-    "intensity": 2,
+    "intensity": 1.8,
     "radius": 4,
     "curve": [
      [
@@ -909,9 +553,9 @@
   {
    "name": "temas",
    "position": [
-    0.098,
+    1.052,
     0.03,
-    2
+    1.964
    ],
    "rotation": [
     0,
@@ -931,8 +575,8 @@
      0
     ],
     "startSize": [
-     0.55,
-     0.55
+     0.5,
+     0.5
     ],
     "startRotation": [
      0,
@@ -1019,9 +663,9 @@
   {
    "name": "cizik0",
    "position": [
-    0.137,
+    1.091,
     0.015,
-    2
+    1.964
    ],
    "rotation": [
     0,
@@ -1109,9 +753,9 @@
   {
    "name": "toz0",
    "position": [
-    0.137,
+    1.091,
     0.015,
-    2
+    1.964
    ],
    "rotation": [
     0,
@@ -1241,9 +885,9 @@
   {
    "name": "kirinti0",
    "position": [
-    0.137,
+    1.091,
     0.015,
-    2
+    1.964
    ],
    "rotation": [
     0,
@@ -1352,9 +996,9 @@
   {
    "name": "cizik1",
    "position": [
-    0.129,
+    1.083,
     0.015,
-    2.42
+    2.384
    ],
    "rotation": [
     0,
@@ -1442,9 +1086,9 @@
   {
    "name": "kirinti1",
    "position": [
-    0.129,
+    1.083,
     0.015,
-    2.42
+    2.384
    ],
    "rotation": [
     0,
@@ -1553,9 +1197,9 @@
   {
    "name": "cizik2",
    "position": [
-    0.118,
+    1.072,
     0.015,
-    2.84
+    2.804
    ],
    "rotation": [
     0,
@@ -1643,9 +1287,9 @@
   {
    "name": "toz2",
    "position": [
-    0.118,
+    1.072,
     0.015,
-    2.84
+    2.804
    ],
    "rotation": [
     0,
@@ -1775,9 +1419,9 @@
   {
    "name": "kirinti2",
    "position": [
-    0.118,
+    1.072,
     0.015,
-    2.84
+    2.804
    ],
    "rotation": [
     0,
@@ -1886,9 +1530,9 @@
   {
    "name": "cizik3",
    "position": [
-    -0.004,
+    0.95,
     0.015,
-    3.26
+    3.224
    ],
    "rotation": [
     0,
@@ -1976,9 +1620,9 @@
   {
    "name": "kirinti3",
    "position": [
-    -0.004,
+    0.95,
     0.015,
-    3.26
+    3.224
    ],
    "rotation": [
     0,
@@ -2087,9 +1731,9 @@
   {
    "name": "cizik4",
    "position": [
-    0.169,
+    1.123,
     0.015,
-    3.68
+    3.644
    ],
    "rotation": [
     0,
@@ -2177,9 +1821,9 @@
   {
    "name": "toz4",
    "position": [
-    0.169,
+    1.123,
     0.015,
-    3.68
+    3.644
    ],
    "rotation": [
     0,
@@ -2309,9 +1953,9 @@
   {
    "name": "kirinti4",
    "position": [
-    0.169,
+    1.123,
     0.015,
-    3.68
+    3.644
    ],
    "rotation": [
     0,
@@ -2420,9 +2064,9 @@
   {
    "name": "cizik5",
    "position": [
-    0.118,
+    1.072,
     0.015,
-    4.1
+    4.064
    ],
    "rotation": [
     0,
@@ -2510,9 +2154,9 @@
   {
    "name": "kirinti5",
    "position": [
-    0.118,
+    1.072,
     0.015,
-    4.1
+    4.064
    ],
    "rotation": [
     0,
@@ -2621,9 +2265,9 @@
   {
    "name": "cizik6",
    "position": [
-    0.084,
+    1.038,
     0.015,
-    4.52
+    4.484
    ],
    "rotation": [
     0,
@@ -2711,9 +2355,9 @@
   {
    "name": "toz6",
    "position": [
-    0.084,
+    1.038,
     0.015,
-    4.52
+    4.484
    ],
    "rotation": [
     0,
@@ -2843,9 +2487,9 @@
   {
    "name": "kirinti6",
    "position": [
-    0.084,
+    1.038,
     0.015,
-    4.52
+    4.484
    ],
    "rotation": [
     0,
@@ -2954,9 +2598,9 @@
   {
    "name": "cizik7",
    "position": [
-    0.021,
+    0.975,
     0.015,
-    4.94
+    4.904
    ],
    "rotation": [
     0,
@@ -3044,9 +2688,9 @@
   {
    "name": "kirinti7",
    "position": [
-    0.021,
+    0.975,
     0.015,
-    4.94
+    4.904
    ],
    "rotation": [
     0,
@@ -3155,9 +2799,9 @@
   {
    "name": "cizik8",
    "position": [
-    0.191,
+    1.145,
     0.015,
-    5.36
+    5.324
    ],
    "rotation": [
     0,
@@ -3245,9 +2889,9 @@
   {
    "name": "toz8",
    "position": [
-    0.191,
+    1.145,
     0.015,
-    5.36
+    5.324
    ],
    "rotation": [
     0,
@@ -3377,9 +3021,9 @@
   {
    "name": "kirinti8",
    "position": [
-    0.191,
+    1.145,
     0.015,
-    5.36
+    5.324
    ],
    "rotation": [
     0,
@@ -3488,9 +3132,9 @@
   {
    "name": "cizik9",
    "position": [
-    0.094,
+    1.048,
     0.015,
-    5.78
+    5.744
    ],
    "rotation": [
     0,
@@ -3578,9 +3222,9 @@
   {
    "name": "kirinti9",
    "position": [
-    0.094,
+    1.048,
     0.015,
-    5.78
+    5.744
    ],
    "rotation": [
     0,
@@ -3689,9 +3333,9 @@
   {
    "name": "cizik10",
    "position": [
-    0.062,
+    1.016,
     0.015,
-    6.2
+    6.164
    ],
    "rotation": [
     0,
@@ -3779,9 +3423,9 @@
   {
    "name": "toz10",
    "position": [
-    0.062,
+    1.016,
     0.015,
-    6.2
+    6.164
    ],
    "rotation": [
     0,
@@ -3911,9 +3555,9 @@
   {
    "name": "kirinti10",
    "position": [
-    0.062,
+    1.016,
     0.015,
-    6.2
+    6.164
    ],
    "rotation": [
     0,

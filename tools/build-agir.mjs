@@ -154,39 +154,45 @@ function build(key, variant) {
     };
   }
   if (variant === 'hilal') {
-    // H2 "öne giden hilal" (tek): kesiş biter bitmez karakterin önünde dik, çapraz eğik dolu bir hilal belirir; alt ucu yere
-    // değerek öne (+Z) kayar. Geçtiği yerde zeminde parlak bir çizik kalır, toz ve kırıntı kalkar. H1'in yarık dilinden ayrı.
-    const spd = 9, fly = 0.55, HR = 1.25;            // hız (m/sn), uçuş (sn), hilal yarıçapı (m)
-    // hilalin yönü kılıcın savruluşundan: arkadan bakınca (XY izdüşümü) uç yolunun kirişi; hilal bu kirişe oturur, dışa (aşağı-yana) bombeli
-    const proj = (a) => { const r = a * Math.PI / 180; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
-    const pS = proj(0), pE = proj(A); const chord = Math.atan2(pE[1] - pS[1], pE[0] - pS[0]) * 180 / Math.PI; // baştan sona kiriş yönü
-    let bulge = chord - 90; if (Math.sin(bulge * Math.PI / 180) > 0) bulge += 180;  // bombe aşağı tarafa
-    const span = 150, from = +(bulge - span / 2).toFixed(1);
-    const t1 = +(tEnd - 0.005).toFixed(4);            // hilalin doğuşu (kesiş sonu)
-    const lowSin = Math.min(...Array.from({ length: 61 }, (_, k) => Math.sin((from + span * k / 60) * Math.PI / 180)));
-    const start = [0.12, +(-lowSin * HR + 0.03).toFixed(3), 2.0]; // hilal merkezi; en alt noktası yerden 3 cm
-    const lowA = Array.from({ length: 61 }, (_, k) => from + span * k / 60).reduce((m, a) => (Math.sin(a * Math.PI / 180) < Math.sin(m * Math.PI / 180) ? a : m));
-    const contact = [+(start[0] + HR * Math.cos(lowA * Math.PI / 180)).toFixed(3), 0.03, start[2]];
-    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.48).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 10, rotation: [0, 0, from] };
+    // H2 "öne giden hilal": kesiş biter bitmez sıkışmış havadan bir rüzgâr hilali öne (+Z) fırlar. Hilal gidiş yönüne yatıktır:
+    // bombesi önde, savruluşun çaprazına göre eğik (bumerang gibi); alçak ucu yere değerek kayar, zeminde çizik/toz/kırıntı bırakır.
+    // Hafif saldırı kesiğinin dili (dolu mavi gövde + beyaz kenar) kullanılmaz; H1'in yarık dilinden de ayrı.
+    const D2R = Math.PI / 180;
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const toEuler = (X, Y, Z) => { const x = Math.asin(Math.max(-1, Math.min(1, -Z[1]))) / D2R, y = Math.atan2(Z[0], Z[2]) / D2R, z = Math.atan2(X[1], Y[1]) / D2R; return [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)]; };
+    const spd = 9, fly = 0.55, HR = 1.3, span = 140, from = 90 - span / 2;   // yay yerelde +Y'ye (ileri) bombeli
+    // savruluşun arkadan görünen kirişi (uç yolunun XY izdüşümü, baştan sona)
+    const proj = (a) => { const r = a * D2R; return [Math.cos(r) * AX.X[0] + Math.sin(r) * AX.Y[0], Math.cos(r) * AX.X[1] + Math.sin(r) * AX.Y[1]]; };
+    const pS = proj(0), pE = proj(A); let cx = pE[0] - pS[0], cy = pE[1] - pS[1]; const cl = Math.hypot(cx, cy) || 1; cx /= cl; cy /= cl;
+    if (cy > 0) { cx = -cx; cy = -cy; }                                          // yerel X aşağı uca baksın (o uç yere değer)
+    // bombe önde (+Z) ama arkadan (oyun kamerası) da hilal okunsun diye kiriş ekseni etrafında yukarı doğru eğik
+    const lean = 35 * D2R; let ux = -cy, uy = cx; if (uy < 0) { ux = -ux; uy = -uy; }
+    const LX = [cx, cy, 0], LY = [Math.sin(lean) * ux, Math.sin(lean) * uy, Math.cos(lean)], LZ = cross(LX, LY), rot = toEuler(LX, LY, LZ);
+    const at3 = (C, a) => { const r = a * D2R; return C.map((c, i) => c + HR * (Math.cos(r) * LX[i] + Math.sin(r) * LY[i])); };
+    const samples = Array.from({ length: 71 }, (_, k) => from + span * k / 70);
+    const low = samples.reduce((m, a) => (at3([0, 0, 0], a)[1] < at3([0, 0, 0], m)[1] ? a : m));
+    const C = [0.12, +(0.03 - at3([0, 0, 0], low)[1]).toFixed(3), 1.6];           // en alçak nokta yerden 3 cm
+    const contact = at3(C, low).map((c, i) => +(i === 1 ? 0.03 : c).toFixed(3));
+    const t1 = +(tEnd - 0.005).toFixed(4);
+    const moonMesh = { shape: 'arc', file: '', innerRadius: +(HR * 0.45).toFixed(4), outerRadius: +HR.toFixed(4), angle: span, height: 0.5, segments: 128, rings: 12 };
     const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
     const fwd = (sp) => ({ enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 });
     const moon = (name, mat, blend, order, extra = {}) => {
       const e = arc(name, mat, { blend, order, dt: t1 - t0, life: fly, mesh: moonMesh, rotZ: from, extra });
-      e.position = start; e.rotation = [0, 0, 0]; e.customData = full; e.velocity = fwd(spd);
-      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.85], [0.25, 1.05], [1, 1.2]] };
+      e.position = C; e.rotation = rot; e.customData = full; e.velocity = fwd(spd);
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.9], [0.2, 1.0], [1, 1.04]] };
       return e;
     };
-    const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 8, scroll: [0, 2] } } });
-    // zemindeki iz: hilalin değdiği yol boyunca kademeli (her adımda hilal oraya vardığında)
+    const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 7, scroll: [0, 3] } } });
+    // zemindeki iz (hilalin alçak ucu geçtikçe)
     const steps = [], stepLen = 0.42, travel = spd * fly * 0.9;
     for (let k = 0; k * stepLen < travel; k++) {
-      const z = +(start[2] + k * stepLen).toFixed(3), d = +(t1 + (k * stepLen) / spd).toFixed(4);
-      const wob = 0.07 * Math.sin(k * 1.7) + 0.04 * Math.sin(k * 3.1 + 1.3); // iz hafifçe kıvrılır (düz çizgi değil)
+      const z = +(contact[2] + k * stepLen).toFixed(3), d = +(t1 + (k * stepLen) / spd).toFixed(4);
+      const wob = 0.07 * Math.sin(k * 1.7) + 0.04 * Math.sin(k * 3.1 + 1.3);
       const pos = [+(contact[0] + wob).toFixed(3), 0.015, z];
-      steps.push(emitAt(`cizik${k}`, pos, [0, 0, 0], { delay: d, life: [0.9, 1.1], speed: [0, 0], size: [0.62, 0.78], srot: [-14, 14], color: ['#ffffff', '#f4f8ff'], max: 2, count: [1, 1],
-        arc: 1, from: 0, mat: M('h', 'cizik'), order: 2 }));
-      steps[steps.length - 1].shape = { enabled: false };
-      steps[steps.length - 1].renderer.mode = 'horizontal';
+      const cz = emitAt(`cizik${k}`, pos, [0, 0, 0], { delay: d, life: [0.9, 1.1], speed: [0, 0], size: [0.62, 0.78], srot: [-14, 14], color: ['#ffffff', '#f4f8ff'], max: 2, count: [1, 1],
+        arc: 1, from: 0, mat: M('h', 'cizik'), order: 2 });
+      cz.shape = { enabled: false }; cz.renderer.mode = 'horizontal'; steps.push(cz);
       if (k % 2 === 0) steps.push(emitAt(`toz${k}`, pos, [0, 0, 0], { delay: d, life: [0.5, 0.9], speed: [0.4, 1.2], size: [0.3, 0.6], srot: [0, 360], color: ['#ffffff', '#eef3ff'],
         max: 6, count: [2, 3], r: 0.1, thick: 1, arc: 360, from: 0, rand: 0.6, noise: 0.25, angv: [-40, 40], gravity: -0.05, sizeCurve: [[0, 0.5], [1, 1.5]],
         blend: 'alpha', mat: M('h', 'sis'), order: 1 }));
@@ -194,18 +200,18 @@ function build(key, variant) {
         max: 8, count: [3, 5], r: 0.06, thick: 1, arc: 360, from: 0, rand: 0.9, drag: 2, mat: 'zerre_hafif', order: 6 }));
     }
     for (const e of steps) if (e.name.startsWith('toz') || e.name.startsWith('kirinti')) e.shape = { ...e.shape, rotation: [-90, 0, 0] };
-    const contactGlow = emitAt('temas', contact, [0, 0, 0], { delay: t1, life: [fly * 0.9, fly * 0.9], speed: [0, 0], size: [0.55, 0.55], color: ['#dcecff', '#dcecff'], max: 2, count: [1, 1],
+    const contactGlow = emitAt('temas', contact, [0, 0, 0], { delay: t1, life: [fly * 0.9, fly * 0.9], speed: [0, 0], size: [0.5, 0.5], color: ['#dcecff', '#dcecff'], max: 2, count: [1, 1],
       arc: 1, from: 0, alpha: [[0, 1], [0.7, 0.8], [1, 0]], mat: 'zerre_hafif_isik', order: 9 });
     contactGlow.shape = { enabled: false }; contactGlow.velocity = fwd(spd);
+    // çıkış: hilal doğarken hava patlaması (sis tutamları + zerre)
+    const out = at3(C, 90).map((c) => +c.toFixed(3));
     return {
       name: `agir_${key}_hilal`, duration: 1.8, loop: true, preview: prev,
       emitters: [
-        arc('iz', M('h', 'iz'), { order: 3, life: 0.3 }),
-        onArc('cikis', { delay: t1 - 0.01, life: [0.14, 0.14], speed: [0, 0], size: [0.8, 0.8], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
-          arc: 1, from: hitAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
-        moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.05)),
-        moon('hilal_govde', M('h', 'govde'), 'additive', 4),
-        moon('hilal_kenar', M('h', 'kenar'), 'additive', 5, light(2.0, 4)),
+        emitAt('cikis_sis', out, [0, 0, 0], { delay: t1, life: [0.35, 0.6], speed: [0.6, 1.6], size: [0.35, 0.7], srot: [0, 360], color: ['#ffffff', '#eef3ff'], max: 10, count: [5, 7],
+          r: 0.3, thick: 1, arc: 360, from: 0, rand: 0.8, noise: 0.3, angv: [-60, 60], sizeCurve: [[0, 0.5], [1, 1.5]], blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
+        moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, dist(0.06)),
+        moon('hilal_ruzgar', M('h', 'ruzgar'), 'additive', 4, light(1.8, 4)),
         contactGlow,
         ...steps,
       ],

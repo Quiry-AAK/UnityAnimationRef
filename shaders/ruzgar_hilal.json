@@ -1,0 +1,78 @@
+{
+ "name": "ruzgar_hilal",
+ "description": "Rüzgâr hilali (additive, mesh yay; dış kenar V=1 gidiş yönündeki bombeli ön): sıkışmış havadan hilal. Önde yumuşak, parlak hava cephesi; gövdede yay boyunca hızla akan çok sayıda ince, kavisli rüzgâr çizgisi (farklı yarıçaplarda, kopuk, kalınlığı dalgalı); çok şeffaf iç pus; uçlarda çizgiler dağınık tutamlara ayrılır. Hafif saldırı kesiğinin dolu mavi gövdesi/beyaz kenarı değil. life = 1 - alfa.",
+ "properties": [
+  {
+   "name": "_Front",
+   "type": "hdrColor",
+   "label": "Ön cephe",
+   "default": {
+    "color": "#e8f4ff",
+    "intensity": 1.8
+   }
+  },
+  {
+   "name": "_Wind",
+   "type": "hdrColor",
+   "label": "Rüzgâr çizgileri",
+   "default": {
+    "color": "#bfe0ff",
+    "intensity": 1.6
+   }
+  },
+  {
+   "name": "_Haze",
+   "type": "hdrColor",
+   "label": "İç pus",
+   "default": {
+    "color": "#6f9cf0",
+    "intensity": 0.35
+   }
+  },
+  {
+   "name": "_Width",
+   "type": "range",
+   "label": "Gövde (V)",
+   "min": 0.1,
+   "max": 0.9,
+   "default": 0.6
+  },
+  {
+   "name": "_Lines",
+   "type": "range",
+   "label": "Çizgi sayısı",
+   "min": 2,
+   "max": 24,
+   "default": 11
+  },
+  {
+   "name": "_Speed",
+   "type": "range",
+   "label": "Akış",
+   "min": 0,
+   "max": 20,
+   "default": 7
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float life = 1.0 - i.color.a;\n    float ends = pow(saturate(sin(3.14159 * u)), 0.7);\n    float w = _Width * ends * (1.0 - life * 0.35);\n    float inner = 1.0 - w;\n    float d = saturate((v - inner) / max(w, 0.001));            // 0 iç → 1 ön\n    float inBand = smoothstep(inner - 0.03, inner + 0.08, v) * (1.0 - smoothstep(0.985, 1.0, v));\n    // rüzgâr çizgileri: d uzayında _Lines şerit; her şerit yay boyunca akan gürültüyle kopuk, kalınlığı ve konumu dalgalı\n    float ld = d * _Lines + (vnoise(float2(u * 6.0 - i.time * 2.0, d * 3.0)) - 0.5) * 0.9;\n    float li = floor(ld);\n    float lf = frac(ld) - 0.5;\n    float seed = hash21(float2(li, 7.0));\n    float thick = 0.06 + 0.12 * vnoise(float2(u * 9.0 + seed * 20.0, li));\n    float line = 1.0 - smoothstep(thick * 0.5, thick, abs(lf));\n    float flow = vnoise(float2(u * (10.0 + seed * 8.0) - i.time * _Speed * (0.7 + seed * 0.6), li * 3.1));\n    float seg = smoothstep(0.35, 0.7, flow);\n    float tipWisp = smoothstep(0.0, 0.25, ends);                // uçlarda çizgiler incelip dağılır\n    float wind = line * seg * tipWisp * (0.35 + 0.65 * d);\n    float front = exp(-abs(v - 0.975) / 0.02) * ends;\n    float haze = inBand * pow(d, 1.5) * (0.6 + 0.4 * fbm(float2(u * 5.0 - i.time, v * 4.0)));\n    float er = fbm(float2(u * 8.0 + life * 3.0, v * 6.0));\n    float erode = saturate((er + 0.65 - life * 1.15) * 4.0);\n    float fade = (1.0 - smoothstep(0.55, 1.0, life)) * smoothstep(0.0, 0.06, life);\n    float3 col = (_Front.rgb * front + _Wind.rgb * wind * inBand + _Haze.rgb * haze) * erode * fade * i.color.rgb;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}
