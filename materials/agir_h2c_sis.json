@@ -1,0 +1,19 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2c_sis",
+ "shader": "UnityPreview/duman_enerji",
+ "values": {
+  "_Tint": {
+   "color": "#8fa8d8",
+   "intensity": 1
+  },
+  "_EdgeCol": {
+   "color": "#dce8ff",
+   "intensity": 1
+  },
+  "_Density": 0.45,
+  "_Curl": 1.3,
+  "_Scale": 1.8
+ },
+ "renderQueue": -1
+}

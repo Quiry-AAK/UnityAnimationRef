@@ -1,0 +1,18 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2c_kirik",
+ "shader": "UnityPreview/kirik_parca",
+ "values": {
+  "_Fill": "#7f9fd0",
+  "_Facet": {
+   "color": "#d4e6ff",
+   "intensity": 1.4
+  },
+  "_Rim": {
+   "color": "#f2f8ff",
+   "intensity": 2.6
+  },
+  "_Stretch": 2
+ },
+ "renderQueue": -1
+}

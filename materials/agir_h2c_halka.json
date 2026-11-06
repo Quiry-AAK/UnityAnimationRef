@@ -1,0 +1,13 @@
+{
+ "name": "agir_h2c_halka",
+ "shader": "UnityPreview/halka_enerji",
+ "values": {
+  "_Break": 0.6,
+  "_Thick": 0.07,
+  "_Ring": {
+   "color": "#cfe6ff",
+   "intensity": 1.6
+  }
+ },
+ "renderQueue": -1
+}

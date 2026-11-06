@@ -17,6 +17,9 @@ const FITS = {
     radius: 1.1627, angle: 195.3, inner: 0.369, impact: 0.846, axes: { X: [-0.0029, 0.3059, -0.9521], Y: [-0.045, 0.9511, 0.3057] },
     progress: [[0.2917, 0], [0.3, 0.0416], [0.3083, 0.1045], [0.3167, 0.1717], [0.325, 0.2402], [0.3333, 0.3115], [0.3417, 0.3972],
       [0.35, 0.4859], [0.3583, 0.6178], [0.3667, 0.7514], [0.375, 0.8757], [0.3833, 1]] },
+  h2: { anim: 'arpg_attack_combo2_from_b2', normal: [0.786, 0.6161, 0.0508], center: [0.0876, 1.1783, 1.4487], rotation: [-38.032, 86.3, 59.078],
+    radius: 0.9606, angle: 190.57, inner: 0.3339, impact: 0.6, axes: { X: [-0.4943, 0.6757, -0.5469], Y: [-0.3713, 0.4048, 0.8356] },
+    progress: [[0.4, 0], [0.4083, 0.1184], [0.4167, 0.2464], [0.425, 0.4045], [0.4333, 0.5587], [0.4417, 0.7957], [0.45, 1]] },
 };
 
 const once = (count) => ({ rateOverTime: 0, bursts: [{ time: 0, count, cycles: 1, interval: 0.01 }] });
@@ -102,6 +105,52 @@ function build(key, variant) {
           r: rr, thick: 0.1, arc: +(A * 0.6).toFixed(1), from: +(A * 0.3).toFixed(1), rand: 0.7, noise: 0.25, angv: [-40, 40], sizeCurve: [[0, 0.6], [1, 1.4]],
           blend: 'alpha', mat: M('y', 'sis'), order: 1 }),
       ],
+    };
+  }
+  if (variant === 'capraz') {
+    // H2 "önü tarayan çift kesik": ana kesik yarık dilinde (H1 ile aynı aile, siyah yok); bir an sonra karakterin önünde ona aynalı
+    // ikinci (bıçaksız, enerji) kesik geçer → önde X. Kesişme noktasında çakma + halka + kıymık patlaması.
+    const D2R = Math.PI / 180;
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const toEuler = (X, Y, Z) => { // R = Ry·Rx·Rz, sütunlar = yerel X, Y, Z (Unity Euler)
+      const x = Math.asin(Math.max(-1, Math.min(1, -Z[1]))) / D2R, y = Math.atan2(Z[0], Z[2]) / D2R, z = Math.atan2(X[1], Y[1]) / D2R;
+      return [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)];
+    };
+    const mir = (v) => [-v[0], v[1], v[2]];
+    const MX = mir(AX.X), MY = mir(AX.Y), MZ = cross(MX, MY);
+    const mCenter = mir(F.center).map((c) => +c.toFixed(4)), mRot = toEuler(MX, MY, MZ);
+    // kesişme: ana yayda dünya x'i 0'a en yakın, en önde nokta
+    let best = null;
+    for (let d = 0; d <= A; d += 0.5) { const p = arcPoint(d); const sc = Math.abs(p[0]) - p[2] * 0.02; if (!best || sc < best.sc) best = { d, p, sc }; }
+    const xAng = +best.d.toFixed(1), xFrac = xAng / A, tX = timeAt(F, xFrac);
+    const lag = 0.09; // ikinci kesik gecikmesi (sn)
+    const open = (delay, life) => { const h = life01(delay, life, tX); return [[0, 0], [Math.max(0.01, h - 0.12), 0.25], [h, 1], [Math.min(0.9, h + 0.22), 0.8], [Math.min(0.95, h + 0.4), 0], [1, 0]]; };
+    const rr = F.inner * R + 0.9 * (R * 1.06 - F.inner * R);
+    const mirrorArc = (e) => { e.position = mCenter; e.rotation = mRot; e.main = { ...e.main, startDelay: +(e.main.startDelay + lag).toFixed(4) }; e.name += '_2'; return e; };
+    const pair = (mk) => [mk(), mirrorArc(mk())];
+    return {
+      name: `agir_${key}_capraz`, duration: 1.8, loop: true, preview: prev,
+      emitters: [
+        ...pair(() => arc('bukulme', M('c', 'bukulme'), { blend: 'distortion', order: 0, life: 0.7, extra: { renderer: { distortion: { mode: 'noise', strength: 0.035, frequency: 8, scroll: [0, 2] } } } })),
+        ...pair(() => arc('iz', M('c', 'iz'), { order: 3, life: 0.3 })),
+        ...pair(() => arc('yarik_ic', M('c', 'ic'), { blend: 'alpha', order: 5, life: 0.7, cy: open })),
+        ...pair(() => arc('yarik_kenar', M('c', 'kenar'), { order: 6, life: 0.7, cy: open })),
+        // kesişme (X) patlaması: ikinci kesik geçerken
+        onArc('cakma', { delay: tX + lag, life: [0.16, 0.16], speed: [0, 0], size: [0.9, 0.9], color: ['#cfe4ff', '#cfe4ff'], max: 2, count: [1, 1], r: rr,
+          arc: 1, from: xAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+        onArc('halka', { delay: tX + lag + 0.01, life: [0.3, 0.3], speed: [0, 0], size: [2.2, 2.2], color: ['#ffffff', '#ffffff'], max: 2, count: [1, 1], r: rr,
+          arc: 1, from: xAng, sizeCurve: [[0, 0.15], [0.35, 0.75], [1, 1]], mat: M('c', 'halka'), order: 8 }),
+        onArc('kirik', { delay: tX + lag + 0.01, life: [0.45, 0.85], speed: [1.5, 4.5], size: [0.12, 0.26], srot: [0, 360], color: ['#ffffff', '#cfdcf0'], gravity: 0.7,
+          max: 24, count: [14, 18], r: rr, thick: 0.05, arc: 30, from: +(xAng - 15).toFixed(1), rand: 0.8, drag: 3, angv: [-300, 300],
+          alpha: [[0, 1], [0.7, 0.9], [1, 0]], sizeCurve: [[0, 1], [1, 0.7]], blend: 'alpha', mat: M('c', 'kirik'), order: 7 }),
+        ...pair(() => onArc('zerre', { delay: tX, life: [0.3, 0.6], speed: [0.2, 0.8], size: [0.045, 0.09], srot: [0, 45], color: ['#dcecff', '#8fb8ff'], gravity: -0.05,
+          max: 40, count: [22, 30], r: rr, thick: 0.15, arc: +(A * 0.7).toFixed(1), from: +(A * 0.2).toFixed(1), rand: 0.6, drag: 2,
+          alpha: [[0, 0], [0.08, 1], [0.35, 0.5], [0.45, 1], [1, 0]], mat: 'zerre_hafif', order: 6 })),
+        onArc('sis', { delay: tX + lag + 0.12, life: [0.5, 0.9], speed: [0.2, 0.5], size: [0.4, 0.8], srot: [0, 360], color: ['#ffffff', '#e8f0ff'], max: 14, count: [8, 10],
+          r: rr, thick: 0.1, arc: 60, from: +(xAng - 30).toFixed(1), rand: 0.7, noise: 0.25, angv: [-40, 40], sizeCurve: [[0, 0.6], [1, 1.4]],
+          blend: 'alpha', mat: M('c', 'sis'), order: 1 }),
+      ].map((e) => (e.name.endsWith('_2') ? e : e)),
+      _debug: { xAng, tX: +tX.toFixed(4), mCenter, mRot },
     };
   }
   if (variant === 'dalga') {
