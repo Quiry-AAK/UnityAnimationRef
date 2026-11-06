@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } from '../public/vfx-schema.js';
 import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
-import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings } from '../lib/unreal-vfx.js';
+import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings, splitFollowEffects } from '../lib/unreal-vfx.js';
 import { proceduralMesh, meshToOBJ, fitArc } from '../public/vfx-mesh.js';
 
 let fails = 0, n = 0;
@@ -141,6 +141,17 @@ test('renderer bağlaması bayat: yazılan öznitelik için bBindingExistsOnSour
   assert.deepEqual(staleBindings(rd, new Set(['Particles.Scale', 'Particles.MeshOrientation'])), ['Particles.Scale', 'Particles.MeshOrientation']);
   assert.deepEqual(staleBindings(rd, new Set(['Particles.Scale'])), ['Particles.Scale']); // yazılmayan atlanır
   assert.deepEqual(staleBindings(rd.replace(/false/g, 'true'), new Set(['Particles.Scale', 'Particles.MeshOrientation'])), []);
+});
+test('follow: izleyen katmanlar ayrı _iz sistemine, diğerleri ana sistemde; şerit genişliği kök–uç uzaklığından', () => {
+  const fxe = JSON.parse(fs.readFileSync(path.join(root, 'vfx', 'agir_h4_bitirici.json'), 'utf8'));
+  const { effect } = normalizeEffect(fxe);
+  const parts = splitFollowEffects(effect);
+  assert.equal(parts.length, 2);
+  assert.ok(parts[0].emitters.every((e) => e.follow.target === 'none') && parts[0].name === 'agir_h4_bitirici');
+  assert.deepEqual(parts[1].emitters.map((e) => e.name), ['iz', 'iz_vurus']); assert.equal(parts[1].name, 'agir_h4_bitirici_iz');
+  const p = effectToNiagaraPlan(parts[1]);
+  assert.ok(findP(p, 'Particles.RibbonWidth').hlsl.startsWith('length(Particles.UPE_Tip - Particles.UPE_Root)'));
+  assert.deepEqual(splitFollowEffects({ ...effect, emitters: parts[0].emitters }).length, 1);
 });
 test('mesh: dünya uzayı → Engine.Owner.Rotation ile çarpılır', () => {
   const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { main: { simulationSpace: 'world' } })));
