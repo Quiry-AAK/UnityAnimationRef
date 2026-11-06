@@ -1,0 +1,31 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_h2h_govde",
+ "shader": "UnityPreview/kesik_agir",
+ "values": {
+  "_Width": 0.8,
+  "_CoreW": 0.02,
+  "_Core": {
+   "color": "#f2f8ff",
+   "intensity": 2
+  },
+  "_ColA": {
+   "color": "#8fdcff",
+   "intensity": 1.4
+  },
+  "_ColB": {
+   "color": "#4a86ff",
+   "intensity": 1
+  },
+  "_ColC": {
+   "color": "#7090ff",
+   "intensity": 0.7
+  },
+  "_Fiber": 36,
+  "_Scroll": 5,
+  "_Gain": 1.05,
+  "_Tail": 1,
+  "_Eat": 0.45
+ },
+ "renderQueue": -1
+}

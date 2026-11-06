@@ -153,6 +153,41 @@ function build(key, variant) {
       _debug: { xAng, tX: +tX.toFixed(4), mCenter, mRot },
     };
   }
+  if (variant === 'hilal') {
+    // H2 "öne giden hilal": kılıç kesişi biter bitmez, kesik düzleminde dolu ve parlak bir hilal karakterin önüne (+Z) fırlar,
+    // uçarken büyür ve dağılır; arkasında bir art-hilal ve hilalle birlikte akan zerreler. H1'in yarık/çatlak dilinden farklı.
+    const spd = 9, fly = 0.5, span = +(A * 0.7).toFixed(1), from = +(A * 0.15).toFixed(1);
+    const moonMesh = { shape: 'arc', file: '', innerRadius: +(R * 0.5).toFixed(4), outerRadius: +(R * 1.06).toFixed(4), angle: span, height: 0.5, segments: 96, rings: 8 };
+    const full = { enabled: true, x: [[0, 1], [1, 1]], y: [[0, 0], [1, 0]], z: [[0, 0], [1, 0]], w: [[0, 0], [1, 0]] };
+    const moon = (name, mat, blend, order, dt, size, sp, extra = {}) => {
+      const e = arc(name, mat, { blend, order, dt: tEnd - t0 + dt, life: fly, size, mesh: moonMesh, extra });
+      e.renderer.mesh.rotation = [0, 0, from];
+      e.customData = full;
+      e.velocity = { enabled: true, linear: [0, 0, sp], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 };
+      e.sizeOverLifetime = { enabled: true, curve: [[0, 0.9], [0.3, 1.15], [1, 1.6]] };
+      return e;
+    };
+    const dist = (st) => ({ renderer: { distortion: { mode: 'noise', strength: st, frequency: 8, scroll: [0, 2] } } });
+    const flow = (name, o) => { const e = onArc(name, o); e.velocity = { enabled: true, linear: [0, 0, o.carry], orbital: [0, 0, 0], radial: 0, space: 'world', speedModifier: 1 }; return e; };
+    return {
+      name: `agir_${key}_hilal`, duration: 1.8, loop: true, preview: prev,
+      emitters: [
+        arc('iz', M('h', 'iz'), { order: 3, life: 0.3 }),
+        onArc('cikis', { delay: tEnd - 0.01, life: [0.14, 0.14], speed: [0, 0], size: [0.8, 0.8], color: ['#d8eaff', '#d8eaff'], max: 2, count: [1, 1],
+          arc: 1, from: hitAng, sizeCurve: [[0, 0.3], [0.2, 1], [1, 1.1]], mat: 'zerre_hafif_isik', order: 9 }),
+        moon('hilal_buk', M('h', 'bukulme'), 'distortion', 0, 0, 1, spd, dist(0.05)),
+        moon('hilal_govde', M('h', 'govde'), 'additive', 4, 0, 1, spd),
+        moon('hilal_kenar', M('h', 'kenar'), 'additive', 5, 0, 1, spd, light(2.0, 4)),
+        moon('art_hilal', M('h', 'kenar2'), 'additive', 3, 0.05, 0.85, spd * 0.75),
+        flow('akinti', { delay: tEnd, life: [0.25, 0.5], speed: [0.2, 0.8], size: [0.045, 0.09], color: ['#e8f3ff', '#9cc4ff'], max: 50, count: [30, 40],
+          r: R * 0.95, thick: 0.25, arc: span, from, rand: 0.6, noise: 0.3, carry: +(spd * 0.8).toFixed(2),
+          alpha: [[0, 0], [0.08, 1], [0.6, 0.6], [1, 0]], mat: 'zerre_hafif', order: 6 }),
+        onArc('sis', { delay: tEnd, life: [0.4, 0.7], speed: [0.2, 0.6], size: [0.35, 0.7], srot: [0, 360], color: ['#ffffff', '#e8f0ff'], max: 12, count: [6, 8],
+          r: R * 0.95, thick: 0.15, arc: 60, from: +(hitAng - 30).toFixed(1), rand: 0.7, noise: 0.25, angv: [-40, 40], sizeCurve: [[0, 0.6], [1, 1.4]],
+          blend: 'alpha', mat: M('h', 'sis'), order: 1 }),
+      ],
+    };
+  }
   if (variant === 'dalga') {
     // basınç dalgası: kesik sade; bitince önüne şeffaf hilal dalgalar atar, ileri uçup genişleyerek dağılır (bükülme ağırlıklı)
     const dir = [Math.cos(hitAng * Math.PI / 180), Math.sin(hitAng * Math.PI / 180), 0];
