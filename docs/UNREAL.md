@@ -128,6 +128,13 @@ customData → Dynamic Parameter; UPE-SL kesik/kabuk/bükülme/zerre materyaller
   yazan girdi metni farklı ama anlamı aynı (parantez sarmalı) ifadeyle yeniden yazılır (aynı metin değişiklik sayılmıyor),
   derleme beklenir, yeniden bakılır (en çok 4 kez); kalırsa uyarı.
 - Art arda çok aktarım editör belleğini büyütüyor (~25 GB'ta bir kez çöktü): büyük aktarımlardan sonra editörü yeniden başlat.
+- **Ağır saldırılar (2026-11-07):** `emitter.follow` katmanları ayrı `NS_<ad>_iz` sistemi (`splitFollowEffects`; sistem yereli =
+  UPE eşya/kemik çerçevesi, oyunda takılır). 20'den çok emitter → `NS_<ad>_2…` (`chunkEffect`, `UPE_UE_MAX_EMITTERS`): tek sistemde
+  her ekleme tüm sistemi yeniden derliyor, çağrılar 5 dk'yı aşıyor. Çağrı zaman aşımı 300 sn (`UPE_UE_TIMEOUT_MS`), derleme
+  beklemesi editör tarafı 120 sn zaman aşımında yeniden sorar. `ue-vfx-send --part iz|ana`, `--only <parça,...>`.
+- **NaN tuzağı:** kuvvet modülü olmayan emitter'da `SolveForcesAndVelocity` NaN konum üretiyor, sistem sınır kutusu bozulup
+  sistemdeki TÜM emitter'lar görünmez oluyor → kuvvetsiz emitter'a sıfır `GravityForce` (`UPE_ForceInit`).
+- Şerit genişliği kök–uç uzaklığından (`length(UPE_Tip − UPE_Root)`): ölçekli bağlamada (katana boyu) doğru.
 - Görsel doğrulama yöntemi: `--freeze` kopyası + kamerası bilinen `CaptureViewport` + hesaplanan yay noktalarını görüntüye işaretlemek.
 
 Araçlar: `tools/ue-vfx-plan-test.mjs` (editörsüz plan testi), `tools/ue-vfx-send.mjs [--content yol] [--preset a,b] <efekt…>`
