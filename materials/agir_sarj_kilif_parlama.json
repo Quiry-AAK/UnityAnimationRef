@@ -1,0 +1,39 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_sarj_kilif_parlama",
+ "shader": "UnityPreview/sarj_kilif",
+ "values": {
+  "_Core": {
+   "color": "#ffffff",
+   "intensity": 2.2
+  },
+  "_ColA": {
+   "color": "#8fd4ff",
+   "intensity": 1.6
+  },
+  "_ColB": {
+   "color": "#3a62ff",
+   "intensity": 1.2
+  },
+  "_ColC": {
+   "color": "#7350ff",
+   "intensity": 0.8
+  },
+  "_Rim": 1.4,
+  "_Flow": 6,
+  "_Fiber": 6,
+  "_Body": 0,
+  "_Front": 1.2,
+  "_FrontW": 0.06,
+  "_Pulse": 0,
+  "_Gain": 1
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

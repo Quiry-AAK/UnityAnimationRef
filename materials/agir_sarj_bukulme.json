@@ -1,0 +1,18 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_sarj_bukulme",
+ "shader": "UnityPreview/sarj_kilif_bukulme",
+ "values": {
+  "_Freq": 10,
+  "_Flow": 3,
+  "_Mask": 1
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

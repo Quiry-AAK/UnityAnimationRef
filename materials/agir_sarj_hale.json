@@ -1,0 +1,26 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_sarj_hale",
+ "shader": "UnityPreview/sarj_hale",
+ "values": {
+  "_Col": {
+   "color": "#3a68ff",
+   "intensity": 0.75
+  },
+  "_ColC": {
+   "color": "#5a3cff",
+   "intensity": 0.55
+  },
+  "_Soft": 3,
+  "_Flow": 2.5,
+  "_Pulse": 0.2
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

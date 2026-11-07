@@ -1,0 +1,39 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_sarj_kilif_dolu",
+ "shader": "UnityPreview/sarj_kilif",
+ "values": {
+  "_Core": {
+   "color": "#f4f8ff",
+   "intensity": 2.4
+  },
+  "_ColA": {
+   "color": "#62c0ff",
+   "intensity": 2
+  },
+  "_ColB": {
+   "color": "#2a52ff",
+   "intensity": 1.3
+  },
+  "_ColC": {
+   "color": "#7350ff",
+   "intensity": 1
+  },
+  "_Rim": 1.6,
+  "_Flow": 6.5,
+  "_Fiber": 7,
+  "_Body": 1.25,
+  "_Front": 0,
+  "_FrontW": 0.05,
+  "_Pulse": 0.35,
+  "_Gain": 1.15
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

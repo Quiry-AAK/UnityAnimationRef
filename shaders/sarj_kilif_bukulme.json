@@ -1,0 +1,51 @@
+{
+ "name": "sarj_kilif_bukulme",
+ "description": "Şarj kılıfı bükülmesi (distortion, mesh silindir): sıcak hava gibi uca doğru akan titreşim; rg = yön, a = maske (silüette güçlü, dolum cephesine kadar, uçlarda söner).",
+ "properties": [
+  {
+   "name": "_Freq",
+   "type": "range",
+   "label": "Sıklık",
+   "min": 2,
+   "max": 30,
+   "default": 10
+  },
+  {
+   "name": "_Flow",
+   "type": "range",
+   "label": "Akış",
+   "min": 0,
+   "max": 10,
+   "default": 3
+  },
+  {
+   "name": "_Mask",
+   "type": "range",
+   "label": "Maske gücü",
+   "min": 0,
+   "max": 2,
+   "default": 1
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n\n// silindir çevresinde dikişsiz koordinat (U 0..1 → açı)\nfloat ringX(float u)\n{\n    float a = u * 6.2831853;\n    return sin(a) * 1.6 + cos(a) * 0.7;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float t = i.time;\n    float x = ringX(u);\n    float a = fbm(float2(x * 1.2, v * _Freq - t * _Flow));\n    float b = fbm(float2(x * 1.2 + 7.3, v * _Freq - t * _Flow + 3.1));\n    float2 dir = float2(a, b) * 2.0 - 1.0;\n    float body = 1.0 - smoothstep(i.custom.x - 0.06, i.custom.x + 0.01, v);\n    float ndv = abs(dot(normalize(i.normalWS), normalize(i.viewDirWS)));\n    float ends = smoothstep(0.0, 0.1, v) * (1.0 - smoothstep(0.8, 1.0, v));\n    float m = (0.35 + 0.65 * (1.0 - ndv)) * body * ends * _Mask * i.color.a;\n    return float4(dir, 0.0, saturate(m));\n}\n",
+  "outlineFragment": ""
+ }
+}

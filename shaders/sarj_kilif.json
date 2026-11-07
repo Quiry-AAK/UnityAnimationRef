@@ -1,0 +1,127 @@
+{
+ "name": "sarj_kilif",
+ "description": "Şarj kılıfı (additive, mesh silindir; U çevre, V kabza→uç): silüette parlayan akan lifli enerji. i.custom.x = dolum cephesi (V; >1 tam dolu), cephe dalgalı ve parlak; i.custom.y = ek beyaz parlama. Uçlar yumuşak söner.",
+ "properties": [
+  {
+   "name": "_Core",
+   "type": "hdrColor",
+   "label": "Cephe / çekirdek",
+   "default": {
+    "color": "#f4faff",
+    "intensity": 2.2
+   }
+  },
+  {
+   "name": "_ColA",
+   "type": "hdrColor",
+   "label": "Camgöbeği",
+   "default": {
+    "color": "#6fd0ff",
+    "intensity": 1.4
+   }
+  },
+  {
+   "name": "_ColB",
+   "type": "hdrColor",
+   "label": "Mavi",
+   "default": {
+    "color": "#2f6bff",
+    "intensity": 1
+   }
+  },
+  {
+   "name": "_ColC",
+   "type": "hdrColor",
+   "label": "Mor (dış silüet)",
+   "default": {
+    "color": "#6a48ff",
+    "intensity": 0.8
+   }
+  },
+  {
+   "name": "_Rim",
+   "type": "range",
+   "label": "Silüet keskinliği",
+   "min": 0.5,
+   "max": 6,
+   "default": 2.2
+  },
+  {
+   "name": "_Flow",
+   "type": "range",
+   "label": "Lif akışı (uca doğru)",
+   "min": 0,
+   "max": 12,
+   "default": 5
+  },
+  {
+   "name": "_Fiber",
+   "type": "range",
+   "label": "Lif sıklığı (çevre)",
+   "min": 1,
+   "max": 20,
+   "default": 6
+  },
+  {
+   "name": "_Body",
+   "type": "range",
+   "label": "Gövde",
+   "min": 0,
+   "max": 2,
+   "default": 1
+  },
+  {
+   "name": "_Front",
+   "type": "range",
+   "label": "Cephe parlaklığı",
+   "min": 0,
+   "max": 6,
+   "default": 1.5
+  },
+  {
+   "name": "_FrontW",
+   "type": "range",
+   "label": "Cephe kalınlığı (V)",
+   "min": 0.01,
+   "max": 0.3,
+   "default": 0.05
+  },
+  {
+   "name": "_Pulse",
+   "type": "range",
+   "label": "Nabız",
+   "min": 0,
+   "max": 1,
+   "default": 0
+  },
+  {
+   "name": "_Gain",
+   "type": "range",
+   "label": "Genel parlaklık",
+   "min": 0,
+   "max": 4,
+   "default": 1
+  }
+ ],
+ "renderState": {
+  "blend": "additive",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 2
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n\n// silindir çevresinde dikişsiz koordinat (U 0..1 → açı)\nfloat ringX(float u)\n{\n    float a = u * 6.2831853;\n    return sin(a) * 1.6 + cos(a) * 0.7;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float u = i.uv.x;\n    float v = i.uv.y;\n    float t = i.time;\n    float x = ringX(u);\n    // enerji lifleri: çevre boyunca sık, bıçak boyunca uzun ve hızla uca akan, kıvrılarak (buz lekesi değil, akış)\n    float warp = fbm(float2(v * 4.0 - t * _Flow * 0.45, x * 0.8 + 4.0)) * 3.6;\n    float n = fbm(float2(x * _Fiber + warp, v * 3.6 - t * _Flow));\n    float n2 = fbm(float2(x * _Fiber * 1.9 - warp * 0.7 + 9.0, v * 3.4 - t * _Flow * 1.6));\n    float flick = 0.82 + 0.18 * vnoise(float2(t * 11.0, 3.0));\n    // cephe: çevre boyunca dalgalı, dil dil (düz halka değil)\n    float tong = fbm(float2(x * 2.2 + 2.0, t * 1.6));\n    float front = i.custom.x + (tong - 0.5) * 0.22;\n    float body = 1.0 - smoothstep(front - 0.07, front + 0.01, v);\n    float fd = (v - front) / max(_FrontW, 0.001);\n    float band = exp(-fd * fd) * step(i.custom.x, 1.02);\n    float ndv = abs(dot(normalize(i.normalWS), normalize(i.viewDirWS)));\n    // silüet yırtık: gürültüyle dil dil aşınır, düz tüp kenarı kalmaz\n    float wisp = fbm(float2(x * 2.6 + 11.0, v * 4.0 - t * _Flow * 1.4));\n    float sil = smoothstep(0.02, 0.45, ndv + (wisp - 0.5) * 1.0);\n    float edge = saturate(1.0 - ndv);\n    float rim = pow(edge, _Rim) * sil;\n    float inner = pow(ndv, 2.0) * 0.22;\n    float strand = smoothstep(0.42, 0.78, n);\n    float strand2 = smoothstep(0.5, 0.82, n2);\n    float ends = smoothstep(0.0, 0.1, v) * (1.0 - smoothstep(0.8, 1.0, v));\n    float pulse = 1.0 + _Pulse * sin(t * 7.0 + v * 6.0) * 0.5;\n    // renk: koyu mavi gövde → camgöbeği lifler → beyaz sıcak lif; dış silüete hafif mor\n    float3 base = lerp(_ColB.rgb, _ColC.rgb, smoothstep(0.35, 0.95, edge));\n    float3 col = base * (rim * 1.1 + inner) * 0.55;\n    col += _ColA.rgb * strand * (rim * 1.2 + inner * 1.6) * 1.1;\n    col += _Core.rgb * strand * strand2 * (0.25 + 0.75 * rim) * 0.7;\n    col *= body * _Body * pulse * flick;\n    col += lerp(_ColA.rgb, _Core.rgb, 0.6) * band * (0.35 + 0.8 * n) * (0.15 + 0.85 * rim) * _Front;\n    col += _Core.rgb * i.custom.y * (0.3 + 0.7 * rim) * (0.4 + 0.6 * strand) * body;\n    col *= ends * _Gain * i.color.rgb * i.color.a;\n    return float4(col, 1.0);\n}\n",
+  "outlineFragment": ""
+ }
+}

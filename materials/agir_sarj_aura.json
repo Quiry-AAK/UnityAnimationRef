@@ -1,0 +1,26 @@
+{
+ "format": "upe-material-1",
+ "name": "agir_sarj_aura",
+ "shader": "UnityPreview/duman_enerji_isik",
+ "values": {
+  "_Tint": {
+   "color": "#3554e0",
+   "intensity": 0.85
+  },
+  "_EdgeCol": {
+   "color": "#8fb2ff",
+   "intensity": 0.9
+  },
+  "_Density": 0.5,
+  "_Curl": 1.5,
+  "_Scale": 1.8
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}
