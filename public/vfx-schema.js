@@ -71,7 +71,7 @@ export function defaultEffect() {
     duration: 2, // önizleme döngüsü (sn); Unity'de kök ParticleSystem'in süresi
     loop: true, // önizlemede tekrar oynat
     attach: { target: 'none', name: '', position: v3(), rotation: v3() }, // target: none | bone | prop
-    preview: { withAnimation: false, startFrame: 0, background: '#0d1018', bloom: 0.8, showHero: true, showGrid: true, showGround: false },
+    preview: { withAnimation: false, startFrame: 0, freezeAnim: false, background: '#0d1018', bloom: 0.8, showHero: true, showGrid: true, showGround: false },
     emitters: [{ ...defaultEmitter(), name: 'emitter' }],
   };
 }
@@ -311,6 +311,7 @@ export function normalizeEffect(input) {
     const p = src.preview;
     e.preview.withAnimation = typeof p.withAnimation === 'boolean' ? p.withAnimation : def.preview.withAnimation;
     e.preview.startFrame = Math.max(0, Math.round(num(p.startFrame, 0)));
+    e.preview.freezeAnim = typeof p.freezeAnim === 'boolean' ? p.freezeAnim : false;
     e.preview.background = normColor(p.background, def.preview.background);
     e.preview.bloom = clampN(num(p.bloom, def.preview.bloom), { min: 0, max: 5 });
     e.preview.showHero = typeof p.showHero === 'boolean' ? p.showHero : def.preview.showHero;
@@ -504,7 +505,7 @@ Dönüşler Unity Euler (uygulama sırası Z, X, Y). Renkler '#rrggbb' (ya da '#
 - attach: { target: none|bone|prop, name: kemik kısa adı ("RightHand") ya da eşya id ("katana"), position, rotation }
   Konum/dönüş, kemiğin REST (T-pose) dünya eksenlerinde ya da eşyanın kendi ekseninde (eşya modeli ortalanır: orijin = modelin
   merkezi; Elarion katanası ±Z boyunca ~0.92 m). Ölçek iptal edilir, birim hep metre. Önizleme + oyuna bağlama bilgisi.
-- preview: { withAnimation (animasyonla birlikte oynat), startFrame (efekt animasyonun bu karesinde başlar), background, bloom (0 kapalı), showHero, showGrid, showGround (ışığı görmek için zemin) }
+- preview: { withAnimation (animasyonla birlikte oynat), startFrame (efekt animasyonun bu karesinde başlar), freezeAnim (animasyon startFrame karesinde donar; ör. şarj bekleme pozu), background, bloom (0 kapalı), showHero, showGrid, showGround (ışığı görmek için zemin) }
 - emitters: [...]
 
 ## Emitter (her modül Unity'deki aynı adlı modül)

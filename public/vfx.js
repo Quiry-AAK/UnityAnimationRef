@@ -100,7 +100,7 @@ export function initVfx(ctx) {
   player.onBeforeStep = (t) => {
     if (!effect.preview.withAnimation) return;
     const anim = ctx.getAnim(); if (!ctx.getRig() || !anim) return;
-    let f = effect.preview.startFrame + t * anim.fps; const end = anim.length - 1;
+    let f = effect.preview.startFrame + (effect.preview.freezeAnim ? 0 : t * anim.fps); const end = anim.length - 1;
     f = anim.loop ? f % end : Math.min(f, end); ctx.poseAt(f);
   };
   player.onTexture = () => {};
@@ -464,6 +464,7 @@ export function initVfx(ctx) {
     se.append(
       field('bool', 'Animasyonla birlikte oynat', R(P, 'withAnimation')),
       field('int', 'Animasyon başlangıç karesi', R(P, 'startFrame'), { min: 0, max: Math.max(1, (ctx.getAnim()?.length || 2) - 1), step: 1 }),
+      field('bool', 'Animasyonu başlangıç karesinde dondur', R(P, 'freezeAnim')),
       field('num', 'Bloom', R(P, 'bloom'), { min: 0, max: 5, step: 0.05 }, 'effect.bloom'),
       field('bool', 'Kahramanı göster', R(P, 'showHero')), field('bool', 'Zemin ızgarası', R(P, 'showGrid')), field('bool', 'Zemin (ışığı görmek için)', R(P, 'showGround')),
     );
