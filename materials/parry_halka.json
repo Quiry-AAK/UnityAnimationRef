@@ -1,0 +1,26 @@
+{
+ "format": "upe-material-1",
+ "name": "parry_halka",
+ "shader": "UnityPreview/halka_kirik",
+ "values": {
+  "_Ring": {
+   "color": "#f0fdff",
+   "intensity": 2.4
+  },
+  "_Glow": {
+   "color": "#3fb4ff",
+   "intensity": 0.6
+  },
+  "_Radius": 0.72,
+  "_Thick": 0.03,
+  "_Break": 0.5
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "format": "upe-material-1",
+ "name": "vurus_agir_bukulme",
+ "shader": "UnityPreview/dalga_bukulme",
+ "values": {
+  "_Width": 0.5,
+  "_Freq": 8
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

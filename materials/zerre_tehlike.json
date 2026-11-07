@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "zerre_tehlike",
+ "shader": "UnityPreview/zerre_yumusak",
+ "values": {
+  "_Core": {
+   "color": "#fff0e0",
+   "intensity": 2
+  },
+  "_Halo": {
+   "color": "#ff6a3a",
+   "intensity": 0.8
+  },
+  "_CoreSize": 26,
+  "_HaloSize": 5,
+  "_Wobble": 0.3,
+  "_Twinkle": 0.35
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

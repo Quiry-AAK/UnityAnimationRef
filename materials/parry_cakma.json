@@ -1,0 +1,32 @@
+{
+ "format": "upe-material-1",
+ "name": "parry_cakma",
+ "shader": "UnityPreview/vurus_cakma",
+ "values": {
+  "_Core": {
+   "color": "#ffffff",
+   "intensity": 2.2
+  },
+  "_Glow": {
+   "color": "#6fe2ff",
+   "intensity": 2
+  },
+  "_Edge": {
+   "color": "#3a62ff",
+   "intensity": 0.5
+  },
+  "_Lobes": 4.5,
+  "_Reach": 0.7,
+  "_Curl": 0.7,
+  "_CoreSize": 30,
+  "_Thin": 0.6
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

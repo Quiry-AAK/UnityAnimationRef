@@ -1,0 +1,618 @@
+{
+ "format": "upe-vfx-1",
+ "name": "blok",
+ "duration": 0.58,
+ "loop": true,
+ "attach": {
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation": [
+   0,
+   0,
+   0
+  ],
+  "target": "prop",
+  "name": "katana"
+ },
+ "preview": {
+  "withAnimation": true,
+  "startFrame": 0,
+  "freezeAnim": false,
+  "background": "#3a4150",
+  "bloom": 0.8,
+  "showHero": true,
+  "showGrid": true,
+  "showGround": false
+ },
+ "emitters": [
+  {
+   "name": "temas",
+   "position": [
+    0,
+    -0.002,
+    0.14
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.6,
+    "looping": false,
+    "startDelay": 0,
+    "startLifetime": [
+     0.05,
+     0.05
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.07,
+     0.07
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 8
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0.03,
+      "count": [
+       1,
+       1
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "sphere",
+    "radius": 0.001,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.3
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_metal",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 6
+   }
+  },
+  {
+   "name": "surtunme",
+   "position": [
+    0,
+    -0.002,
+    0.14
+   ],
+   "rotation": [
+    40,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.6,
+    "looping": false,
+    "startDelay": 0,
+    "startLifetime": [
+     0.25,
+     0.5
+    ],
+    "startSpeed": [
+     1.6,
+     3.8
+    ],
+    "startSize": [
+     0.014,
+     0.026
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#fff2e0"
+    ],
+    "gravity": 1.3,
+    "simulationSpace": "world",
+    "maxParticles": 36
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0.03,
+      "count": [
+       34,
+       34
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "cone",
+    "angle": 22,
+    "radius": 0.01,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 2.5,
+    "limit": 20,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.75,
+      0.9
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.5
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_metal",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "dokulen",
+   "position": [
+    0,
+    -0.002,
+    0.14
+   ],
+   "rotation": [
+    90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.6,
+    "looping": false,
+    "startDelay": 0,
+    "startLifetime": [
+     0.35,
+     0.6
+    ],
+    "startSpeed": [
+     0.5,
+     1.4
+    ],
+    "startSize": [
+     0.018,
+     0.028
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffecd4"
+    ],
+    "gravity": 1.6,
+    "simulationSpace": "world",
+    "maxParticles": 12
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0.03,
+      "count": [
+       12,
+       12
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "cone",
+    "angle": 60,
+    "radius": 0.02,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 1.5,
+    "limit": 20,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      1
+     ],
+     [
+      0.8,
+      0.8
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0.5
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_metal",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 1,
+    "sortingOrder": 5
+   }
+  },
+  {
+   "name": "toz",
+   "position": [
+    0,
+    -0.002,
+    0.14
+   ],
+   "rotation": [
+    90,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.6,
+    "looping": false,
+    "startDelay": 0,
+    "startLifetime": [
+     0.3,
+     0.45
+    ],
+    "startSpeed": [
+     0.3,
+     0.6
+    ],
+    "startSize": [
+     0.13,
+     0.2
+    ],
+    "startRotation": [
+     0,
+     360
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ecebe6"
+    ],
+    "gravity": 0,
+    "simulationSpace": "world",
+    "maxParticles": 3
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": [
+     {
+      "time": 0.03,
+      "count": [
+       3,
+       3
+      ],
+      "cycles": 1,
+      "interval": 0.01
+     }
+    ]
+   },
+   "shape": {
+    "enabled": true,
+    "type": "cone",
+    "angle": 40,
+    "radius": 0.02,
+    "radiusThickness": 1,
+    "arc": 360,
+    "position": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "randomDirection": 0.2
+   },
+   "limitVelocity": {
+    "enabled": true,
+    "drag": 2,
+    "limit": 20,
+    "dampen": 0
+   },
+   "colorOverLifetime": {
+    "enabled": true,
+    "color": [
+     [
+      0,
+      "#ffffff"
+     ],
+     [
+      1,
+      "#ffffff"
+     ]
+    ],
+    "alpha": [
+     [
+      0,
+      0
+     ],
+     [
+      0.15,
+      0.35
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "sizeOverLifetime": {
+    "enabled": true,
+    "curve": [
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      1.5
+     ]
+    ]
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "blok_toz",
+    "texture": "soft",
+    "blend": "alpha",
+    "intensity": 1,
+    "sortingOrder": 1,
+    "softParticles": {
+     "enabled": true,
+     "distance": 0.15
+    }
+   }
+  },
+  {
+   "name": "isik",
+   "position": [
+    0,
+    -0.002,
+    0.14
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "main": {
+    "duration": 0.06,
+    "looping": false,
+    "startDelay": 0.03,
+    "startLifetime": [
+     0.1,
+     0.1
+    ],
+    "startSpeed": [
+     0,
+     0
+    ],
+    "startSize": [
+     0.01,
+     0.01
+    ],
+    "startColor": [
+     "#ffffff",
+     "#ffffff"
+    ],
+    "gravity": 0,
+    "simulationSpace": "local",
+    "maxParticles": 1
+   },
+   "emission": {
+    "rateOverTime": 0,
+    "bursts": []
+   },
+   "shape": {
+    "enabled": false
+   },
+   "renderer": {
+    "mode": "billboard",
+    "alignment": "view",
+    "material": "zerre_hafif",
+    "texture": "soft",
+    "blend": "additive",
+    "intensity": 0,
+    "sortingOrder": 0
+   },
+   "light": {
+    "enabled": true,
+    "mode": "single",
+    "color": "#fff2e0",
+    "useParticleColor": false,
+    "intensity": 0.25,
+    "radius": 0.6,
+    "curve": [
+     [
+      0,
+      1
+     ],
+     [
+      0.3,
+      0.45
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "maxLights": 1,
+    "shadows": false
+   }
+  }
+ ]
+}

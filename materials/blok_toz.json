@@ -1,0 +1,22 @@
+{
+ "format": "upe-material-1",
+ "name": "blok_toz",
+ "shader": "UnityPreview/sis_yumusak",
+ "values": {
+  "_Tint": {
+   "color": "#9a968e",
+   "intensity": 1
+  },
+  "_Density": 0.8,
+  "_Curl": 0.9,
+  "_Scale": 1.7
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

@@ -1,0 +1,60 @@
+{
+ "name": "sis_yumusak",
+ "description": "Yumuşak hava/sis tutamı (alfa, billboard): eşiksiz, kıvrımlı yoğunluk (domain-warp fbm) × yumuşak yuvarlak düşüş; pul pul parçalanmaz, kenarı hep yumuşak. Tohum parçacık renginden; yaşla açılır ve incelir. Renk/alfa parçacıktan.",
+ "properties": [
+  {
+   "name": "_Tint",
+   "type": "hdrColor",
+   "label": "Renk",
+   "default": {
+    "color": "#9aaccc",
+    "intensity": 1
+   }
+  },
+  {
+   "name": "_Density",
+   "type": "range",
+   "label": "Yoğunluk",
+   "min": 0,
+   "max": 2,
+   "default": 0.8
+  },
+  {
+   "name": "_Curl",
+   "type": "range",
+   "label": "Kıvrım",
+   "min": 0,
+   "max": 2,
+   "default": 1
+  },
+  {
+   "name": "_Scale",
+   "type": "range",
+   "label": "Ölçek",
+   "min": 0.5,
+   "max": 4,
+   "default": 1.6
+  }
+ ],
+ "renderState": {
+  "blend": "alpha",
+  "cull": "off",
+  "zwrite": false,
+  "ztest": "lequal",
+  "queue": "transparent",
+  "queueOffset": 0
+ },
+ "lighting": {
+  "receiveShadows": false,
+  "castShadows": false
+ },
+ "outline": {
+  "enabled": false
+ },
+ "code": {
+  "common": "float hash21(float2 p)\n{\n    p = frac(p * float2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return frac(p.x * p.y);\n}\n\nfloat vnoise(float2 p)\n{\n    float2 c = floor(p);\n    float2 f = frac(p);\n    float2 u = f * f * (3.0 - 2.0 * f);\n    float a = hash21(c);\n    float b = hash21(c + float2(1.0, 0.0));\n    float d = hash21(c + float2(0.0, 1.0));\n    float e = hash21(c + float2(1.0, 1.0));\n    return lerp(lerp(a, b, u.x), lerp(d, e, u.x), u.y);\n}\n\nfloat fbm(float2 p)\n{\n    float v = 0.0;\n    float a = 0.5;\n    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + float2(1.7, 9.2); a *= 0.5; }\n    return v;\n}\n",
+  "vertex": "",
+  "fragment": "float4 frag(UPEInput i)\n{\n    float2 p = i.uv * 2.0 - 1.0;\n    float life = 1.0 - i.color.a;\n    float seed = frac(dot(i.color.rgb, float3(17.31, 31.7, 7.13)) * 3.7) * 20.0;\n    float2 w = float2(fbm(p * _Scale + seed), fbm(p * _Scale + seed + 4.3)) - 0.5;\n    float2 q = p + w * _Curl * (0.6 + life * 0.6);\n    float n = fbm(q * _Scale * 1.3 + seed * 0.7 + life * 0.8);\n    float fall = saturate(1.0 - length(q) * 1.15);\n    fall = fall * fall * (3.0 - 2.0 * fall);\n    float a = saturate(fall * (0.35 + n * 0.9) * _Density) * (1.0 - life * 0.35);\n    float3 col = _Tint.rgb * (0.85 + 0.3 * n);\n    return float4(col, a * i.color.a);\n}\n",
+  "outlineFragment": ""
+ }
+}

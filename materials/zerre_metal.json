@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "zerre_metal",
+ "shader": "UnityPreview/zerre_yumusak",
+ "values": {
+  "_Core": {
+   "color": "#fff8ee",
+   "intensity": 2.4
+  },
+  "_Halo": {
+   "color": "#e2c8a4",
+   "intensity": 0.5
+  },
+  "_CoreSize": 46,
+  "_HaloSize": 7,
+  "_Wobble": 0.15,
+  "_Twinkle": 0.6
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

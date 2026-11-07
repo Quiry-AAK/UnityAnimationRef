@@ -1,0 +1,27 @@
+{
+ "format": "upe-material-1",
+ "name": "zerre_parry",
+ "shader": "UnityPreview/zerre_yumusak",
+ "values": {
+  "_Core": {
+   "color": "#f2fdff",
+   "intensity": 2.2
+  },
+  "_Halo": {
+   "color": "#4cc8ff",
+   "intensity": 0.9
+  },
+  "_CoreSize": 30,
+  "_HaloSize": 4.5,
+  "_Wobble": 0.3,
+  "_Twinkle": 0.3
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

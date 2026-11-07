@@ -1,0 +1,32 @@
+{
+ "format": "upe-material-1",
+ "name": "vurus_kahraman_cakma",
+ "shader": "UnityPreview/vurus_cakma",
+ "values": {
+  "_Core": {
+   "color": "#fff1e2",
+   "intensity": 2
+  },
+  "_Glow": {
+   "color": "#ff7a3e",
+   "intensity": 1.9
+  },
+  "_Edge": {
+   "color": "#c4201a",
+   "intensity": 0.6
+  },
+  "_Lobes": 4.2,
+  "_Reach": 0.7,
+  "_Curl": 0.7,
+  "_CoreSize": 26,
+  "_Thin": 0.6
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

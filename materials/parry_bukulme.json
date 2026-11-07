@@ -1,0 +1,17 @@
+{
+ "format": "upe-material-1",
+ "name": "parry_bukulme",
+ "shader": "UnityPreview/halka_bukulme",
+ "values": {
+  "_Radius": 0.7,
+  "_Thick": 0.16
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

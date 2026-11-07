@@ -1,0 +1,32 @@
+{
+ "format": "upe-material-1",
+ "name": "blok_cakma",
+ "shader": "UnityPreview/vurus_cakma",
+ "values": {
+  "_Core": {
+   "color": "#ffffff",
+   "intensity": 1.8
+  },
+  "_Glow": {
+   "color": "#c8dcf4",
+   "intensity": 1.2
+  },
+  "_Edge": {
+   "color": "#5a78b0",
+   "intensity": 0.3
+  },
+  "_Lobes": 5,
+  "_Reach": 0.55,
+  "_Curl": 0.5,
+  "_CoreSize": 40,
+  "_Thin": 0.7
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

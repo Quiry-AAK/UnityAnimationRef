@@ -1,0 +1,22 @@
+{
+ "format": "upe-material-1",
+ "name": "dodge_toz",
+ "shader": "UnityPreview/sis_yumusak",
+ "values": {
+  "_Tint": {
+   "color": "#8c867c",
+   "intensity": 1
+  },
+  "_Density": 1,
+  "_Curl": 1,
+  "_Scale": 1.8
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

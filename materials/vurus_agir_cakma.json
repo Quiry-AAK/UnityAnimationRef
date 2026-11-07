@@ -1,0 +1,32 @@
+{
+ "format": "upe-material-1",
+ "name": "vurus_agir_cakma",
+ "shader": "UnityPreview/vurus_cakma",
+ "values": {
+  "_Core": {
+   "color": "#ffffff",
+   "intensity": 1.7
+  },
+  "_Glow": {
+   "color": "#6cc0ff",
+   "intensity": 1.5
+  },
+  "_Edge": {
+   "color": "#5a3cff",
+   "intensity": 0.8
+  },
+  "_Lobes": 4.5,
+  "_Reach": 0.8,
+  "_Curl": 0.9,
+  "_CoreSize": 22,
+  "_Thin": 0.55
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}

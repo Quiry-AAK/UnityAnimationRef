@@ -1,0 +1,32 @@
+{
+ "format": "upe-material-1",
+ "name": "vurus_hafif_cakma",
+ "shader": "UnityPreview/vurus_cakma",
+ "values": {
+  "_Core": {
+   "color": "#f4f9ff",
+   "intensity": 2
+  },
+  "_Glow": {
+   "color": "#7cc2ff",
+   "intensity": 1.4
+  },
+  "_Edge": {
+   "color": "#2f55ff",
+   "intensity": 0.4
+  },
+  "_Lobes": 4.2,
+  "_Reach": 0.62,
+  "_Curl": 0.6,
+  "_CoreSize": 30,
+  "_Thin": 0.6
+ },
+ "renderQueue": -1,
+ "preview": {
+  "target": "sphere",
+  "background": "#1a1d24",
+  "bloom": 0.6,
+  "rotate": true,
+  "showGrid": false
+ }
+}
