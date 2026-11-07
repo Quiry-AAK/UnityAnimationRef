@@ -162,6 +162,13 @@ test('çok emitter: 30 üstü _2, _3 sistemlerine bölünür, sıra ve adlar kor
   assert.ok(ch.every((c) => c.emitters.length <= 30));
   assert.equal(chunkEffect({ ...effect, emitters: effect.emitters.slice(0, 5) }).length, 1);
 });
+test('kuvvetsiz emitter: sıfır yerçekimi modülü çözücüden önce (NaN konum sistemi görünmez yapıyordu)', () => {
+  const { effect } = normalizeEffect(JSON.parse(fs.readFileSync(path.join(root, 'vfx', 'agir_h1_yarik.json'), 'utf8')));
+  effect.emitters = effect.emitters.filter((e) => e.name === 'sis');
+  const st = effectToNiagaraPlan(effect).emitters[0].steps;
+  const gi = st.findIndex((x) => x.alias === 'UPE_ForceInit'), si = st.findIndex((x) => String(x.asset || '').includes('SolveForcesAndVelocity'));
+  assert.ok(gi >= 0 && si > gi); assert.deepEqual(st[gi].inputs[0].value.value, [0, 0, 0]);
+});
 test('mesh: dünya uzayı → Engine.Owner.Rotation ile çarpılır', () => {
   const p = effectToNiagaraPlan(fx(presetEmitter('arc_slash', { main: { simulationSpace: 'world' } })));
   assert.ok(findP(p, 'Particles.MeshOrientation').hlsl.includes('Engine.Owner.Rotation'));
