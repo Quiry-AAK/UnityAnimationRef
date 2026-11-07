@@ -132,12 +132,12 @@
     <details id="secUnreal">
       <summary>Unreal <i id="unrDot" class="dot" title="Unreal editörü MCP bağlantısı"></i></summary>
       <label class="fl">UE proje klasörü (.uproject olan) ya da .uproject yolu<input id="unrProject" placeholder="örn: C:/Elarion/Elarion"></label>
-      <label class="fl">Editörün MCP adresi<input id="unrMcp" placeholder="http://127.0.0.1:8000/mcp"></label>
+      <label class="fl">Editörün MCP hedefi<input id="unrMcp" placeholder="ue-mcp"></label>
       <label class="fl">İçerik yolu (Niagara sistemleri)<input id="unrContent" placeholder="/Game/UPE/VFX"></label>
       <label class="chk"><input type="checkbox" id="unrAll"> Kütüphanedeki tüm efektleri gönder</label>
       <div class="row"><button id="btnUnrSave">Kaydet</button><button id="btnUnrCheck" title="Unreal editörüne bağlanmayı dene">Bağlantıyı dene</button><button id="btnUnrSend" class="primary">Unreal'e gönder</button></div>
       <div id="unrStatus" class="hint-s"></div>
-      <div class="hint-s">Efekt <code>&lt;içerik yolu&gt;/NS_&lt;ad&gt;</code> Niagara System olur. Unreal editörü açık ve MCP eklentisi çalışıyor olmalı (editör 1: 8000, editör 2: 8001).</div>
+      <div class="hint-s">Efekt <code>&lt;içerik yolu&gt;/NS_&lt;ad&gt;</code> Niagara System olur. Unreal editörü açık ve ue-mcp köprü eklentisi (UE_MCP_Bridge) yüklü olmalı. Hedef <code>ue-mcp</code> = yukarıdaki projeyle ue-mcp; eski Epic eklentisi için http://…/mcp.</div>
     </details>
     </div>
     <div id="matRight" data-modes="material"></div>

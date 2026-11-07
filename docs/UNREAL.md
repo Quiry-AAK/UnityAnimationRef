@@ -7,9 +7,14 @@ Aşama 1: `vfx-schema.js` modülleri → Niagara modülleri, dokulu yerleşik pa
 Aşama 2: UPE-SL (özel shader) materyalleri → UE Custom HLSL düğümlü materyaller (`renderer.material`).
 
 ## Yol
-UPE sunucusu (Node), çalışan Unreal editörünün MCP sunucusuna (Unreal'in kendi `ModelContextProtocol` eklentisi, HTTP,
-varsayılan `http://127.0.0.1:8000/mcp`) MCP istemcisi olarak bağlanır ve `NiagaraToolsets.NiagaraToolset_System` araçlarıyla
-(`CreateNiagaraSystem`, `AddEmitter`, `AddModule`, `SetStackInputData`, `AddRenderer`, `SetRendererData`, …) sistemi kurar.
+UPE sunucusu (Node), çalışan Unreal editörüne MCP istemcisi olarak bağlanır ve Epic'in yerleşik
+`NiagaraToolsets.NiagaraToolset_System` araçlarıyla (`CreateNiagaraSystem`, `AddEmitter`, `AddModule`, `SetStackInputData`,
+`AddRenderer`, `SetRendererData`, …) sistemi kurar. **Hedef (2026-11-07): ue-mcp** (`mcpUrl: 'ue-mcp'` varsayılan): istemci
+`npx ue-mcp@1.4.12 <uproject>` sunucusunu stdio ile başlatır; Epic araçları `epic(call_tool, {toolset, tool, input})` ile çağrılır,
+sonuç `.result` içinde gelir. Epic'in asenkron `GetSystemCompileState`'i ue-mcp'de çalışmadığı için derleme ue-mcp'nin
+`niagara(compile)` eylemiyle beklenir. Editörde `UE_MCP_Bridge` eklentisi yüklü olmalı. Eski Epic `ModelContextProtocol`
+(HTTP, `http://…:8000/mcp`) hâlâ desteklenir ama Elarion'da kapatıldı. Git Bash'te `--content /Game/...` verirken
+`MSYS_NO_PATHCONV=1` şart (yoksa yol `C:/Program Files/Git/Game/...` olur).
 Editörde Python betiği ya da eklenti kurulmaz. Editör kapalıysa gönderim anlaşılır hatayla durur.
 
 Katmanlar:

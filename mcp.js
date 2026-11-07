@@ -644,12 +644,12 @@ server.registerTool('send_vfx_to_unity', {
 
 // ── Unreal'e VFX gönderimi (docs/UNREAL.md): UPE sunucusu çalışan UE editörünün MCP sunucusuna bağlanıp Niagara System kurar
 server.registerTool('get_unreal_info', {
-  description: 'Unreal entegrasyonu durumu: ayarlı UE proje klasörü (.uproject), editörün MCP adresi (varsayılan http://127.0.0.1:8000/mcp), içerik yolu (varsayılan /Game/UPE/VFX) ve bağlantı denemesi (status: { connected, projectName?, engineVersion?, error? }). Editör kapalıyken de çalışır (connected:false).',
+  description: 'Unreal entegrasyonu durumu: ayarlı UE proje klasörü (.uproject), editörün MCP hedefi (varsayılan ue-mcp = ayarlı projeyle ue-mcp; eski Epic eklentisi için http://…/mcp), içerik yolu (varsayılan /Game/UPE/VFX) ve bağlantı denemesi (status: { connected, projectName?, engineVersion?, error? }). Editör kapalıyken de çalışır (connected:false).',
   inputSchema: {},
 }, async () => { await ensureServer(); return text(await get('/api/unreal/status')); });
 
 server.registerTool('set_unreal_project', {
-  description: 'Unreal ayarlarını değiştirir (kalıcı; verilmeyen alan aynı kalır). project: .uproject içeren klasör ya da .uproject yolu (Elarion: C:\\Elarion\\Elarion). mcpUrl: UE editörünün MCP sunucusu (editör 1: http://127.0.0.1:8000/mcp, editör 2: http://127.0.0.1:8001/mcp). contentPath: Niagara sistemlerinin yazılacağı /Game/... yolu.',
+  description: 'Unreal ayarlarını değiştirir (kalıcı; verilmeyen alan aynı kalır). project: .uproject içeren klasör ya da .uproject yolu (Elarion: C:\\Elarion\\Elarion). mcpUrl: MCP hedefi: ue-mcp (varsayılan, ayarlı projeyle), ue-mcp:<.uproject yolu> ya da eski Epic eklentisi için http://…/mcp. contentPath: Niagara sistemlerinin yazılacağı /Game/... yolu.',
   inputSchema: { project: z.string().optional(), mcpUrl: z.string().optional(), contentPath: z.string().optional() },
 }, async ({ project, mcpUrl, contentPath }) => {
   await ensureServer(); await post('/api/unreal/config', { project, mcpUrl, contentPath });

@@ -201,8 +201,10 @@ async function unitySendVfx({ name, all }) {
 }
 
 // ── Unreal entegrasyonu (yalnız VFX; docs/UNREAL.md): UPE sunucusu, çalışan UE editörünün MCP sunucusuna istemci olarak bağlanır
-const UNREAL_DEFAULTS = { project: null, mcpUrl: 'http://127.0.0.1:8000/mcp', contentPath: '/Game/UPE/VFX' };
+// mcpUrl: 'ue-mcp' (varsayılan: ayarlı projenin .uproject'iyle ue-mcp, stdio) | 'ue-mcp:<.uproject>' | http(s)://…/mcp (eski Epic eklentisi)
+const UNREAL_DEFAULTS = { project: null, mcpUrl: 'ue-mcp', contentPath: '/Game/UPE/VFX' };
 state.unreal = { ...UNREAL_DEFAULTS, ...(state.unreal && typeof state.unreal === 'object' ? state.unreal : {}) };
+if (state.unreal.mcpUrl === 'http://127.0.0.1:8000/mcp') state.unreal.mcpUrl = 'ue-mcp'; // Epic MCP kaldırıldı (2026-11-07)
 // proje: .uproject içeren klasör ya da .uproject yolu → { dir, uproject } | null
 function resolveUnrealProject(p) {
   if (!p) return null;
@@ -225,11 +227,17 @@ async function loadUnrealLib() {
   }
   return unrealLib;
 }
+// istemciye giden hedef: 'ue-mcp' → ayarlı projenin .uproject'i
+function unrealTarget(u = state.unreal) {
+  if (String(u.mcpUrl || '').trim().toLowerCase() !== 'ue-mcp') return u.mcpUrl;
+  const proj = resolveUnrealProject(u.project);
+  return proj ? 'ue-mcp:' + proj.uproject.split(path.sep).join('/') : 'ue-mcp';
+}
 async function unrealInfo({ probe = true } = {}) {
   const u = state.unreal; const proj = resolveUnrealProject(u.project);
   const out = { project: u.project, projectValid: !!proj, uproject: proj?.uproject || null, projectName: proj ? path.basename(proj.uproject, '.uproject') : null, mcpUrl: u.mcpUrl, contentPath: u.contentPath };
   if (probe) {
-    try { const { unrealStatus } = await loadUnrealLib(); out.status = await unrealStatus({ mcpUrl: u.mcpUrl }); } catch (e) { out.status = { connected: false, error: String(e?.message || e) }; }
+    try { const { unrealStatus } = await loadUnrealLib(); out.status = await unrealStatus({ mcpUrl: unrealTarget(u) }); } catch (e) { out.status = { connected: false, error: String(e?.message || e) }; }
   }
   return out;
 }
@@ -242,7 +250,7 @@ function unrealConfig(b = {}) {
   }
   if (b.mcpUrl !== undefined) {
     const m = String(b.mcpUrl || '').trim() || UNREAL_DEFAULTS.mcpUrl;
-    if (!/^https?:\/\/[^\s/]+/i.test(m)) throw badRequest('MCP adresi http(s):// ile başlamalı: ' + m);
+    if (!/^https?:\/\/[^\s/]+/i.test(m) && !/^ue-mcp(:.+\.uproject)?$/i.test(m)) throw badRequest("MCP hedefi 'ue-mcp', 'ue-mcp:<.uproject>' ya da http(s):// olmalı: " + m);
     next.mcpUrl = m;
   }
   if (b.contentPath !== undefined) {
@@ -262,7 +270,7 @@ async function unrealSendVfx({ name, all } = {}) {
   const effects = list.map((src) => { const { effect } = normalizeEffect(src); effect.name = safeName(effect.name || 'vfx').replace(/[\s.-]+/g, '_'); return effect; });
   const { sendVfxToUnreal } = await loadUnrealLib();
   const u = state.unreal;
-  return await sendVfxToUnreal(effects, { mcpUrl: u.mcpUrl, contentPath: u.contentPath, texturesDir: VFX_TEX_DIR, log: (...a) => console.log('[unreal]', ...a) });
+  return await sendVfxToUnreal(effects, { mcpUrl: unrealTarget(u), contentPath: u.contentPath, texturesDir: VFX_TEX_DIR, log: (...a) => console.log('[unreal]', ...a) });
 }
 
 // ── Materyal + Shader kütüphanesi (docs/MATERIAL.md; format/mantık public/shader-schema.js)
