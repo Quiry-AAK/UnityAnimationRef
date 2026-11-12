@@ -35,6 +35,11 @@ Katmanlar:
 - `public/` — sağ panelde **Unreal** bölümü (proje yolu, MCP adresi, ue-mcp sürümü, içerik yolu, animasyonda hedef iskelet;
   bağlantı durumu), Animasyon ve VFX modlarında üst barda **⇪ Unreal'e gönder** (Ctrl+Shift+Enter).
 
+### ue-mcp "micro mode"
+Bazı projelerde (ör. oyun projesi, ue-mcp 1.4.13) ue-mcp kategori araçlarını (`animation`, `epic`, `niagara`, `asset`…) ayrı ayrı
+listelemez; hepsi tek `tools` geçidinden çağrılır: `tools { action:'call', category, method, args }`. İstemci sunucunun araç listesini
+bir kez okur; kategori aracı yoksa ve `tools` varsa çağrıyı kendiliğinden geçide çevirir (VFX ve animasyon ikisi de). Yanıt biçimi aynı.
+
 ### ue-mcp sürümü
 ue-mcp sunucusu ile projedeki `UE_MCP_Bridge` eklentisi birlikte sürümlenir; farklı sürümler eylem adlarında/parametrelerde
 uyuşmayabilir. Projeler farklı sürümde: oyun projesi (`D:\Can You Hear Me Director`) köprüsü ve `.mcp.json`'u **1.4.13** (npm'deki
@@ -284,6 +289,12 @@ varsayılan 300 sn) → `set_sequence_properties { loop }`. Yanıt: `{ ok, skele
 fps, bones, axes, warnings }], errors }`. Varlık adı ASCII (`Kılıç Savuruş` → `A_Kilic_Savurus`).
 
 ### Doğrulama durumu
+- Komut satırı: `node tools/ue-anim-send.mjs --uproject <.uproject> [--rig <UPE durum dosyası>] [--skeleton /Game/...] [--probe | --dry |
+  --readback] <anim…>` (`--probe` yalnız okur: projedeki SkeletalMesh'ler ve rig'e uyumu).
+- **Gerçek editör, 2026-11-12 (UE 5.9, oyun projesi, ue-mcp 1.4.13, yalnız okuma):** micro mode bulundu ve düzeltildi;
+  `list_skeletal_meshes` (`assets[].path`) ve `get_bone_transforms` (`bones[{ name, index, parentIndex, location, rotation }]`)
+  yanıtları kodla uyumlu; gerçek bir iskelette (motorun TutorialTPP'si) eksen kalibrasyonu kimlik eşlemeyi buldu (64 çift, uyum 1,0).
+  Oyun projesinin `/Game` altında henüz hiç SkeletalMesh/Skeleton yok: yazma (create/bake) adımı karakter projeye girince denenecek.
 - Editörsüz: `node tools/ue-anim-plan-test.mjs` (mcp-smoke de çalıştırır): sahte Mixamo rig'i bilinen eksen eşlemesiyle (FBX
   varsayılanı, Force Front X, `root` kemikli/kemiksiz) UE iskeletine çevrilir, bir kemiğin ekseni bilerek farklı yapılır; plan UE
   ileri kinematiğiyle oynatılınca tüm eklemler UPE'nin eşlenmiş eklemlerine ~1e-4 cm, dönüşler ~1e-4° içinde düşüyor.
