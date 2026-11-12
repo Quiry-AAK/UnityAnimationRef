@@ -924,7 +924,7 @@ $('#btnUSend').onclick = () => sendCurrent();
 function setUnrealDot(st) { const d = $('#unrDot'); d.className = 'dot ' + (st?.connected ? 'ok' : st ? 'bad' : ''); d.title = st?.connected ? `Unreal bağlı${st.projectName ? ' · ' + st.projectName : ''}${st.engineVersion ? ' · UE ' + st.engineVersion : ''}` : 'Unreal editörüne bağlı değil' + (st?.error ? ': ' + st.error : ''); }
 function fillUnreal(u) {
   for (const [id, k] of [['#unrProject', 'project'], ['#unrMcp', 'mcpUrl'], ['#unrContent', 'contentPath'], ['#unrAnimContent', 'animContentPath'], ['#unrSkeleton', 'animSkeleton'], ['#unrVer', 'ueMcpVersion']]) if (document.activeElement !== $(id)) $(id).value = u[k] || '';
-  $('#unrVer').placeholder = u.ueMcpVersionUsed ? `${u.ueMcpVersionUsed} (${u.ueMcpVersionSource})` : '1.4.12';
+  $('#unrVer').placeholder = u.ueMcpVersionUsed ? `${u.ueMcpVersionUsed} (${u.ueMcpVersionSource})` : 'otomatik';
   $('#unrVer').title = u.ueMcpVersionWarning || (u.projectUeMcpVersion ? `Proje .mcp.json: ue-mcp@${u.projectUeMcpVersion}` : '');
 }
 async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna bağlanmayı dene (/api/unreal/status)

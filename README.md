@@ -33,7 +33,7 @@ Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md) · 
 
 ## Unreal'e gönderme (VFX + animasyon)
 UE5 editörü açık ve projede ue-mcp köprü eklentisi (`UE_MCP_Bridge`) yüklü olmalı; UPE `npx ue-mcp@<sürüm> <uproject>`'i kendisi başlatır
-(sürüm ayardan, boşsa 1.4.12; projenin `.mcp.json`'undaki sürüm farklıysa panel uyarır — sürüm kararı bekliyor). Sağ panel → **Unreal** (proje, MCP hedefi, ue-mcp sürümü, içerik yolu,
+(sürüm projenin köprü eklentisinden: oyun projesi 1.4.13, Elarion 1.4.12; panelden elle de seçilir). Sağ panel → **Unreal** (proje, MCP hedefi, ue-mcp sürümü, içerik yolu,
 animasyonda hedef iskelet; bağlantı göstergesi) → üst bar **⇪ Unreal'e gönder** (Ctrl+Shift+Enter) ya da MCP `send_vfx_to_unreal` /
 `send_animation_to_unreal`.
 - VFX: `<içerik yolu>/NS_<ad>` Niagara System (varsayılan `/Game/UPE/VFX`).

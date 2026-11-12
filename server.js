@@ -202,7 +202,7 @@ async function unitySendVfx({ name, all }) {
 
 // ── Unreal entegrasyonu (VFX → Niagara, animasyon → AnimSequence; docs/UNREAL.md): UPE sunucusu, çalışan UE editörünün MCP sunucusuna
 // istemci olarak bağlanır. mcpUrl: 'ue-mcp' (varsayılan: ayarlı projenin .uproject'iyle ue-mcp, stdio) | 'ue-mcp:<.uproject>' | http(s)://…/mcp (eski Epic eklentisi)
-// ueMcpVersion: boşsa UPE_UE_MCP_VERSION / istemci varsayılanı (1.4.12); projenin .mcp.json sürümü farklıysa get_unreal_info uyarır.
+// ueMcpVersion: boşsa projenin köprü eklentisinin sürümü (.uplugin, yoksa .mcp.json), o da yoksa UPE_UE_MCP_VERSION / 1.4.12.
 // animSkeleton: animasyonun yazılacağı UE iskeleti (SkeletalMesh ya da Skeleton yolu); boşsa UPE rigine en çok uyan aranır.
 const UNREAL_DEFAULTS = { project: null, mcpUrl: 'ue-mcp', contentPath: '/Game/UPE/VFX', animContentPath: '/Game/UPE/Animations', animSkeleton: null, ueMcpVersion: null };
 state.unreal = { ...UNREAL_DEFAULTS, ...(state.unreal && typeof state.unreal === 'object' ? state.unreal : {}) };
@@ -229,18 +229,29 @@ async function loadUnrealLib() {
   }
   return unrealLib;
 }
-// ue-mcp sürümü: ayar > istemci varsayılanı. Projenin .mcp.json'undaki sabit (köprü eklentisi o sürümle gelir) yalnız okunur ve raporlanır.
+// ue-mcp sürümü (2026-11-12): sunucu, projedeki UE_MCP_Bridge eklentisiyle aynı sürümde olmalı (eylem/parametre adları birlikte
+// değişir). Projeler farklı: oyun (Can You Hear Me Director) köprüsü 1.4.13, Elarion 1.4.12 → sabit bir varsayılan ikisine uymaz.
+// Sıra: ayar (ueMcpVersion) > projenin köprü eklentisi (Plugins/UE_MCP_Bridge/*.uplugin VersionName) > projenin .mcp.json'u
+// (klasörde ya da bir üstünde; ue-mcp@x.y.z) > UPE_UE_MCP_VERSION / 1.4.12. Proje dosyaları yalnız okunur.
 const UE_MCP_VER_RE = /^\d+\.\d+\.\d+[\w.-]*$/;
 const UE_MCP_DEFAULT_VERSION = process.env.UPE_UE_MCP_VERSION || '1.4.12'; // lib/unreal-mcp-client.js UE_MCP_VERSION ile aynı
 function projectUeMcpVersion(proj) {
   if (!proj) return null;
-  try { const m = fs.readFileSync(path.join(proj.dir, '.mcp.json'), 'utf8').match(/ue-mcp@(\d+\.\d+\.\d+[\w.-]*)/); return m ? m[1] : null; } catch { return null; }
+  try {
+    const pd = path.join(proj.dir, 'Plugins', 'UE_MCP_Bridge');
+    for (const f of fs.readdirSync(pd).filter((x) => /\.uplugin$/i.test(x))) {
+      const v = JSON.parse(fs.readFileSync(path.join(pd, f), 'utf8').replace(/^﻿/, '')).VersionName;
+      if (UE_MCP_VER_RE.test(String(v || ''))) return { version: String(v), source: 'proje köprü eklentisi' };
+    }
+  } catch { /* eklenti yok */ }
+  for (const d of [proj.dir, path.dirname(proj.dir)]) {
+    try { const m = fs.readFileSync(path.join(d, '.mcp.json'), 'utf8').match(/ue-mcp@(\d+\.\d+\.\d+[\w.-]*)/); if (m) return { version: m[1], source: 'proje .mcp.json' }; } catch { /* yok */ }
+  }
+  return null;
 }
-// Sürüm KARARI BEKLİYOR (2026-11-12): projenin .mcp.json'undaki sürüm kendiliğinden kullanılmaz, yalnız bilgi + uyumsuzluk uyarısı.
-// Kullanılan: ayar (ueMcpVersion) > istemci varsayılanı (UPE_UE_MCP_VERSION ya da lib/unreal-mcp-client.js).
 function unrealMcpVersion(u = state.unreal) {
   if (u.ueMcpVersion) return { version: u.ueMcpVersion, source: 'ayar' };
-  return { version: null, source: 'varsayılan' };
+  return projectUeMcpVersion(resolveUnrealProject(u.project)) || { version: null, source: 'varsayılan' };
 }
 // istemciye giden hedef: 'ue-mcp' → ayarlı projenin .uproject'i (+ sabit sürüm: 'ue-mcp@X:<uproject>')
 function unrealTarget(u = state.unreal) {
@@ -254,7 +265,7 @@ async function unrealInfo({ probe = true } = {}) {
   const out = { project: u.project, projectValid: !!proj, uproject: proj?.uproject || null, projectName: proj ? path.basename(proj.uproject, '.uproject') : null, mcpUrl: u.mcpUrl, contentPath: u.contentPath,
     animContentPath: u.animContentPath, animSkeleton: u.animSkeleton, ueMcpVersion: u.ueMcpVersion, ueMcpVersionUsed: ver.version || UE_MCP_DEFAULT_VERSION, ueMcpVersionSource: ver.source };
   const pv = projectUeMcpVersion(proj);
-  if (pv) { out.projectUeMcpVersion = pv; if (pv !== out.ueMcpVersionUsed) out.ueMcpVersionWarning = `Proje .mcp.json ue-mcp@${pv}, UPE ue-mcp@${out.ueMcpVersionUsed} çağırıyor: köprü eklentisiyle uyumsuz olabilir (sürüm kararı bekliyor; ueMcpVersion ile elle seçilebilir).`; }
+  if (pv) { out.projectUeMcpVersion = pv.version; if (pv.version !== out.ueMcpVersionUsed) out.ueMcpVersionWarning = `Projenin köprüsü ue-mcp@${pv.version} (${pv.source}), UPE ue-mcp@${out.ueMcpVersionUsed} çağırıyor (${ver.source}): uyumsuz olabilir.`; }
   if (probe) {
     try { const { unrealStatus } = await loadUnrealLib(); out.status = await unrealStatus({ mcpUrl: unrealTarget(u) }); } catch (e) { out.status = { connected: false, error: String(e?.message || e) }; }
   }

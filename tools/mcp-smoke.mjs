@@ -249,14 +249,19 @@ try {
     check('UA: geçersiz animContentPath / animSkeleton / ueMcpVersion → hata', badA.isError && badS.isError && badV.isError, [badA, badS, badV].map((x) => x.text.slice(0, 40)).join(' | '));
     const s = (await call('set_unreal_project', { animContentPath: '/Game/UPE/SmokeAnim/', animSkeleton: '/Game/Smoke/YBot' })).json;
     check('UA: set_unreal_project (anim yolu + iskelet)', s?.animContentPath === '/Game/UPE/SmokeAnim' && s.animSkeleton === '/Game/Smoke/YBot' && s.mcpUrl === deadUrl, JSON.stringify({ a: s?.animContentPath, s: s?.animSkeleton }));
-    // ue-mcp sürümü (karar bekliyor): projenin .mcp.json'u kendiliğinden KULLANILMAZ, yalnız raporlanır + uyarı; ayar önce gelir
-    fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@9.9.9', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
+    // ue-mcp sürümü: projenin .mcp.json'u → köprü eklentisi (.uplugin) önce gelir → ayar en önce (farklıysa uyarı) → boş ayar projeye döner
+    fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@9.9.8', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
     const v1 = (await call('get_unreal_info')).json;
-    const v2 = (await call('set_unreal_project', { ueMcpVersion: '9.9.9' })).json;
-    const v3 = (await call('set_unreal_project', { ueMcpVersion: '' })).json;
-    check('UA: ue-mcp sürümü (varsayılan + proje uyarısı → ayar → varsayılan)', v1?.ueMcpVersionSource === 'varsayılan' && v1.ueMcpVersionUsed !== '9.9.9' && v1.projectUeMcpVersion === '9.9.9' && /9\.9\.9/.test(v1.ueMcpVersionWarning || '')
-      && v2?.ueMcpVersionUsed === '9.9.9' && v2.ueMcpVersionSource === 'ayar' && !v2.ueMcpVersionWarning && v3?.ueMcpVersionSource === 'varsayılan' && v3.ueMcpVersion === null,
-      [v1, v2, v3].map((v) => `${v?.ueMcpVersionUsed}/${v?.ueMcpVersionSource}`).join(' → '));
+    fs.mkdirSync(path.join(FAKE_UE, 'Plugins', 'UE_MCP_Bridge'), { recursive: true });
+    fs.writeFileSync(path.join(FAKE_UE, 'Plugins', 'UE_MCP_Bridge', 'UE_MCP_Bridge.uplugin'), '﻿' + JSON.stringify({ FileVersion: 3, VersionName: '9.9.9' }));
+    const v2 = (await call('get_unreal_info')).json;
+    const v3 = (await call('set_unreal_project', { ueMcpVersion: '1.2.3' })).json;
+    const v4 = (await call('set_unreal_project', { ueMcpVersion: '' })).json;
+    check('UA: ue-mcp sürümü (.mcp.json → köprü eklentisi → ayar+uyarı → proje)', v1?.ueMcpVersionUsed === '9.9.8' && v1.ueMcpVersionSource === 'proje .mcp.json'
+      && v2?.ueMcpVersionUsed === '9.9.9' && v2.ueMcpVersionSource === 'proje köprü eklentisi' && !v2.ueMcpVersionWarning
+      && v3?.ueMcpVersionUsed === '1.2.3' && v3.ueMcpVersionSource === 'ayar' && /9\.9\.9/.test(v3.ueMcpVersionWarning || '')
+      && v4?.ueMcpVersionUsed === '9.9.9' && v4.ueMcpVersion === null,
+      [v1, v2, v3, v4].map((v) => `${v?.ueMcpVersionUsed}/${v?.ueMcpVersionSource}`).join(' → '));
     // rig yokken / olmayan animasyon / http hedefi (editör yok): anlaşılır hata, isError değil
     await postJ('/api/rig', { modelName: null, rig: null });
     const noRig = (await call('send_animation_to_unreal')).json;

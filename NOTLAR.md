@@ -17,7 +17,7 @@
 - Yalnız açık istekle: Animasyon modunda üst bar **⇪ Unreal'e gönder** (Ctrl+Shift+Enter) ya da Claude'a "Unreal'e gönder" deyince
   MCP `send_animation_to_unreal`. Kural: animasyon önce UPE'de yapılır, kullanıcı onaylamadan motora gitmez.
 - Ayar (sağ panel → **Unreal**, Unity bölümünün altında; ya da MCP `set_unreal_project`): proje klasörü / `.uproject`, MCP hedefi
-  `ue-mcp`, ue-mcp sürümü (boş: 1.4.12; oyun projesi `.mcp.json`'unda `1.4.13` — uyumsuzluk panelde uyarılır, sürüm kararı bekliyor), animasyon içerik yolu
+  `ue-mcp`, ue-mcp sürümü (boş: projenin `UE_MCP_Bridge` eklentisinin sürümü — oyun projesinde `1.4.13`; elle vermek genelde gerekmez), animasyon içerik yolu
   (varsayılan `/Game/UPE/Animations`), **hedef iskelet**: UE'deki aynı Mixamo karakterinin SkeletalMesh ya da Skeleton yolu
   (boşsa en uyan aranır, yanıtta söylenir; kalıcı olsun diye bir kez ayarla).
 - Sonuç `<içerik yolu>/A_<ad>` AnimSequence (loop ayarı UPE'den). Aynı adla tekrar gönderim: uzunluk aynıysa yerinde güncellenir.
