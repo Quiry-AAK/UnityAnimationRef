@@ -920,10 +920,12 @@ async function sendUnity() {
 $('#btnUSave').onclick = async () => { if (await saveUnityCfg()) { toast('Unity ayarı kaydedildi', 'ok'); refreshStatusUnity(); } };
 $('#btnUSend').onclick = () => sendCurrent();
 
-// ───────────────────────── Unreal (yalnız VFX → Niagara; docs/UNREAL.md)
+// ───────────────────────── Unreal (VFX → Niagara, animasyon → AnimSequence; docs/UNREAL.md). Yalnız düğme/kısayolla gönderilir.
 function setUnrealDot(st) { const d = $('#unrDot'); d.className = 'dot ' + (st?.connected ? 'ok' : st ? 'bad' : ''); d.title = st?.connected ? `Unreal bağlı${st.projectName ? ' · ' + st.projectName : ''}${st.engineVersion ? ' · UE ' + st.engineVersion : ''}` : 'Unreal editörüne bağlı değil' + (st?.error ? ': ' + st.error : ''); }
 function fillUnreal(u) {
-  for (const [id, k] of [['#unrProject', 'project'], ['#unrMcp', 'mcpUrl'], ['#unrContent', 'contentPath']]) if (document.activeElement !== $(id)) $(id).value = u[k] || '';
+  for (const [id, k] of [['#unrProject', 'project'], ['#unrMcp', 'mcpUrl'], ['#unrContent', 'contentPath'], ['#unrAnimContent', 'animContentPath'], ['#unrSkeleton', 'animSkeleton'], ['#unrVer', 'ueMcpVersion']]) if (document.activeElement !== $(id)) $(id).value = u[k] || '';
+  $('#unrVer').placeholder = u.ueMcpVersionUsed ? `${u.ueMcpVersionUsed} (${u.ueMcpVersionSource})` : 'otomatik';
+  $('#unrVer').title = u.ueMcpVersionWarning || (u.projectUeMcpVersion ? `Proje .mcp.json: ue-mcp@${u.projectUeMcpVersion}` : '');
 }
 async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna bağlanmayı dene (/api/unreal/status)
   const u = await fetch(probe ? '/api/unreal/status' : '/api/unreal').then((r) => r.json()).catch(() => null);
@@ -932,18 +934,31 @@ async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna
   const proj = u.projectValid ? `Proje: ${u.projectName}` : u.project ? 'Proje klasöründe .uproject yok' : 'Proje ayarlı değil (gönderim için zorunlu değil)';
   if (probe) { setUnrealDot(u.status); $('#unrStatus').textContent = `${proj} · ${u.status?.connected ? 'Unreal bağlı' + (u.status.projectName ? ' (' + u.status.projectName + ')' : '') : 'Unreal bağlı değil' + (u.status?.error ? ': ' + u.status.error : '')}`; }
   else $('#unrStatus').textContent = proj;
+  if (u.ueMcpVersionWarning) $('#unrStatus').textContent += ' · ⚠ ' + u.ueMcpVersionWarning;
   return u;
 }
 async function saveUnrealCfg() {
-  const r = await api('/api/unreal/config', { project: $('#unrProject').value, mcpUrl: $('#unrMcp').value, contentPath: $('#unrContent').value });
+  const r = await api('/api/unreal/config', { project: $('#unrProject').value, mcpUrl: $('#unrMcp').value, contentPath: $('#unrContent').value,
+    animContentPath: $('#unrAnimContent').value, animSkeleton: $('#unrSkeleton').value, ueMcpVersion: $('#unrVer').value });
   if (r.error) { toast('Hata: ' + r.error, 'err'); $('#unrStatus').textContent = r.error; return false; }
   fillUnreal(r); return true;
 }
+// animasyon → AnimSequence: yanıt { ok, skeleton, sequences:[{ name, path, bones, frames, warnings }], errors } ya da { ok:false, error }
+async function sendUnrealAnim() {
+  if (!rig) return 'Hata: önce bir karakter yükle';
+  toast("Unreal'e gönderiliyor…"); await api('/api/anim', anim);
+  const r = await api('/api/unreal/send-anim', { all: $('#unrAnimAll').checked });
+  if (r.error && !r.sequences?.length) return 'Hata: ' + r.error;
+  const nWarn = (r.sequences || []).reduce((s, q) => s + (q.warnings?.length || 0), 0);
+  for (const q of r.sequences || []) for (const w of q.warnings || []) console.warn('[Unreal]', q.name, w);
+  const done = (r.sequences || []).map((q) => `${q.path} (${q.bones} kemik, ${q.frames} kare)`).join(', ');
+  return (r.ok ? "Unreal'e aktarıldı: " : 'Hata: kısmen aktarıldı — ' + (r.error || '') + ' · ') + done + (r.skeletonAuto ? ` · iskelet otomatik: ${r.skeleton}` : '') + (nWarn ? ` (${nWarn} uyarı, konsolda)` : '');
+}
 async function sendUnreal() {
-  if (mode !== 'vfx') return toast("Unreal'e şimdilik yalnız VFX gönderilir (VFX moduna geç)");
+  if (mode !== 'vfx' && mode !== 'anim') return toast("Unreal'e animasyon ya da VFX gönderilir (Animasyon/VFX moduna geç)");
   if (!(await saveUnrealCfg())) return;
   $('#unrStatus').textContent = 'Gönderiliyor…';
-  let msg; try { msg = await vfx.sendUnreal({ all: $('#unrAll').checked }); } catch (e) { msg = 'Hata: ' + (e.message || e); }
+  let msg; try { msg = mode === 'anim' ? await sendUnrealAnim() : await vfx.sendUnreal({ all: $('#unrAll').checked }); } catch (e) { msg = 'Hata: ' + (e.message || e); }
   toast(msg || 'Gönderildi', /^Hata/.test(msg || '') ? 'err' : 'ok'); $('#unrStatus').textContent = msg;
   refreshUnreal().then(() => { $('#unrStatus').textContent = msg; });
 }
@@ -957,7 +972,7 @@ refreshUnreal(false);
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F1') { e.preventDefault(); return openHelp(); }
   if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); if (!panelOpen('right')) setPanel('right', true); return $('#panelFilter').focus(); }
-  if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && mode === 'vfx') { e.preventDefault(); return sendUnreal(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && (mode === 'vfx' || mode === 'anim')) { e.preventDefault(); return sendUnreal(); }
   if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); return sendCurrent(); }
   if (document.querySelector('dialog[open]')) return;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['checkbox', 'range'].includes(document.activeElement.type)) return;
@@ -1036,6 +1051,8 @@ function setEditorMode(m, { notify = true } = {}) {
   const prev = mode, changed = m !== prev;
   if (changed) { camByMode[prev] = { pos: camera.position.clone(), target: orbit.target.clone() }; const pm = modeModule(prev); if (pm?.active) pm.deactivate(); }
   mode = m; document.body.dataset.mode = m;
+  // Unreal bölümü: animasyonda Unity bölümünün altında, VFX'te kendi kabında (ayar araması görünen ilk kabın içinde arar)
+  if (m === 'anim') $('#secUnity').after($('#secUnreal')); else $('#unrealRight').append($('#secUnreal'));
   for (const k of MODES) $('#mode' + k[0].toUpperCase() + k.slice(1))?.classList.toggle('on', k === m);
   $('#togLeft').title = LEFT_NAMES[m] + ' paneli (B)';
   $('#sendLabel').textContent = SEND_LABEL[m]; $('#stHint').textContent = HINTS[m]; $('#panelFilter').value = ''; applyFilter();
@@ -1156,7 +1173,7 @@ function fillHelp() {
   const sec = (k) => { const [t, items] = HELP[k]; return `<section class="${k === mode ? 'cur' : ''}"><h4>${t}${k === mode ? ' <small style="color:var(--acc)">· şu anki mod</small>' : ''}</h4><ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul></section>`; };
   $('#helpBody').innerHTML = `<section class="full"><h4>Nasıl çalışır?</h4><p>İşi Claude yapar; sen izlersin, istersen değerlerle oynarsın. Beğenmediğin bir şey için <b>💬 Claude'a not</b> yaz ya da elle düzeltip Claude'a "düzelttim" de; değişikliklerini kendisi okur. Beğendiğinde <b>⇪ Unity'ye gönder</b>.</p><p>Üstteki sekmeler modlar: <kbd>1</kbd> Animasyon · <kbd>2</kbd> VFX · <kbd>3</kbd> Materyal · <kbd>4</kbd> Shader · <kbd>5</kbd> Model. Alttaki çubukta bağlantı, Claude'un son güncellemesi ve Unity projesi görünür.</p></section>`
     + MODES.map(sec).join('')
-    + `<section class="full"><h4>Kısayollar</h4><p><kbd>F1</kbd> yardım · <kbd>N</kbd> Claude'a not · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Unity'ye gönder · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> Unreal'e gönder (VFX) · <kbd>Ctrl</kbd>+<kbd>F</kbd> ayar ara · <kbd>F</kbd> odakla · <kbd>B</kbd>/<kbd>P</kbd> sol/sağ panel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> geri al · <kbd>Ctrl</kbd>+<kbd>Y</kbd> yinele · Fare: sol sürükle döndür, sağ sürükle kaydır, tekerlek yakınlaştır</p></section>`;
+    + `<section class="full"><h4>Kısayollar</h4><p><kbd>F1</kbd> yardım · <kbd>N</kbd> Claude'a not · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Unity'ye gönder · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> Unreal'e gönder (animasyon/VFX) · <kbd>Ctrl</kbd>+<kbd>F</kbd> ayar ara · <kbd>F</kbd> odakla · <kbd>B</kbd>/<kbd>P</kbd> sol/sağ panel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> geri al · <kbd>Ctrl</kbd>+<kbd>Y</kbd> yinele · Fare: sol sürükle döndür, sağ sürükle kaydır, tekerlek yakınlaştır</p></section>`;
 }
 function openHelp(welcome = false) {
   $('#helpTitle').textContent = welcome ? 'Unity Preview Editor\'e hoş geldin' : 'Yardım ve kısayollar';

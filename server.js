@@ -200,9 +200,11 @@ async function unitySendVfx({ name, all }) {
   return out;
 }
 
-// ── Unreal entegrasyonu (yalnız VFX; docs/UNREAL.md): UPE sunucusu, çalışan UE editörünün MCP sunucusuna istemci olarak bağlanır
-// mcpUrl: 'ue-mcp' (varsayılan: ayarlı projenin .uproject'iyle ue-mcp, stdio) | 'ue-mcp:<.uproject>' | http(s)://…/mcp (eski Epic eklentisi)
-const UNREAL_DEFAULTS = { project: null, mcpUrl: 'ue-mcp', contentPath: '/Game/UPE/VFX' };
+// ── Unreal entegrasyonu (VFX → Niagara, animasyon → AnimSequence; docs/UNREAL.md): UPE sunucusu, çalışan UE editörünün MCP sunucusuna
+// istemci olarak bağlanır. mcpUrl: 'ue-mcp' (varsayılan: ayarlı projenin .uproject'iyle ue-mcp, stdio) | 'ue-mcp:<.uproject>' | http(s)://…/mcp (eski Epic eklentisi)
+// ueMcpVersion: boşsa projenin köprü eklentisinin sürümü (.uplugin, yoksa .mcp.json), o da yoksa UPE_UE_MCP_VERSION / 1.4.12.
+// animSkeleton: animasyonun yazılacağı UE iskeleti (SkeletalMesh ya da Skeleton yolu); boşsa UPE rigine en çok uyan aranır.
+const UNREAL_DEFAULTS = { project: null, mcpUrl: 'ue-mcp', contentPath: '/Game/UPE/VFX', animContentPath: '/Game/UPE/Animations', animSkeleton: null, ueMcpVersion: null };
 state.unreal = { ...UNREAL_DEFAULTS, ...(state.unreal && typeof state.unreal === 'object' ? state.unreal : {}) };
 if (state.unreal.mcpUrl === 'http://127.0.0.1:8000/mcp') state.unreal.mcpUrl = 'ue-mcp'; // Epic MCP kaldırıldı (2026-11-07)
 // proje: .uproject içeren klasör ya da .uproject yolu → { dir, uproject } | null
@@ -227,15 +229,43 @@ async function loadUnrealLib() {
   }
   return unrealLib;
 }
-// istemciye giden hedef: 'ue-mcp' → ayarlı projenin .uproject'i
+// ue-mcp sürümü (2026-11-12): sunucu, projedeki UE_MCP_Bridge eklentisiyle aynı sürümde olmalı (eylem/parametre adları birlikte
+// değişir). Projeler farklı: oyun (Can You Hear Me Director) köprüsü 1.4.13, Elarion 1.4.12 → sabit bir varsayılan ikisine uymaz.
+// Sıra: ayar (ueMcpVersion) > projenin köprü eklentisi (Plugins/UE_MCP_Bridge/*.uplugin VersionName) > projenin .mcp.json'u
+// (klasörde ya da bir üstünde; ue-mcp@x.y.z) > UPE_UE_MCP_VERSION / 1.4.12. Proje dosyaları yalnız okunur.
+const UE_MCP_VER_RE = /^\d+\.\d+\.\d+[\w.-]*$/;
+const UE_MCP_DEFAULT_VERSION = process.env.UPE_UE_MCP_VERSION || '1.4.12'; // lib/unreal-mcp-client.js UE_MCP_VERSION ile aynı
+function projectUeMcpVersion(proj) {
+  if (!proj) return null;
+  try {
+    const pd = path.join(proj.dir, 'Plugins', 'UE_MCP_Bridge');
+    for (const f of fs.readdirSync(pd).filter((x) => /\.uplugin$/i.test(x))) {
+      const v = JSON.parse(fs.readFileSync(path.join(pd, f), 'utf8').trim()).VersionName;
+      if (UE_MCP_VER_RE.test(String(v || ''))) return { version: String(v), source: 'proje köprü eklentisi' };
+    }
+  } catch { /* eklenti yok */ }
+  for (const d of [proj.dir, path.dirname(proj.dir)]) {
+    try { const m = fs.readFileSync(path.join(d, '.mcp.json'), 'utf8').match(/ue-mcp@(\d+\.\d+\.\d+[\w.-]*)/); if (m) return { version: m[1], source: 'proje .mcp.json' }; } catch { /* yok */ }
+  }
+  return null;
+}
+function unrealMcpVersion(u = state.unreal) {
+  if (u.ueMcpVersion) return { version: u.ueMcpVersion, source: 'ayar' };
+  return projectUeMcpVersion(resolveUnrealProject(u.project)) || { version: null, source: 'varsayılan' };
+}
+// istemciye giden hedef: 'ue-mcp' → ayarlı projenin .uproject'i (+ sabit sürüm: 'ue-mcp@X:<uproject>')
 function unrealTarget(u = state.unreal) {
-  if (String(u.mcpUrl || '').trim().toLowerCase() !== 'ue-mcp') return u.mcpUrl;
-  const proj = resolveUnrealProject(u.project);
-  return proj ? 'ue-mcp:' + proj.uproject.split(path.sep).join('/') : 'ue-mcp';
+  const m = String(u.mcpUrl || '').trim().match(/^ue-mcp(?:@(\S+))?$/i);
+  if (!m) return u.mcpUrl; // 'ue-mcp[@x]:<uproject>' ya da http(s)://… olduğu gibi
+  const proj = resolveUnrealProject(u.project); const v = m[1] || unrealMcpVersion(u).version;
+  return 'ue-mcp' + (v ? '@' + v : '') + (proj ? ':' + proj.uproject.split(path.sep).join('/') : '');
 }
 async function unrealInfo({ probe = true } = {}) {
-  const u = state.unreal; const proj = resolveUnrealProject(u.project);
-  const out = { project: u.project, projectValid: !!proj, uproject: proj?.uproject || null, projectName: proj ? path.basename(proj.uproject, '.uproject') : null, mcpUrl: u.mcpUrl, contentPath: u.contentPath };
+  const u = state.unreal; const proj = resolveUnrealProject(u.project); const ver = unrealMcpVersion(u);
+  const out = { project: u.project, projectValid: !!proj, uproject: proj?.uproject || null, projectName: proj ? path.basename(proj.uproject, '.uproject') : null, mcpUrl: u.mcpUrl, contentPath: u.contentPath,
+    animContentPath: u.animContentPath, animSkeleton: u.animSkeleton, ueMcpVersion: u.ueMcpVersion, ueMcpVersionUsed: ver.version || UE_MCP_DEFAULT_VERSION, ueMcpVersionSource: ver.source };
+  const pv = projectUeMcpVersion(proj);
+  if (pv) { out.projectUeMcpVersion = pv.version; if (pv.version !== out.ueMcpVersionUsed) out.ueMcpVersionWarning = `Projenin köprüsü ue-mcp@${pv.version} (${pv.source}), UPE ue-mcp@${out.ueMcpVersionUsed} çağırıyor (${ver.source}): uyumsuz olabilir.`; }
   if (probe) {
     try { const { unrealStatus } = await loadUnrealLib(); out.status = await unrealStatus({ mcpUrl: unrealTarget(u) }); } catch (e) { out.status = { connected: false, error: String(e?.message || e) }; }
   }
@@ -250,7 +280,7 @@ function unrealConfig(b = {}) {
   }
   if (b.mcpUrl !== undefined) {
     const m = String(b.mcpUrl || '').trim() || UNREAL_DEFAULTS.mcpUrl;
-    if (!/^https?:\/\/[^\s/]+/i.test(m) && !/^ue-mcp(:.+\.uproject)?$/i.test(m)) throw badRequest("MCP hedefi 'ue-mcp', 'ue-mcp:<.uproject>' ya da http(s):// olmalı: " + m);
+    if (!/^https?:\/\/[^\s/]+/i.test(m) && !/^ue-mcp(@\d+\.\d+\.\d+[\w.-]*)?(:.+\.uproject)?$/i.test(m)) throw badRequest("MCP hedefi 'ue-mcp', 'ue-mcp:<.uproject>' ya da http(s):// olmalı (sürüm için ueMcpVersion ayarı): " + m);
     next.mcpUrl = m;
   }
   if (b.contentPath !== undefined) {
@@ -258,7 +288,44 @@ function unrealConfig(b = {}) {
     if (!/^\/Game(\/[\w-]+)*$/.test(c)) throw badRequest('İçerik yolu /Game ile başlamalı, yalnız harf/rakam/_/- içermeli: ' + c);
     next.contentPath = c;
   }
+  if (b.animContentPath !== undefined) {
+    const c = (String(b.animContentPath || '').trim() || UNREAL_DEFAULTS.animContentPath).replace(/\\/g, '/').replace(/\/+$/, '');
+    if (!/^\/Game(\/[\w-]+)*$/.test(c)) throw badRequest('Animasyon içerik yolu /Game ile başlamalı, yalnız harf/rakam/_/- içermeli: ' + c);
+    next.animContentPath = c;
+  }
+  if (b.animSkeleton !== undefined) {
+    const s = String(b.animSkeleton || '').trim().replace(/\\/g, '/');
+    if (s && !/^\/[A-Za-z]\w*(\/[\w.-]+)+$/.test(s)) throw badRequest('İskelet yolu bir UE varlık yolu olmalı (ör. /Game/Characters/YBot/YBot): ' + s);
+    next.animSkeleton = s || null;
+  }
+  if (b.ueMcpVersion !== undefined) {
+    const v = String(b.ueMcpVersion || '').trim().replace(/^ue-mcp@/i, '');
+    if (v && !UE_MCP_VER_RE.test(v)) throw badRequest('ue-mcp sürümü x.y.z biçiminde olmalı: ' + v);
+    next.ueMcpVersion = v || null;
+  }
   state.unreal = next; save();
+}
+// animasyon → Unreal AnimSequence (lib/unreal-anim.js). Yalnız kullanıcı/araç açıkça isteyince çağrılır (otomatik gönderim yok).
+let unrealAnimLib = null; let unrealAnimStamp = 0;
+async function loadUnrealAnimLib() {
+  const f = path.join(ROOT, 'lib', 'unreal-anim.js');
+  if (!fs.existsSync(f)) throw new Error('lib/unreal-anim.js yok — Unreal animasyon aktarıcısı kurulu değil.');
+  const stamp = fs.statSync(f).mtimeMs;
+  if (!unrealAnimLib || stamp !== unrealAnimStamp) {
+    try { unrealAnimLib = await import(pathToFileURL(f).href + '?v=' + stamp); unrealAnimStamp = stamp; } catch (e) { throw new Error('lib/unreal-anim.js yüklenemedi: ' + (e?.message || e)); }
+  }
+  return unrealAnimLib;
+}
+async function unrealSendAnim({ animation, all, skeleton } = {}) {
+  if (!state.rig?.bones?.length) throw new Error('Rig bilgisi yok; editörde bir karakter yükle.');
+  const list = [];
+  if (all) { for (const f of fs.readdirSync(ANIMS_DIR).filter((x) => x.endsWith('.json'))) { try { list.push(JSON.parse(fs.readFileSync(path.join(ANIMS_DIR, f), 'utf8'))); } catch { /* bozuk json atlanır */ } } if (!list.length) throw new Error('Animasyon kütüphanesi boş (animations/*.json yok)'); }
+  else if (animation) { const f = path.join(ANIMS_DIR, safeName(animation) + '.json'); if (!fs.existsSync(f)) throw new Error('Kütüphanede yok: ' + animation); list.push(JSON.parse(fs.readFileSync(f, 'utf8'))); }
+  else { if (!state.anim) throw new Error('Gönderilecek animasyon yok'); list.push(state.anim); }
+  const u = state.unreal; const target = unrealTarget(u);
+  if (!/^ue-mcp/i.test(String(target))) throw new Error("Animasyon aktarımı ue-mcp hedefi ister (MCP hedefi 'ue-mcp' olmalı; eski Epic HTTP eklentisinde animasyon araçları yok).");
+  const { sendAnimToUnreal } = await loadUnrealAnimLib();
+  return await sendAnimToUnreal(list, state.rig, { mcpUrl: target, contentPath: u.animContentPath || UNREAL_DEFAULTS.animContentPath, skeleton: (skeleton || u.animSkeleton || '').trim() || null, log: (...a) => console.log('[unreal-anim]', ...a) });
 }
 async function unrealSendVfx({ name, all } = {}) {
   // gönderilecek efektler: unitySendVfx ile aynı (all → kütüphane, name → kütüphaneden, yoksa editördeki)
@@ -660,6 +727,10 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/unreal/config' && req.method === 'POST') {
       try { unrealConfig(await readJson(req)); } catch (e) { return send(res, e.status || 500, { error: String(e?.message || e) }); }
       return send(res, 200, await unrealInfo({ probe: false }));
+    }
+    if (p === '/api/unreal/send-anim' && req.method === 'POST') { // animasyon → AnimSequence (yalnız açık istekle)
+      const b = await readJson(req);
+      try { return send(res, 200, await unrealSendAnim(b)); } catch (e) { return send(res, 200, { ok: false, error: String(e?.message || e) }); }
     }
     if (p === '/api/unreal/send-vfx' && req.method === 'POST') {
       const b = await readJson(req);

@@ -13,6 +13,16 @@
 3. Mod **Otomatik**: karakter Humanoid ise Humanoid, değilse Generic. Mod seçmen gerekmez.
 4. Eşyalar (silah) için Unity'de Tools > Anim Ref > Import penceresindeki "Eşyaları karaktere ekle" kullanılır.
 
+## Unreal'e animasyon gönderme
+- Yalnız açık istekle: Animasyon modunda üst bar **⇪ Unreal'e gönder** (Ctrl+Shift+Enter) ya da Claude'a "Unreal'e gönder" deyince
+  MCP `send_animation_to_unreal`. Kural: animasyon önce UPE'de yapılır, kullanıcı onaylamadan motora gitmez.
+- Ayar (sağ panel → **Unreal**, Unity bölümünün altında; ya da MCP `set_unreal_project`): proje klasörü / `.uproject`, MCP hedefi
+  `ue-mcp`, ue-mcp sürümü (boş: projenin `UE_MCP_Bridge` eklentisinin sürümü — oyun projesinde `1.4.13`; elle vermek genelde gerekmez), animasyon içerik yolu
+  (varsayılan `/Game/UPE/Animations`), **hedef iskelet**: UE'deki aynı Mixamo karakterinin SkeletalMesh ya da Skeleton yolu
+  (boşsa en uyan aranır, yanıtta söylenir; kalıcı olsun diye bir kez ayarla).
+- Sonuç `<içerik yolu>/A_<ad>` AnimSequence (loop ayarı UPE'den). Aynı adla tekrar gönderim: uzunluk aynıysa yerinde güncellenir.
+- Karakter Mixamo değilse (UE Mannequin vb.) önce Mixamo karakterine gönder, UE'de IK Retargeter ile çevir. Ayrıntı: `docs/UNREAL.md`.
+
 ## Tipik akış
 1. Mixamo'dan karakteri **FBX, T-pose** olarak indir → `models/` klasörüne at (ya da editöre sürükle). Mixamo'dan animasyon indirirsen (FBX) editöre sürükle: kareler düzenlenebilir key'lere çevrilir ve kütüphaneye kaydolur.
 2. Editörde kemiği seç (viewport'taki mavi nokta ya da ☰ Kemikler), döndür/taşı, **◆ Key** ile key koy. Küçük düzeltmeler için "Tüm kareleri etkile" işaretle.
@@ -37,8 +47,8 @@
   yazılır, Unity (açıksa birkaç saniyede) `Assets/UnityPreview/VFX/<ad>.prefab` ve `Materials/` üretir. Kök objede `Play()` tüm
   katmanları oynatır. Unity kapalıyken: `-executeMethod UnityPreviewVfxImporter.ProcessPending`. Aynı adla tekrar gönderim prefab'ı
   yerinde günceller (GUID korunur). Malzeme: URP Particles/Unlit, additive/alpha, `_BaseColor` = intensity (HDR, bloom).
-- **Unreal'e gönder** (üst bar, Ctrl+Shift+Enter; MCP `send_vfx_to_unreal`): UPE sunucusu çalışan UE5 editörünün MCP sunucusuna
-  (Unreal `ModelContextProtocol` eklentisi; Elarion editör 1 `http://127.0.0.1:8000/mcp`, editör 2 `:8001`) bağlanıp
+- **Unreal'e gönder** (üst bar, Ctrl+Shift+Enter; MCP `send_vfx_to_unreal`): UPE sunucusu çalışan UE5 editörüne ue-mcp üzerinden
+  (projede `UE_MCP_Bridge`; eski Epic `ModelContextProtocol` HTTP hedefi de geçer) bağlanıp
   `<içerik yolu>/NS_<ad>` Niagara System kurar (varsayılan `/Game/UPE/VFX`; dokular `Textures/T_UPE_<doku>`). Ayar: sağ panel →
   **Unreal** (proje klasörü ya da `.uproject`, MCP adresi, içerik yolu; nokta = bağlantı) ya da MCP `set_unreal_project`. Editör
   kapalıysa gönderim anlaşılır hatayla durur; karşılığı olmayan alanlar uyarı olarak döner. Ayrıntı: `docs/UNREAL.md`.
@@ -90,7 +100,7 @@
 - İlk açılışta yardım penceresi gelir (F1 ile her zaman açılır).
 
 ## Kısayollar
-- Genel: F1 yardım · N Claude'a not · Ctrl+Enter Unity'ye gönder · Ctrl+F ayar ara · 1–5 mod · F odakla · B/P sol/sağ panel · Ctrl+Z / Ctrl+Y
+- Genel: F1 yardım · N Claude'a not · Ctrl+Enter Unity'ye gönder · Ctrl+Shift+Enter Unreal'e gönder (animasyon/VFX) · Ctrl+F ayar ara · 1–5 mod · F odakla · B/P sol/sağ panel · Ctrl+Z / Ctrl+Y
 - Animasyon: Space oynat · ←/→ kare · K key koy/sil · E döndür · W taşı
 - VFX: Space oynat · Home baştan · ←/→ ±0.05 sn
 
