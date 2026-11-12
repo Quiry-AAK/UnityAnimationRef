@@ -291,13 +291,13 @@ fps, bones, axes, warnings }], errors }`. Varlık adı ASCII (`Kılıç Savuruş
 ### Doğrulama durumu
 - Komut satırı: `node tools/ue-anim-send.mjs --uproject <.uproject> [--rig <UPE durum dosyası>] [--skeleton /Game/...] [--probe | --dry |
   --readback] <anim…>` (`--probe` yalnız okur: projedeki SkeletalMesh'ler ve rig'e uyumu).
-- **Gerçek editör, 2026-11-12 (UE 5.9, oyun projesi, ue-mcp 1.4.13, yalnız okuma):** micro mode bulundu ve düzeltildi;
-  `list_skeletal_meshes` (`assets[].path`) ve `get_bone_transforms` (`bones[{ name, index, parentIndex, location, rotation }]`)
-  yanıtları kodla uyumlu; gerçek bir iskelette (motorun TutorialTPP'si) eksen kalibrasyonu kimlik eşlemeyi buldu (64 çift, uyum 1,0).
-  Oyun projesinin `/Game` altında henüz hiç SkeletalMesh/Skeleton yok: yazma (create/bake) adımı karakter projeye girince denenecek.
-- Editörsüz: `node tools/ue-anim-plan-test.mjs` (mcp-smoke de çalıştırır): sahte Mixamo rig'i bilinen eksen eşlemesiyle (FBX
-  varsayılanı, Force Front X, `root` kemikli/kemiksiz) UE iskeletine çevrilir, bir kemiğin ekseni bilerek farklı yapılır; plan UE
-  ileri kinematiğiyle oynatılınca tüm eklemler UPE'nin eşlenmiş eklemlerine ~1e-4 cm, dönüşler ~1e-4° içinde düşüyor.
-- **Gerçek UE editöründe henüz denenmedi** (2026-11-12): ue-mcp yanıt alan adları (`read_sequence` → `lengthSeconds/frameRate`,
-  `list_skeletal_meshes` biçimi), `bake_keyframes_batch`'in kare sayısı eşleşmesi, UE'nin içe aktardığı Mixamo iskeletinin
-  gerçek eksen eşlemesi ve `loop` ayarı ilk denemede kontrol edilmeli.
+- **Gerçek editörde uçtan uca doğrulandı (2026-11-12, UE 5.9, oyun projesi, ue-mcp 1.4.13 micro mode):** geçici test —
+  Elarion_Hero.glb Interchange ile `/Game/UPE_Test`'e alındı, `game_dodge` (60 fps, 27 kare, kalça kök yolu 3,5 m) gönderildi.
+  - Eksen kalibrasyonu UE FBX varsayılanını `(x, z, y)` buldu (54 çift, uyum 1,0; uyarı yok), ölçek 100 (m → cm).
+  - `read_sequence`: `numFrames` 27 (= anahtar sayısı), `frameRate` 60, `lengthSeconds` 0,4333 (= 26/60), loop UPE'deki gibi.
+  - Uçtan uca: UE'nin bileşen uzayı eklem konumları (`read_bone_track space:'component'`, tüm kareler) UPE eklemleriyle
+    55 kemik × 27 kare = 1485 örnekte en çok **0,001 cm** farklı. Aynı adla 2. gönderim yerinde güncelledi. Gönderim ~10 sn.
+  - Bulunan ve düzeltilen: micro mode (yukarıda), `read_bone_track` anahtarları `samples` alanında.
+  - Test varlıkları ve klasörü sonra silindi. Kalıcı kullanım için oyun karakteri projeye girince `animSkeleton` ayarlanır
+    (oyun projesinin `/Game` altında henüz karakter yok).
+- Elle görsel kontrol: animasyon editöründe görüntü (`editor(capture_screenshot)` yalnız proje/Temp klasörüne yazabilir).

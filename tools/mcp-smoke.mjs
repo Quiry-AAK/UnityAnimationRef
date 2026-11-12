@@ -253,7 +253,7 @@ try {
     fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@9.9.8', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
     const v1 = (await call('get_unreal_info')).json;
     fs.mkdirSync(path.join(FAKE_UE, 'Plugins', 'UE_MCP_Bridge'), { recursive: true });
-    fs.writeFileSync(path.join(FAKE_UE, 'Plugins', 'UE_MCP_Bridge', 'UE_MCP_Bridge.uplugin'), '﻿' + JSON.stringify({ FileVersion: 3, VersionName: '9.9.9' }));
+    fs.writeFileSync(path.join(FAKE_UE, 'Plugins', 'UE_MCP_Bridge', 'UE_MCP_Bridge.uplugin'), String.fromCharCode(0xFEFF) + JSON.stringify({ FileVersion: 3, VersionName: '9.9.9' }));
     const v2 = (await call('get_unreal_info')).json;
     const v3 = (await call('set_unreal_project', { ueMcpVersion: '1.2.3' })).json;
     const v4 = (await call('set_unreal_project', { ueMcpVersion: '' })).json;

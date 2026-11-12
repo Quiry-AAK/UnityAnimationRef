@@ -19,7 +19,11 @@ const skeleton = opt('--skeleton'); const content = opt('--content') || '/Game/U
 const animsDir = opt('--anims') || path.join(root, 'animations');
 const probe = flag('--probe'), dry = flag('--dry'), readback = flag('--readback');
 if (!uproject) { console.error('--uproject gerekli'); process.exit(2); }
-const mcpUrl = `ue-mcp${ver ? '@' + ver : ''}:${uproject.replace(/\\/g, '/')}`;
+// sürüm: --ue-mcp > projenin köprü eklentisi (Plugins/UE_MCP_Bridge/*.uplugin VersionName) > istemci varsayılanı (server.js ile aynı kural)
+let bridgeVer = null;
+try { const pd = path.join(path.dirname(uproject), 'Plugins', 'UE_MCP_Bridge'); const f = fs.readdirSync(pd).find((x) => /\.uplugin$/i.test(x)); bridgeVer = JSON.parse(fs.readFileSync(path.join(pd, f), 'utf8').trim()).VersionName || null; } catch { /* yok */ }
+const v = ver || bridgeVer;
+const mcpUrl = `ue-mcp${v ? '@' + v : ''}:${uproject.replace(/\\/g, '/')}`;
 const st = JSON.parse(fs.readFileSync(rigFile, 'utf8')); const rig = st.rig;
 if (!rig?.bones?.length) { console.error('Rig yok: ' + rigFile); process.exit(2); }
 console.log(`rig: ${st.modelName} (${rig.bones.length} kemik, unitScale ${rig.unitScale}) · hedef ${mcpUrl}`);
@@ -55,22 +59,39 @@ try {
       console.log(JSON.stringify(r, null, 1), `\n${((Date.now() - t0) / 1000).toFixed(1)} sn`);
       if (readback) for (const s of r.sequences) {
         const seq = await ue('animation', 'read_sequence', { assetPath: s.path });
-        console.log('read_sequence:', JSON.stringify(seq).slice(0, 700));
-        const bt = await ue('animation', 'get_bone_transforms', { skeletonPath: s.skeleton, space: 'local' });
-        const plan = animToUnrealPlan(anims.find((a) => a.name === s.name), rig, bt.bones);
-        let worst = 0, worstBone = '';
-        for (const tr of plan.tracks.slice(0, 12)) {
-          const rb = await ue('animation', 'read_bone_track', { assetPath: s.path, boneName: tr.bone, rotationFormat: 'quaternion' });
-          const keys = rb?.keyframes || rb?.frames || rb?.keys || [];
-          keys.forEach((k, i) => {
-            const want = tr.keyframes[i]?.rotation; const got = k.rotation; if (!want || !got) return;
-            const d = Math.abs(want.x * got.x + want.y * got.y + want.z * got.z + want.w * got.w);
-            const ang = 2 * Math.acos(Math.min(1, d)) * 180 / Math.PI; if (ang > worst) { worst = ang; worstBone = `${tr.bone}@${i}`; }
-          });
-          if (tr === plan.tracks[0]) console.log('read_bone_track örnek:', JSON.stringify(rb).slice(0, 400));
-        }
-        console.log(`geri okuma: en büyük dönüş farkı ${worst.toFixed(3)}° (${worstBone})`);
+        console.log('read_sequence:', JSON.stringify({ numFrames: seq.numFrames, frameRate: seq.frameRate, lengthSeconds: seq.lengthSeconds, loop: seq.loop }));
+        await compareJoints(anims.find((a) => a.name === s.name), s);
       }
     }
   }
 } finally { await closeAll(); }
+
+// Uçtan uca: UE'nin bileşen uzayı eklem konumları (read_bone_track space:'component', tüm kareler) ↔ UPE dünya eklemleri × eksen
+// eşlemesi × ölçek (kök kemiğe göre). Her karede tüm eşleşen kemikler.
+async function compareJoints(anim, s) {
+  const qmul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  const qrot = (q, v) => { const r = qmul(qmul(q, [...v, 0]), [-q[0], -q[1], -q[2], q[3]]); return r.slice(0, 3); };
+  const nq = (q) => { const l = Math.hypot(...q); return q.map((x) => x / l); };
+  const slerp = (a, b, t) => { let d = a.reduce((x, v, i) => x + v * b[i], 0); if (d < 0) { b = b.map((v) => -v); d = -d; } if (d > 0.9995) return nq(a.map((v, i) => v + (b[i] - v) * t)); const th = Math.acos(d), sn = Math.sin(th); return a.map((v, i) => v * Math.sin((1 - t) * th) / sn + b[i] * Math.sin(t * th) / sn); };
+  const ev = (keys, f, n) => { if (!keys?.length) return null; const g = (k) => keys[k].slice(1, 1 + n); if (f <= keys[0][0]) return g(0); const m = keys.length; if (f >= keys[m - 1][0]) return g(m - 1); let k = 0; while (keys[k + 1][0] <= f) k++; const t = (f - keys[k][0]) / (keys[k + 1][0] - keys[k][0]); return n === 4 ? nq(slerp(g(k), g(k + 1), t)) : g(k).map((v, i) => v + (keys[k + 1][i + 1] - v) * t); };
+  const M = s.axes.matrix; const mapV = (v) => M.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+  const byName = new Map(rig.bones.map((b) => [b.name, b])); const order = []; const seen = new Set();
+  const add = (b) => { if (seen.has(b.name)) return; seen.add(b.name); if (b.parent && byName.has(b.parent)) add(byName.get(b.parent)); order.push(b); };
+  rig.bones.forEach(add);
+  const fk = (f) => { const W = new Map(), G = new Map(); for (const b of order) { const t = anim.tracks[b.name]; const lq = ev(t?.rot, f, 4) || b.restQ, lp = ev(t?.pos, f, 3) || b.restP; const pw = b.parent && W.get(b.parent); W.set(b.name, pw ? nq(qmul(pw, lq)) : lq); G.set(b.name, pw ? G.get(b.parent).map((x, i) => x + qrot(pw, lp)[i]) : lp); } return G; };
+  const bt = await ue('animation', 'get_bone_transforms', { skeletonPath: s.skeleton, space: 'local' });
+  const map = matchBones(rig.bones.map((b) => b.name), bt.bones.map((b) => b.name));
+  const root = order[0].name; const N = Math.max(2, Math.round(anim.length)); const frames = [...Array(N).keys()];
+  const ueC = new Map();
+  for (const n of map.keys()) {
+    const rb = await ue('animation', 'read_bone_track', { assetPath: s.path, boneName: map.get(n), frames, space: 'component', rotationFormat: 'quaternion' });
+    ueC.set(n, (rb.samples || []).map((x) => [x.location.x, x.location.y, x.location.z]));
+  }
+  const G0 = fk(0); const rel = (G, n) => G.get(n).map((x, i) => x - G.get(root)[i]); const urel = (n, f) => ueC.get(n)[f].map((x, i) => x - ueC.get(root)[f][i]);
+  const ratios = [...map.keys()].filter((n) => n !== root && Math.hypot(...rel(G0, n)) > 0.05).map((n) => Math.hypot(...urel(n, 0)) / Math.hypot(...rel(G0, n))).sort((a, b) => a - b);
+  const sc = ratios[ratios.length >> 1];
+  let worst = 0, at = '', cnt = 0;
+  for (const f of frames) { const G = fk(f); for (const n of map.keys()) { if (!ueC.get(n)[f]) continue; const want = mapV(rel(G, n)).map((x) => x * sc); const d = Math.hypot(...want.map((x, i) => x - urel(n, f)[i])); cnt++; if (d > worst) { worst = d; at = `${n}@${f}`; } } }
+  const hips = ueC.get('Hips') || ueC.get([...map.keys()][1]);
+  console.log(`eklem karşılaştırması: ${map.size} kemik × ${N} kare (${cnt} örnek), ölçek ${sc.toFixed(3)}, en büyük sapma ${worst.toFixed(3)} cm (${at}); kalça yolu ${hips[0].map((x) => x.toFixed(1)).join(',')} → ${hips[N - 1].map((x) => x.toFixed(1)).join(',')} cm`);
+}

@@ -240,7 +240,7 @@ function projectUeMcpVersion(proj) {
   try {
     const pd = path.join(proj.dir, 'Plugins', 'UE_MCP_Bridge');
     for (const f of fs.readdirSync(pd).filter((x) => /\.uplugin$/i.test(x))) {
-      const v = JSON.parse(fs.readFileSync(path.join(pd, f), 'utf8').replace(/^﻿/, '')).VersionName;
+      const v = JSON.parse(fs.readFileSync(path.join(pd, f), 'utf8').trim()).VersionName;
       if (UE_MCP_VER_RE.test(String(v || ''))) return { version: String(v), source: 'proje köprü eklentisi' };
     }
   } catch { /* eklenti yok */ }
