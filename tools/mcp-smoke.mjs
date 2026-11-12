@@ -249,12 +249,13 @@ try {
     check('UA: geçersiz animContentPath / animSkeleton / ueMcpVersion → hata', badA.isError && badS.isError && badV.isError, [badA, badS, badV].map((x) => x.text.slice(0, 40)).join(' | '));
     const s = (await call('set_unreal_project', { animContentPath: '/Game/UPE/SmokeAnim/', animSkeleton: '/Game/Smoke/YBot' })).json;
     check('UA: set_unreal_project (anim yolu + iskelet)', s?.animContentPath === '/Game/UPE/SmokeAnim' && s.animSkeleton === '/Game/Smoke/YBot' && s.mcpUrl === deadUrl, JSON.stringify({ a: s?.animContentPath, s: s?.animSkeleton }));
-    // ue-mcp sürümü: sahte projenin .mcp.json'u (oyun projesi gibi) → ayar önce gelir → boş ayar yine projeye döner
-    fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@1.4.13', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
+    // ue-mcp sürümü (karar bekliyor): projenin .mcp.json'u kendiliğinden KULLANILMAZ, yalnız raporlanır + uyarı; ayar önce gelir
+    fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@9.9.9', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
     const v1 = (await call('get_unreal_info')).json;
-    const v2 = (await call('set_unreal_project', { ueMcpVersion: '1.4.12' })).json;
+    const v2 = (await call('set_unreal_project', { ueMcpVersion: '9.9.9' })).json;
     const v3 = (await call('set_unreal_project', { ueMcpVersion: '' })).json;
-    check('UA: ue-mcp sürümü (proje .mcp.json → ayar → proje)', v1?.ueMcpVersionUsed === '1.4.13' && v1.ueMcpVersionSource === 'proje .mcp.json' && v2?.ueMcpVersionUsed === '1.4.12' && v2.ueMcpVersionSource === 'ayar' && v3?.ueMcpVersionUsed === '1.4.13' && v3.ueMcpVersion === null,
+    check('UA: ue-mcp sürümü (varsayılan + proje uyarısı → ayar → varsayılan)', v1?.ueMcpVersionSource === 'varsayılan' && v1.ueMcpVersionUsed !== '9.9.9' && v1.projectUeMcpVersion === '9.9.9' && /9\.9\.9/.test(v1.ueMcpVersionWarning || '')
+      && v2?.ueMcpVersionUsed === '9.9.9' && v2.ueMcpVersionSource === 'ayar' && !v2.ueMcpVersionWarning && v3?.ueMcpVersionSource === 'varsayılan' && v3.ueMcpVersion === null,
       [v1, v2, v3].map((v) => `${v?.ueMcpVersionUsed}/${v?.ueMcpVersionSource}`).join(' → '));
     // rig yokken / olmayan animasyon / http hedefi (editör yok): anlaşılır hata, isError değil
     await postJ('/api/rig', { modelName: null, rig: null });

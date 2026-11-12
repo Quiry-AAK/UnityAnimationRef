@@ -35,13 +35,14 @@ Katmanlar:
 - `public/` — sağ panelde **Unreal** bölümü (proje yolu, MCP adresi, ue-mcp sürümü, içerik yolu, animasyonda hedef iskelet;
   bağlantı durumu), Animasyon ve VFX modlarında üst barda **⇪ Unreal'e gönder** (Ctrl+Shift+Enter).
 
-### ue-mcp sürümü
+### ue-mcp sürümü (karar bekliyor)
 ue-mcp sunucusu ile projedeki `UE_MCP_Bridge` eklentisi birlikte sürümlenir; farklı sürümler eylem adlarında/parametrelerde
-uyuşmayabilir. Örnek: oyun projesi (`D:\Can You Hear Me Director`) kendi `.mcp.json`'unda `ue-mcp@1.4.13`'e sabitli, UPE'nin
-istemci varsayılanı `1.4.12`. Bu yüzden kullanılan sürüm sırayla: **ayar** (`set_unreal_project { ueMcpVersion }` / paneldeki
-"ue-mcp sürümü") → **projenin `.mcp.json`'undaki `ue-mcp@x.y.z`** (yalnız okunur) → `UPE_UE_MCP_VERSION` ortam değişkeni →
-`1.4.12`. Hedef dizesi `ue-mcp@1.4.13:<uproject>` biçimini de kabul eder. `get_unreal_info` → `ueMcpVersionUsed`,
-`ueMcpVersionSource` hangisinin seçildiğini söyler. Aynı projede Claude Code'un kendi ue-mcp'si de çalışıyorsa ikisi aynı sürümde
+uyuşmayabilir. Şu an: oyun projesi (`D:\Can You Hear Me Director`) kendi `.mcp.json`'unda `ue-mcp@1.4.13`'e sabitli, UPE'nin istemci
+varsayılanı `1.4.12`. **Sürüm kararı bekliyor** (2026-11-12: yeni bir ue-mcp sürümü kurulacak); UPE sürümü kendiliğinden değiştirmez.
+Kullanılan sürüm: **ayar** (`set_unreal_project { ueMcpVersion }` / paneldeki "ue-mcp sürümü") → `UPE_UE_MCP_VERSION` ortam değişkeni →
+`1.4.12`. Projenin `.mcp.json`'undaki `ue-mcp@x.y.z` yalnız okunur: `get_unreal_info` → `projectUeMcpVersion`, farklıysa
+`ueMcpVersionWarning` (panelde de uyarı). `ueMcpVersionUsed` / `ueMcpVersionSource` kullanılanı söyler. Hedef dizesi
+`ue-mcp@x.y.z:<uproject>` biçimini de kabul eder. Aynı projede Claude Code'un kendi ue-mcp'si de çalışıyorsa ikisi aynı sürümde
 olmalı (köprü tek).
 
 ## Arayüz (`lib/unreal-vfx.js`)

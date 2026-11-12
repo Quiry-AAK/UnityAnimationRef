@@ -924,7 +924,8 @@ $('#btnUSend').onclick = () => sendCurrent();
 function setUnrealDot(st) { const d = $('#unrDot'); d.className = 'dot ' + (st?.connected ? 'ok' : st ? 'bad' : ''); d.title = st?.connected ? `Unreal bağlı${st.projectName ? ' · ' + st.projectName : ''}${st.engineVersion ? ' · UE ' + st.engineVersion : ''}` : 'Unreal editörüne bağlı değil' + (st?.error ? ': ' + st.error : ''); }
 function fillUnreal(u) {
   for (const [id, k] of [['#unrProject', 'project'], ['#unrMcp', 'mcpUrl'], ['#unrContent', 'contentPath'], ['#unrAnimContent', 'animContentPath'], ['#unrSkeleton', 'animSkeleton'], ['#unrVer', 'ueMcpVersion']]) if (document.activeElement !== $(id)) $(id).value = u[k] || '';
-  $('#unrVer').placeholder = u.ueMcpVersionUsed ? `${u.ueMcpVersionUsed} (${u.ueMcpVersionSource})` : 'örn: 1.4.13';
+  $('#unrVer').placeholder = u.ueMcpVersionUsed ? `${u.ueMcpVersionUsed} (${u.ueMcpVersionSource})` : '1.4.12';
+  $('#unrVer').title = u.ueMcpVersionWarning || (u.projectUeMcpVersion ? `Proje .mcp.json: ue-mcp@${u.projectUeMcpVersion}` : '');
 }
 async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna bağlanmayı dene (/api/unreal/status)
   const u = await fetch(probe ? '/api/unreal/status' : '/api/unreal').then((r) => r.json()).catch(() => null);
@@ -933,6 +934,7 @@ async function refreshUnreal(probe = true) { // probe: editörün MCP sunucusuna
   const proj = u.projectValid ? `Proje: ${u.projectName}` : u.project ? 'Proje klasöründe .uproject yok' : 'Proje ayarlı değil (gönderim için zorunlu değil)';
   if (probe) { setUnrealDot(u.status); $('#unrStatus').textContent = `${proj} · ${u.status?.connected ? 'Unreal bağlı' + (u.status.projectName ? ' (' + u.status.projectName + ')' : '') : 'Unreal bağlı değil' + (u.status?.error ? ': ' + u.status.error : '')}`; }
   else $('#unrStatus').textContent = proj;
+  if (u.ueMcpVersionWarning) $('#unrStatus').textContent += ' · ⚠ ' + u.ueMcpVersionWarning;
   return u;
 }
 async function saveUnrealCfg() {
