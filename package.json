@@ -1,7 +1,7 @@
 {
   "name": "unity-preview-editor",
   "version": "2.0.0",
-  "description": "Unity Preview Editor: animasyon, VFX, materyal ve shader editörü (three.js), Claude için MCP, Unity aktarımı",
+  "description": "Browser-based preview editor for animation, VFX, materials and shaders, driven by an AI assistant over MCP, with export to Unity and Unreal Engine 5",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,7 @@
     "smoke": "node tools/mcp-smoke.mjs",
     "hlsl-test": "node tools/hlsl-gen-test.mjs"
   },
-  "author": "",
+  "author": "Quiry-AAK",
   "license": "ISC",
   "type": "module",
   "dependencies": {

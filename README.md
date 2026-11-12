@@ -1,62 +1,91 @@
 # Unity Preview Editor (UPE)
 
-Unity için önizleme editörü (three.js) + Claude için MCP + Unity'ye tek tıkla aktarım; **VFX ve animasyon artık Unreal Engine 5'e de
-gönderilir** (Niagara System / AnimSequence, çalışan UE editörüne ue-mcp üzerinden). Eski adı **Anim Ref**.
-İşi Claude yapar (MCP araçlarıyla), kullanıcı editörde izler ve isterse değerlerle oynar; onaylanan iş Unity'ye ya da Unreal'e gider
-(yalnız kullanıcı gönder deyince; hiçbir şey kendiliğinden motora gitmez).
+A browser-based preview editor for **animation, VFX, materials and shaders**, built on three.js and driven by an AI assistant over the [Model Context Protocol](https://modelcontextprotocol.io). Design in the preview, then send the result to **Unity** or **Unreal Engine 5** with one click.
 
-Modlar (üst bardaki anahtar):
-- **Animasyon** — Mixamo/Humanoid rig üzerinde key'li animasyon → Unity `.anim` ya da **Unreal AnimSequence**
-- **VFX** — Unity ParticleSystem'e birebir karşılık gelen çok katmanlı parçacık efektleri → Unity prefab ya da **Unreal Niagara System**
-- **Materyal** — Unity materyalleri (oyunun shader'ları, URP Lit/Unlit/Particles ya da özel shader) küre/kahraman/eşya üzerinde → Unity `.mat`
-- **Shader** — özel shader'lar UPE-SL ile (Unity HLSL alt kümesi): Unity'de aynen URP shader'ı olur, editör GLSL'e çevirip önizler → Unity `.shader`
-- **Model** — GLB/FBX/OBJ görüntüleyici: ölçü, üçgen, parça, materyal, doku, kemik bilgisi; kil/normal/UV/tel kafes/iskelet görünümleri, gömülü animasyon (yalnız görüntüleme, Unity'ye gönderim yok)
+The assistant does the authoring through MCP tools while you watch live in the editor and tweak values by hand. Nothing is ever sent to an engine on its own: export happens only when you press send.
 
-## Kurulum (herhangi bir klasörde)
+> Formerly known as *Anim Ref*.
+
+## Modes
+
+| Mode | What it does | Exports to |
+| --- | --- | --- |
+| **Animation** | Keyframed animation on a Mixamo/Humanoid rig | Unity `.anim`, Unreal `AnimSequence` |
+| **VFX** | Layered particle effects that map one-to-one onto Unity's `ParticleSystem` | Unity prefab, Unreal Niagara System |
+| **Material** | Unity materials (URP Lit/Unlit/Particles or custom shaders) on a sphere, character or prop | Unity `.mat` |
+| **Shader** | Custom shaders in UPE-SL (a Unity HLSL subset), previewed as GLSL | Unity URP `.shader` |
+| **Model** | GLB/FBX/OBJ viewer: dimensions, triangles, parts, materials, textures, bones, clay/normal/UV/wireframe/skeleton views | View only |
+
+## Quick start
+
+Requires Node.js 18 or newer.
+
 ```bash
-git clone <repo-url> AnimRef
-cd AnimRef
+git clone https://github.com/Quiry-AAK/UnityAnimationRef.git
+cd UnityAnimationRef
 npm install
-npm start            # editör: http://localhost:5177
+npm start
 ```
-Gereken: Node.js 18+. Port: `UPE_PORT` (eski `ANIMREF_PORT` da geçerli).
 
-## Claude'a bağlama (MCP)
-Claude Code'da bir kez:
+The editor opens at <http://localhost:5177>. Set the `UPE_PORT` environment variable to change the port.
+
+## Connect it to an AI assistant (MCP)
+
+Register the MCP server once with Claude Code, using the absolute path to your clone:
+
 ```bash
-claude mcp add unity-preview -- node C:/YOL/AnimRef/mcp.js
+claude mcp add unity-preview -- node /absolute/path/to/UnityAnimationRef/mcp.js
 ```
-ya da proje klasörüne `.mcp.json.example` dosyasını `.mcp.json` olarak kopyalayıp yolu düzelt. MCP çalışınca editör sunucusu
-otomatik başlar (her chat kendi portunu alır).
 
-Ayrıntılı kullanım, kısayollar ve teknik notlar: [NOTLAR.md](NOTLAR.md) · Sözleşmeler: [docs/VFX.md](docs/VFX.md), [docs/MATERIAL.md](docs/MATERIAL.md), [docs/UNREAL.md](docs/UNREAL.md)
+Alternatively, copy [`.mcp.json.example`](.mcp.json.example) to `.mcp.json` in your project and fix the path. Once the MCP server is running, the editor server starts automatically, and each chat session gets its own port.
 
-## Unreal'e gönderme (VFX + animasyon)
-UE5 editörü açık ve projede ue-mcp köprü eklentisi (`UE_MCP_Bridge`) yüklü olmalı; UPE `npx ue-mcp@<sürüm> <uproject>`'i kendisi başlatır
-(sürüm projenin köprü eklentisinden: oyun projesi 1.4.13, Elarion 1.4.12; panelden elle de seçilir). Sağ panel → **Unreal** (proje, MCP hedefi, ue-mcp sürümü, içerik yolu,
-animasyonda hedef iskelet; bağlantı göstergesi) → üst bar **⇪ Unreal'e gönder** (Ctrl+Shift+Enter) ya da MCP `send_vfx_to_unreal` /
-`send_animation_to_unreal`.
-- VFX: `<içerik yolu>/NS_<ad>` Niagara System (varsayılan `/Game/UPE/VFX`).
-- Animasyon: `<içerik yolu>/A_<ad>` AnimSequence (varsayılan `/Game/UPE/Animations`), UE'deki aynı Mixamo karakterinin iskeletine yazılır.
+## Sending to Unreal Engine 5
 
-Editöre betik kurulmaz. Ayrıntı: [docs/UNREAL.md](docs/UNREAL.md).
+Requirements: a running UE5 editor with the `UE_MCP_Bridge` plugin from [ue-mcp](https://www.npmjs.com/package/ue-mcp) installed in the project. UPE launches `npx ue-mcp@<version> <uproject>` itself, picking the version from the project's bridge plugin (it can also be chosen by hand in the panel).
 
-## Klasörler
-- `models/` karakterler (repoda yok — kendin koy) · `props/` eşyalar (GLB/FBX) · `meshes/` Model sekmesinde görüntülenen genel modeller (repoda yok)
-- `animations/` animasyon kütüphanesi (json repoda, fbx değil) · `vfx/` efekt kütüphanesi (json) · `vfx/textures/` parçacık dokuları (png)
-- `shaders/` özel shader'lar (json) · `materials/` materyaller (json) · `materials/textures/` materyal dokuları (png)
-- `exports/` çıktılar · `unity/` Unity editör scriptleri (gönderimde projeye otomatik kurulur)
-- `public/` editör (app.js animasyon + mod sistemi, vfx*.js VFX, material.js Materyal/Shader modları, model.js Model modu, shader-compile.js UPE-SL→GLSL,
-  shader-schema.js + vfx-schema.js formatlar, shader-builtins.js hazır shader portları — MCP de şema dosyalarını kullanır)
-- `lib/shader-hlsl.js` UPE shader → Unity URP `.shader` üretici · `lib/unreal-vfx.js` VFX → Unreal Niagara · `lib/unreal-anim.js` animasyon → Unreal AnimSequence · `lib/unreal-mcp-client.js` UE MCP (ue-mcp) istemcisi
-- `tools/` yardımcılar: `gen-vfx-textures.mjs`, `gen-material-textures.mjs` (yerleşik dokular), `mcp-smoke.mjs` (MCP uçtan uca testi), `hlsl-gen-test.mjs`, `ue-vfx-plan-test.mjs` / `ue-anim-plan-test.mjs` (Unreal dönüştürme, editörsüz), animasyon üreteçleri
+Open the **Unreal** panel on the right (project, MCP target, ue-mcp version, content path, target skeleton for animation), then use **Send to Unreal** in the top bar (`Ctrl+Shift+Enter`) or the MCP tools `send_vfx_to_unreal` and `send_animation_to_unreal`.
 
-## MCP araçları
-- Genel: `get_status`, `set_editor_mode`
-- Animasyon: `set_keys`, `set_animation`, `get_animation`, `clear_keys`, `sample_pose`, `get_user_edits`, `render_frame`, `list/save/load/delete_animation`, `list_props`, `attach/update/detach_prop`, `list_models`, `load_model`, `export_gif`, `export_for_unity`, `send_to_unity`, `send_animation_to_unreal`
-- VFX: `vfx_reference` (önce bu), `get_vfx`, `set_vfx`, `update_vfx`, `add_emitter`, `remove_emitter`, `get_vfx_user_edits`, `render_vfx`, `fit_arc_from_animation`, `list/save/load/delete_vfx`, `list_vfx_textures`, `send_vfx_to_unity`, `send_vfx_to_unreal`
-- Materyal/Shader: `material_reference` (önce bu), `list/get/new/set/update/save/load/delete_material`, `list/get/new/set/update/save/load/delete_shader`
-  (set/update shader editörün GLSL derleme sonucunu döner), `assign_material` (kahramana/eşyaya giydir), `get/set_lighting`, `render_material`,
-  `get_material_user_edits`, `get_shader_user_edits`, `list_material_textures`, `send_material_to_unity`, `send_shader_to_unity`
-- Model: `list_model_files`, `view_model` (ad ya da mutlak yol + görünüm ayarları; modelin bilgisini döner), `get_model_view`, `render_model`
-- Unity: `get_unity_info`, `set_unity_project` · Unreal: `get_unreal_info`, `set_unreal_project`
+- **VFX** becomes a Niagara System at `<content path>/NS_<name>` (default `/Game/UPE/VFX`).
+- **Animation** becomes an AnimSequence at `<content path>/A_<name>` (default `/Game/UPE/Animations`), written onto the skeleton of the matching Mixamo character in Unreal.
+
+No scripts are installed into the editor. Details and verification status: [docs/UNREAL.md](docs/UNREAL.md).
+
+## Sending to Unity
+
+Set the Unity project folder (the one containing `Assets` and `ProjectSettings`) in the **Unity** panel or with `set_unity_project`. The importer scripts from [`unity/`](unity) are installed into the project under `Assets/Editor/AnimRef/` automatically and updated on every send.
+
+## MCP tools
+
+- **General:** `get_status`, `set_editor_mode`
+- **Animation:** `set_keys`, `set_animation`, `get_animation`, `clear_keys`, `sample_pose`, `get_user_edits`, `render_frame`, `list/save/load/delete_animation`, `list_props`, `attach/update/detach_prop`, `list_models`, `load_model`, `export_gif`, `export_for_unity`, `send_to_unity`, `send_animation_to_unreal`
+- **VFX:** `vfx_reference` (call this first), `get_vfx`, `set_vfx`, `update_vfx`, `add_emitter`, `remove_emitter`, `get_vfx_user_edits`, `render_vfx`, `fit_arc_from_animation`, `list/save/load/delete_vfx`, `list_vfx_textures`, `send_vfx_to_unity`, `send_vfx_to_unreal`
+- **Material and shader:** `material_reference` (call this first), `list/get/new/set/update/save/load/delete_material`, `list/get/new/set/update/save/load/delete_shader`, `assign_material`, `get/set_lighting`, `render_material`, `get_material_user_edits`, `get_shader_user_edits`, `list_material_textures`, `send_material_to_unity`, `send_shader_to_unity`
+- **Model:** `list_model_files`, `view_model`, `get_model_view`, `render_model`
+- **Targets:** `get_unity_info`, `set_unity_project`, `get_unreal_info`, `set_unreal_project`
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `public/` | The editor: animation and mode system (`app.js`), VFX (`vfx*.js`), material and shader modes (`material.js`), model viewer (`model.js`), UPE-SL to GLSL compiler (`shader-compile.js`), format schemas (`*-schema.js`) |
+| `lib/` | Exporters and clients: `shader-hlsl.js` (UPE shader to Unity URP), `unreal-vfx.js` (VFX to Niagara), `unreal-anim.js` (animation to AnimSequence), `unreal-mcp-client.js` (ue-mcp client) |
+| `unity/` | Unity editor scripts, installed into the target project on export |
+| `docs/` | Format and integration references: [VFX](docs/VFX.md), [Material](docs/MATERIAL.md), [Unreal](docs/UNREAL.md) |
+| `tools/` | Texture generators, an end-to-end MCP smoke test (`npm run smoke`), converter tests |
+| `animations/`, `vfx/`, `shaders/`, `materials/` | Saved libraries as JSON, plus generated textures |
+| `models/`, `meshes/`, `props/` | Your own characters, meshes and props. Large binaries are not in the repository, so add your own |
+
+More usage notes, shortcuts and technical details: [NOTLAR.md](NOTLAR.md) (Turkish).
+
+## Development
+
+```bash
+npm start            # run the editor
+npm run smoke        # MCP end-to-end test
+npm run hlsl-test    # UPE shader to HLSL generator test
+npm run textures     # regenerate built-in textures
+```
+
+## Documentation language
+
+The reference documents in `docs/` and `NOTLAR.md` are currently written in Turkish. The README and the editor's tool descriptions are in English.
