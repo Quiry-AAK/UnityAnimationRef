@@ -1,7 +1,12 @@
-# Unreal Engine desteği (VFX) — sözleşme
+# Unreal Engine desteği (VFX + animasyon) — sözleşme
 
-Amaç: efekt UPE'de yapılır (aynı şema, aynı önizleme, aynı MCP araçları), sonra **Unreal'e gönder** ile UE5 projesinde
-**Niagara System** olur. Unity gönderimi aynen kalır; şimdilik Unreal desteği yalnız VFX içindir.
+Amaç: efekt ve animasyon UPE'de yapılır (aynı şema, aynı önizleme, aynı MCP araçları), sonra **Unreal'e gönder** ile UE5
+projesinde efekt **Niagara System**, animasyon **AnimSequence** olur. Unity gönderimi aynen kalır. Materyal/shader modları
+Unreal'e ayrıca gönderilmez (VFX'in kullandığı materyaller efektle birlikte gider). Animasyon kısmı: aşağıda
+[Animasyon → AnimSequence](#animasyon--animsequence).
+
+**Onay kuralı:** hiçbir şey kendiliğinden gitmez. Aktarım yalnız kullanıcı düğmeye (ya da Ctrl+Shift+Enter) bastığında veya
+açıkça istediği için Claude `send_vfx_to_unreal` / `send_animation_to_unreal` çağırdığında olur.
 
 Aşama 1: `vfx-schema.js` modülleri → Niagara modülleri, dokulu yerleşik parçacık materyalleri.
 Aşama 2: UPE-SL (özel shader) materyalleri → UE Custom HLSL düğümlü materyaller (`renderer.material`).
@@ -10,7 +15,7 @@ Aşama 2: UPE-SL (özel shader) materyalleri → UE Custom HLSL düğümlü mate
 UPE sunucusu (Node), çalışan Unreal editörüne MCP istemcisi olarak bağlanır ve Epic'in yerleşik
 `NiagaraToolsets.NiagaraToolset_System` araçlarıyla (`CreateNiagaraSystem`, `AddEmitter`, `AddModule`, `SetStackInputData`,
 `AddRenderer`, `SetRendererData`, …) sistemi kurar. **Hedef (2026-11-07): ue-mcp** (`mcpUrl: 'ue-mcp'` varsayılan): istemci
-`npx ue-mcp@1.4.12 <uproject>` sunucusunu stdio ile başlatır; Epic araçları `epic(call_tool, {toolset, tool, input})` ile çağrılır,
+`npx ue-mcp@<sürüm> <uproject>` sunucusunu stdio ile başlatır (sürüm: aşağıda "ue-mcp sürümü"); Epic araçları `epic(call_tool, {toolset, tool, input})` ile çağrılır,
 sonuç `.result` içinde gelir. Epic'in asenkron `GetSystemCompileState`'i ue-mcp'de çalışmadığı için derleme ue-mcp'nin
 `niagara(compile)` eylemiyle beklenir. Editörde `UE_MCP_Bridge` eklentisi yüklü olmalı. Eski Epic `ModelContextProtocol`
 (HTTP, `http://…:8000/mcp`) hâlâ desteklenir ama Elarion'da kapatıldı. Git Bash'te `--content /Game/...` verirken
@@ -20,12 +25,24 @@ Editörde Python betiği ya da eklenti kurulmaz. Editör kapalıysa gönderim an
 Katmanlar:
 - `lib/unreal-vfx.js` — **dönüştürücü + yürütücü** (tek giriş noktası `sendVfxToUnreal`). Saf eşleme kısmı
   (`effectToNiagaraPlan(effect) → plan`) editörsüz test edilebilir; yürütme `plan`'ı MCP çağrılarına çevirir.
-- `lib/unreal-mcp-client.js` — Unreal MCP'ye HTTP istemcisi (`@modelcontextprotocol/sdk` Streamable HTTP; araçlar
-  `call_tool { toolset_name, tool_name, arguments }` üzerinden).
-- `server.js` — `state.unreal = { project, mcpUrl, contentPath }`, `POST /api/unreal/config`, `POST /api/unreal/send-vfx`.
-- `mcp.js` — `send_vfx_to_unreal { name?, all? }`, `get_unreal_info`, `set_unreal_project`.
-- `public/` — sağ panelde **Unreal** bölümü (proje yolu, MCP adresi, bağlantı durumu), VFX modunda üst barda
-  **⇪ Unreal'e gönder**.
+- `lib/unreal-anim.js` — animasyon dönüştürücü + yürütücü (`animToUnrealPlan` saf, `sendAnimToUnreal`); aşağıda.
+- `lib/unreal-mcp-client.js` — Unreal MCP istemcisi: ue-mcp (stdio, `npx ue-mcp@<sürüm> <uproject>`) ya da eski Epic HTTP
+  (`@modelcontextprotocol/sdk` Streamable HTTP; araçlar `call_tool { toolset_name, tool_name, arguments }` üzerinden).
+- `server.js` — `state.unreal = { project, mcpUrl, contentPath, animContentPath, animSkeleton, ueMcpVersion }`,
+  `POST /api/unreal/config`, `POST /api/unreal/send-vfx`, `POST /api/unreal/send-anim`.
+- `mcp.js` — `send_vfx_to_unreal { name?, all? }`, `send_animation_to_unreal { animation?, all?, skeleton? }`, `get_unreal_info`,
+  `set_unreal_project`.
+- `public/` — sağ panelde **Unreal** bölümü (proje yolu, MCP adresi, ue-mcp sürümü, içerik yolu, animasyonda hedef iskelet;
+  bağlantı durumu), Animasyon ve VFX modlarında üst barda **⇪ Unreal'e gönder** (Ctrl+Shift+Enter).
+
+### ue-mcp sürümü
+ue-mcp sunucusu ile projedeki `UE_MCP_Bridge` eklentisi birlikte sürümlenir; farklı sürümler eylem adlarında/parametrelerde
+uyuşmayabilir. Örnek: oyun projesi (`D:\Can You Hear Me Director`) kendi `.mcp.json`'unda `ue-mcp@1.4.13`'e sabitli, UPE'nin
+istemci varsayılanı `1.4.12`. Bu yüzden kullanılan sürüm sırayla: **ayar** (`set_unreal_project { ueMcpVersion }` / paneldeki
+"ue-mcp sürümü") → **projenin `.mcp.json`'undaki `ue-mcp@x.y.z`** (yalnız okunur) → `UPE_UE_MCP_VERSION` ortam değişkeni →
+`1.4.12`. Hedef dizesi `ue-mcp@1.4.13:<uproject>` biçimini de kabul eder. `get_unreal_info` → `ueMcpVersionUsed`,
+`ueMcpVersionSource` hangisinin seçildiğini söyler. Aynı projede Claude Code'un kendi ue-mcp'si de çalışıyorsa ikisi aynı sürümde
+olmalı (köprü tek).
 
 ## Arayüz (`lib/unreal-vfx.js`)
 ```js
@@ -215,3 +232,58 @@ tick'lediği ve burst'ler güvenilir yakalanmadığı için), `--nomat` (Aşama 
 `tools/ue-vfx-cap.mjs [--dir x,y,z] [--target x,y,z] [--dist cm] [--times ..] <NS>`: Simulate'te sahneye geçici koyup
 `exports/ue_vfx/cap_<tag>_<t>.png` yazar (harita kaydedilmez, aktör kaldırılır).
 Not: yeni bir materyal ilk gönderimde arka planda Niagara köşe fabrikaları için derlenir; birkaç saniye görünmeyebilir.
+
+## Animasyon → AnimSequence (`lib/unreal-anim.js`)
+Animasyon modunda **⇪ Unreal'e gönder** (Ctrl+Shift+Enter) ya da MCP `send_animation_to_unreal { animation?, all?, skeleton? }`:
+animasyon `<animContentPath>/A_<ad>` (varsayılan `/Game/UPE/Animations`) AnimSequence olur. Yalnız ue-mcp hedefinde çalışır
+(eski Epic HTTP eklentisinde animasyon araçları yok).
+
+### Seçilen yol ve neden
+Adaylar: (a) animasyonu FBX/glTF olarak dışa aktarıp ue-mcp `asset(import_animation / import_skeletal_mesh)` ile almak,
+(b) ue-mcp'nin animasyon eylemleriyle AnimSequence'ı doğrudan kurmak. **(b) seçildi:**
+- UPE'de FBX yazıcı yok (three.js'te FBXExporter yok); glTF içe aktarımı UE'de yeni iskelet/mesh üretir, oyunun karakterine
+  bağlamak için yine retarget gerekir. Ara dosya, içe aktarma diyaloğu/ayarı ve eksen dönüşümü belirsizliği yok.
+- ue-mcp 1.4.13 bunu karşılıyor: `animation(create_sequence)` (iskelet + kare sayısı + kare hızı), `animation(bake_keyframes_batch)`
+  (tüm kemik izleri tek işlemde, eksik iz oluşturulur, hata olursa yarım başarı dönmez, kaydeder), `set_sequence_properties`
+  (loop), `get_bone_transforms` (hedefin yerel rest pozu). Eylem ve parametre adları ue-mcp 1.4.13 paketinden
+  (`dist/tools/specs/animation.generated.js` + köprü C++'ı) okundu.
+- Anahtarlar doğrudan oyunun iskeletine yazılır; UE'de ek adım gerekmez.
+
+**Rig / retarget:** en basit yol seçildi: hedef, UE'deki **aynı Mixamo karakteri** (aynı kemik adları). Ad eşlemesi harf/rakam
+dışını atar (UE `mixamorig_Hips` / `mixamorig:Hips` ↔ UPE `mixamorigHips`), olmazsa `mixamorig` önekisiz dener (`Hips`).
+Hedef iskelet ayardan (`animSkeleton`: SkeletalMesh ya da Skeleton yolu) ya da gönderimde `skeleton` parametresinden gelir; boşsa
+projedeki SkeletalMesh'ler arasından UPE kemiklerinin en az %50'sini taşıyan en iyi aday seçilir ve yanıtta `skeletonAuto`
+olarak söylenir. Oyun karakteri Mixamo değilse (ör. UE Mannequin): önce Mixamo karakterine gönder, sonra UE'de IK Retargeter
+ile çevir (ue-mcp `animation(batch_retarget_animations { retargeterPath, sourceMesh, targetMesh, animPaths })`). Bu adım UPE'ye
+bilerek eklenmedi: retargeter ve IK Rig'ler projeye özgü, oyunda bir kez kurulur.
+
+### Dönüştürme (`animToUnrealPlan(anim, rig, ueBones)` — saf, editörsüz test edilir)
+- Kareler: UPE `length` kare (0…length−1), `fps` → UE `numFrames = length − 1`, `frameRate = round(fps)` (UE tam sayı ister;
+  kesirliyse uyarı). Anahtar sayısı = `length` (UE'de kare sayısı + 1).
+- Retarget dünya uzayında, `unity/AnimRefImporter.cs` ile aynı fikir: her kemiğin UPE dünya dönüşü hedefe eksen eşlemesiyle
+  verilir, `Wue = M(Wg) · K`, yerel = `ebeveynWue⁻¹ · Wue`. Rest pozlar farklı olabilir (T/A poz): kemik eksenleri iki rigde
+  aynıysa `K = 1`; çocuğun yerel ofseti hedefte >10° başka yöne bakıyorsa eksenler farklıdır, o kemikte rest'ler aynı poz
+  sayılır: `K = M(WgRest)⁻¹ · WueRest` (uyarı).
+- **Eksen eşlemesi M kalibre edilir**: UE'nin FBX içe aktarma ayarına (Convert Scene, Force Front X) göre değiştiği için sabit
+  değil; 48 işaretli eksen permütasyonundan rest pozdaki (çocuk − ebeveyn) kemik yönlerine en iyi oturan seçilir (eşitlikte UE
+  FBX varsayılanı `UE = (x, z, y)`). Uyum < 0,9 ise uyarı. Kuaterniyon: `R' = M R Mᵀ` → eksen `det(M)·M·a`, açı aynı.
+- Konum: yalnız UPE'de konum izi olan kemiklere yazılır (diğerleri UE rest konumunda). Kök (ebeveynsiz UPE kemiği) bileşen
+  uzayında mutlak, oran = UE kök yüksekliği / UPE kök yüksekliği; diğerleri UE rest'i + rest'ten sapma × (UE/UPE kemik boyu oranı).
+- İzsiz ve hedef rest'inden ayrılmayan kemik yazılmaz (2 geçiş: çocukları da o rest'e göre hesaplanır). Eşleşmeyen izli kemikler
+  uyarıyla atlanır; hiçbiri eşleşmezse hata.
+- Ölçek izi yok; UE iskeletinde kemik ölçeği 1 varsayılır.
+
+### Yürütme (`sendAnimToUnreal`)
+iskelet (ayar ya da otomatik) → `get_bone_transforms { space: 'local' }` → plan → `<yol>/A_<ad>` varsa ve uzunluğu/kare hızı aynıysa
+yerinde yeniden yazılır (başvurular korunur); uzunluk farklıysa `asset(delete, force:false)` + yeniden kurulur, başka varlık
+kullanıyorsa silinmez ve hata döner → `create_sequence` → `bake_keyframes_batch { save: true }` (zaman aşımı `UPE_UE_TIMEOUT_MS`,
+varsayılan 300 sn) → `set_sequence_properties { loop }`. Yanıt: `{ ok, skeleton, skeletonAuto?, sequences: [{ name, path, frames,
+fps, bones, axes, warnings }], errors }`. Varlık adı ASCII (`Kılıç Savuruş` → `A_Kilic_Savurus`).
+
+### Doğrulama durumu
+- Editörsüz: `node tools/ue-anim-plan-test.mjs` (mcp-smoke de çalıştırır): sahte Mixamo rig'i bilinen eksen eşlemesiyle (FBX
+  varsayılanı, Force Front X, `root` kemikli/kemiksiz) UE iskeletine çevrilir, bir kemiğin ekseni bilerek farklı yapılır; plan UE
+  ileri kinematiğiyle oynatılınca tüm eklemler UPE'nin eşlenmiş eklemlerine ~1e-4 cm, dönüşler ~1e-4° içinde düşüyor.
+- **Gerçek UE editöründe henüz denenmedi** (2026-11-12): ue-mcp yanıt alan adları (`read_sequence` → `lengthSeconds/frameRate`,
+  `list_skeletal_meshes` biçimi), `bake_keyframes_batch`'in kare sayısı eşleşmesi, UE'nin içe aktardığı Mixamo iskeletinin
+  gerçek eksen eşlemesi ve `loop` ayarı ilk denemede kontrol edilmeli.

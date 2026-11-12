@@ -642,19 +642,29 @@ server.registerTool('send_vfx_to_unity', {
   inputSchema: { name: z.string().optional(), all: z.boolean().default(false) },
 }, async ({ name, all }) => { await ensureServer(); return text(await post('/api/unity/send-vfx', { name, all })); });
 
-// ── Unreal'e VFX gönderimi (docs/UNREAL.md): UPE sunucusu çalışan UE editörünün MCP sunucusuna bağlanıp Niagara System kurar
+// ── Unreal'e VFX + animasyon gönderimi (docs/UNREAL.md): UPE sunucusu çalışan UE editörünün MCP sunucusuna bağlanıp Niagara System / AnimSequence kurar
 server.registerTool('get_unreal_info', {
-  description: 'Unreal entegrasyonu durumu: ayarlı UE proje klasörü (.uproject), editörün MCP hedefi (varsayılan ue-mcp = ayarlı projeyle ue-mcp; eski Epic eklentisi için http://…/mcp), içerik yolu (varsayılan /Game/UPE/VFX) ve bağlantı denemesi (status: { connected, projectName?, engineVersion?, error? }). Editör kapalıyken de çalışır (connected:false).',
+  description: 'Unreal entegrasyonu durumu: ayarlı UE proje klasörü (.uproject), editörün MCP hedefi (varsayılan ue-mcp = ayarlı projeyle ue-mcp; eski Epic eklentisi için http://…/mcp), VFX içerik yolu (varsayılan /Game/UPE/VFX), animasyon içerik yolu (animContentPath, varsayılan /Game/UPE/Animations) ve hedef iskeleti (animSkeleton), kullanılan ue-mcp sürümü (ueMcpVersionUsed + kaynağı: ayar / proje .mcp.json / varsayılan) ve bağlantı denemesi (status: { connected, projectName?, engineVersion?, error? }). Editör kapalıyken de çalışır (connected:false).',
   inputSchema: {},
 }, async () => { await ensureServer(); return text(await get('/api/unreal/status')); });
 
 server.registerTool('set_unreal_project', {
-  description: 'Unreal ayarlarını değiştirir (kalıcı; verilmeyen alan aynı kalır). project: .uproject içeren klasör ya da .uproject yolu (Elarion: C:\\Elarion\\Elarion). mcpUrl: MCP hedefi: ue-mcp (varsayılan, ayarlı projeyle), ue-mcp:<.uproject yolu> ya da eski Epic eklentisi için http://…/mcp. contentPath: Niagara sistemlerinin yazılacağı /Game/... yolu.',
-  inputSchema: { project: z.string().optional(), mcpUrl: z.string().optional(), contentPath: z.string().optional() },
-}, async ({ project, mcpUrl, contentPath }) => {
-  await ensureServer(); await post('/api/unreal/config', { project, mcpUrl, contentPath });
+  description: 'Unreal ayarlarını değiştirir (kalıcı; verilmeyen alan aynı kalır, "" varsayılana döndürür). project: .uproject içeren klasör ya da .uproject yolu (Elarion: C:\\Elarion\\Elarion). mcpUrl: MCP hedefi: ue-mcp (varsayılan, ayarlı projeyle), ue-mcp:<.uproject yolu> ya da eski Epic eklentisi için http://…/mcp. contentPath: Niagara sistemlerinin yazılacağı /Game/... yolu. '
+    + 'animContentPath: animasyonların (AnimSequence) yazılacağı /Game/... yolu (varsayılan /Game/UPE/Animations). animSkeleton: animasyonun hedef iskeleti — UE\'deki aynı Mixamo karakterinin SkeletalMesh ya da Skeleton yolu (boşsa UPE rigine en çok uyan aranır). '
+    + 'ueMcpVersion: çağrılacak ue-mcp sürümü (x.y.z); boşsa projenin kendi .mcp.json\'undaki ue-mcp@x.y.z kullanılır (projedeki UE_MCP_Bridge eklentisiyle aynı sürüm olmalı).',
+  inputSchema: { project: z.string().optional(), mcpUrl: z.string().optional(), contentPath: z.string().optional(), animContentPath: z.string().optional(), animSkeleton: z.string().optional(), ueMcpVersion: z.string().optional() },
+}, async ({ project, mcpUrl, contentPath, animContentPath, animSkeleton, ueMcpVersion }) => {
+  await ensureServer(); await post('/api/unreal/config', { project, mcpUrl, contentPath, animContentPath, animSkeleton, ueMcpVersion });
   return text(await get('/api/unreal/status'));
 });
+
+server.registerTool('send_animation_to_unreal', {
+  description: 'YALNIZ KULLANICI AÇIKÇA İSTEDİĞİNDE çağır (animasyon önce UPE\'de yapılır, kullanıcı onaylamadan motora aktarılmaz; bu araç kendiliğinden ya da başka bir işin parçası olarak çalıştırılmamalı). '
+    + 'Animasyonu çalışan Unreal editörüne AnimSequence olarak yazar: <animContentPath>/A_<ad> (varsayılan /Game/UPE/Animations), hedef iskelet animSkeleton (set_unreal_project) ya da skeleton parametresi — UE\'deki aynı Mixamo karakteri (kemik adları eşleşmeli; UE "mixamorig_Hips" ↔ UPE "mixamorigHips" eşlenir). '
+    + 'Yol: ue-mcp animation(create_sequence → bake_keyframes_batch → set_sequence_properties loop); retarget dünya uzayında (Unity aktarımıyla aynı fikir), eksen eşlemesi rest pozdan kalibre edilir. Aynı adla tekrar gönderim: uzunluk aynıysa varlık yerinde yeniden yazılır, farklıysa silinip kurulur. '
+    + 'animation: kütüphaneden ad (verilmezse editördeki), all: tüm kütüphane. UE editörü açık ve ue-mcp köprüsü (UE_MCP_Bridge) yüklü olmalı; kapalıysa anlaşılır hatayla döner. Yanıt: { ok, skeleton, sequences: [{ name, path, frames, fps, bones, warnings }], errors } ya da { ok:false, error }.',
+  inputSchema: { animation: z.string().optional(), all: z.boolean().default(false), skeleton: z.string().optional().describe('Bu gönderim için hedef iskelet (UE SkeletalMesh/Skeleton yolu); verilmezse ayar') },
+}, async ({ animation, all, skeleton }) => { await ensureServer(); return text(await post('/api/unreal/send-anim', { animation, all, skeleton })); });
 
 server.registerTool('send_vfx_to_unreal', {
   description: 'Efekti TEK ADIMDA çalışan Unreal editörüne gönderir: Niagara System <contentPath>/NS_<ad> kurulur (aynı adla tekrar gönderim varlığı yerinde yeniden kurar), kullanılan dokular <contentPath>/Textures/T_UPE_<doku> olur. '

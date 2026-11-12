@@ -203,7 +203,7 @@ try {
   // ── Unreal (docs/UNREAL.md): editör yok; MCP adresi boş bir porta ayarlanır (gerçek UE editörüne asla gönderilmez)
   await step('U: Unreal araçları', async () => {
     const names = (await client.listTools()).tools.map((t) => t.name);
-    const missing = ['get_unreal_info', 'set_unreal_project', 'send_vfx_to_unreal'].filter((n) => !names.includes(n));
+    const missing = ['get_unreal_info', 'set_unreal_project', 'send_vfx_to_unreal', 'send_animation_to_unreal'].filter((n) => !names.includes(n));
     check('U: araç listesi', !missing.length, missing.length ? 'eksik: ' + missing.join(', ') : '');
     const deadUrl = `http://127.0.0.1:${await deadPort()}/mcp`;
     const bad = await call('set_unreal_project', { project: os.tmpdir() });
@@ -226,6 +226,46 @@ try {
     check('U: send_vfx_to_unreal (editör yok → anlaşılır hata)', !r.isError && rj?.ok === false && msg.length > 0, msg.slice(0, 120));
     const http = await fetch(BASE + '/api/unreal/status').then((x) => x.json());
     check('U: GET /api/unreal/status', http.status?.connected === false && http.projectName === 'SmokeUE', '');
+  });
+
+  // ── Animasyon → Unreal AnimSequence (docs/UNREAL.md "Animasyon"): saf dönüştürme + sahte proje; gerçek editöre gönderilmez
+  await step('UA: saf dönüştürme (animToUnrealPlan)', async () => {
+    const { runAnimPlanTest } = await import('./ue-anim-plan-test.mjs');
+    for (const [label, opts] of [['FBX varsayılanı', {}], ['Force Front X', { M: [[0, 0, 1], [-1, 0, 0], [0, 1, 0]] }], ['kökü olmayan iskelet', { ueRoot: false }]]) {
+      const cs = runAnimPlanTest(opts); const bad = cs.filter((c) => !c.ok);
+      check(`UA: plan (${label})`, !bad.length, bad.length ? bad.map((c) => `${c.name}: ${c.info}`).join(' | ') : `${cs.length} denetim · ${cs.find((c) => /eklem konumları/.test(c.name))?.info}`);
+    }
+  });
+  await step('UA: send_animation_to_unreal + ayarlar', async () => {
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'send_animation_to_unreal');
+    check('UA: araç listesi + onay kuralı açıklamada', names.includes('send_animation_to_unreal') && /AÇIKÇA/.test(tool?.description || ''), '');
+    const deadUrl = (await call('get_unreal_info')).json?.mcpUrl;
+    if (!/^http/.test(deadUrl || '')) throw new Error('MCP hedefi boş port değil; animasyon gönderimi atlandı (gerçek editöre gitmesin).');
+    // ayarlar: doğrulama + kalıcılık
+    const badA = await call('set_unreal_project', { animContentPath: 'Game/yanlis' });
+    const badS = await call('set_unreal_project', { animSkeleton: 'YBot' });
+    const badV = await call('set_unreal_project', { ueMcpVersion: 'son' });
+    check('UA: geçersiz animContentPath / animSkeleton / ueMcpVersion → hata', badA.isError && badS.isError && badV.isError, [badA, badS, badV].map((x) => x.text.slice(0, 40)).join(' | '));
+    const s = (await call('set_unreal_project', { animContentPath: '/Game/UPE/SmokeAnim/', animSkeleton: '/Game/Smoke/YBot' })).json;
+    check('UA: set_unreal_project (anim yolu + iskelet)', s?.animContentPath === '/Game/UPE/SmokeAnim' && s.animSkeleton === '/Game/Smoke/YBot' && s.mcpUrl === deadUrl, JSON.stringify({ a: s?.animContentPath, s: s?.animSkeleton }));
+    // ue-mcp sürümü: sahte projenin .mcp.json'u (oyun projesi gibi) → ayar önce gelir → boş ayar yine projeye döner
+    fs.writeFileSync(path.join(FAKE_UE, '.mcp.json'), JSON.stringify({ mcpServers: { 'ue-mcp': { command: 'npx', args: ['-y', 'ue-mcp@1.4.13', path.join(FAKE_UE, 'SmokeUE.uproject')] } } }));
+    const v1 = (await call('get_unreal_info')).json;
+    const v2 = (await call('set_unreal_project', { ueMcpVersion: '1.4.12' })).json;
+    const v3 = (await call('set_unreal_project', { ueMcpVersion: '' })).json;
+    check('UA: ue-mcp sürümü (proje .mcp.json → ayar → proje)', v1?.ueMcpVersionUsed === '1.4.13' && v1.ueMcpVersionSource === 'proje .mcp.json' && v2?.ueMcpVersionUsed === '1.4.12' && v2.ueMcpVersionSource === 'ayar' && v3?.ueMcpVersionUsed === '1.4.13' && v3.ueMcpVersion === null,
+      [v1, v2, v3].map((v) => `${v?.ueMcpVersionUsed}/${v?.ueMcpVersionSource}`).join(' → '));
+    // rig yokken / olmayan animasyon / http hedefi (editör yok): anlaşılır hata, isError değil
+    await postJ('/api/rig', { modelName: null, rig: null });
+    const noRig = (await call('send_animation_to_unreal')).json;
+    check('UA: rig yok → anlaşılır hata', noRig?.ok === false && /Rig/.test(noRig.error || ''), (noRig?.error || '').slice(0, 80));
+    await postJ('/api/rig', { modelName: 'smoke', rig: { unitScale: 1, bones: [{ name: 'mixamorigHips', parent: null, restQ: [0, 0, 0, 1], restP: [0, 1, 0] }, { name: 'mixamorigSpine', parent: 'mixamorigHips', restQ: [0, 0, 0, 1], restP: [0, 0.1, 0] }] } });
+    await postJ('/api/anim', { name: 'smoke_anim', fps: 30, length: 3, loop: false, tracks: { mixamorigSpine: { rot: [[0, 0, 0, 0, 1], [2, 0.1, 0, 0, 0.995]] } } });
+    const none = (await call('send_animation_to_unreal', { animation: 'yok_boyle_anim' })).json;
+    check('UA: olmayan animasyon → hata', none?.ok === false && /yok_boyle_anim/.test(none.error || ''), (none?.error || '').slice(0, 80));
+    const r = await call('send_animation_to_unreal'); const rj = r.json;
+    check('UA: send_animation_to_unreal (editör yok → anlaşılır hata)', !r.isError && rj?.ok === false && /ue-mcp/.test(rj.error || ''), (rj?.error || '').slice(0, 120));
   });
 
   await step('get_status (eski araç, son)', async () => {
