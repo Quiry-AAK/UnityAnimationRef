@@ -3,7 +3,7 @@
     "unity-preview": {
       "command": "node",
       "args": [
-        "C:/YOL/BURAYA/AnimRef/mcp.js"
+        "/absolute/path/to/UnityAnimationRef/mcp.js"
       ]
     }
   }
