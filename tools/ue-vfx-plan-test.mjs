@@ -7,6 +7,7 @@ import { normalizeEffect, presetEmitter, PRESETS, defaultEffect, evalCurve } fro
 import { createMaterialLibrary, translateShaderForUE, checkTranslation, planEmitterMaterial, convertSampling, parseCompileErrors, colorToLinear, baseMaterialName, renderStateFor } from '../lib/ue-material.js';
 import { effectToNiagaraPlan, toUE, toUEDir, unityEulerMatrix, toUEMatrix, matVec, curveExpr, f, safeName, quatFromMatrix, quatRotate, DISTORT_HLSL, staleBindings, splitFollowEffects, chunkEffect } from '../lib/unreal-vfx.js';
 import { proceduralMesh, meshToOBJ, fitArc } from '../public/vfx-mesh.js';
+import { translateCall, isModernToolsetList } from '../lib/ue-toolsets.js';
 
 let fails = 0, n = 0;
 const test = (name, fn) => { n++; try { fn(); } catch (e) { fails++; console.error('BAŞARISIZ', name, '\n  ', e.message); } };
@@ -362,6 +363,25 @@ test('materyalli emitter → ueMaterials (ribbon/sprite ayrı)', () => {
   assert.ok(p.ueMaterials.some((m) => m.name === 'kilic_izi_agir' && m.kind === 'ribbon'));
   assert.ok(p.ueMaterials.some((m) => m.kind === 'sprite'));
   assert.ok(!p.warnings.some((w) => /Aşama 2/.test(w)));
+});
+
+// ── araç seti uyumu (UE 5.9: Python editor_toolset.* → C++ EditorToolset.*)
+const MTo = 'editor_toolset.toolsets.material.MaterialTools', ATo = 'editor_toolset.toolsets.asset.AssetTools';
+test('araç seti: eski motorda çağrı olduğu gibi', () => assert.deepEqual(translateCall(false, MTo, 'add_expression', { material_or_function: 1 }), [{ toolset: MTo, tool: 'add_expression', args: { material_or_function: 1 } }]));
+test('araç seti: 5.9 PascalCase yöntem + camelCase argüman', () => assert.deepEqual(translateCall(true, MTo, 'connect_to_output', { expression: 1, output_name: '', material_property: 'MP_Opacity' }),
+  [{ toolset: 'EditorToolset.MaterialToolset', tool: 'ConnectToOutput', args: { expression: 1, outputName: '', materialProperty: 'MP_Opacity' } }]));
+test('araç seti: 5.9 MaterialInstance create → Create', () => assert.equal(translateCall(true, 'editor_toolset.toolsets.material_instance.MaterialInstanceTools', 'create', { folder_path: 'a', asset_name: 'b', parent: 1 })[0].args.folderPath, 'a'));
+test('araç seti: 5.9 save_assets → her yol için SaveAsset', () => assert.deepEqual(translateCall(true, ATo, 'save_assets', { asset_paths: ['/a', '/b'] }).map((c) => c.args.assetPath), ['/a', '/b']));
+test('araç seti: 5.9 AssetTools.import_file yok', () => assert.ok(translateCall(true, ATo, 'import_file', {}).missing));
+test('araç seti: 5.9 StaticMesh import_file → ImportFile', () => assert.equal(translateCall(true, 'editor_toolset.toolsets.static_mesh.StaticMeshTools', 'import_file', { source_file: 'x' })[0].args.sourceFile, 'x'));
+test('araç seti: 5.9 Niagara argüman adları', () => {
+  assert.ok('rendererRef' in translateCall(true, 'NiagaraToolsets.NiagaraToolset_System', 'SetRendererData', { renderer: 1, rendererData: 2 })[0].args);
+  assert.ok('emitterRef' in translateCall(true, 'NiagaraToolsets.NiagaraToolset_System', 'RemoveEmitter', { emitterToRemove: 1 })[0].args);
+  assert.ok('renderer' in translateCall(false, 'NiagaraToolsets.NiagaraToolset_System', 'SetRendererData', { renderer: 1 })[0].args);
+});
+test('araç seti kuşağı tespiti', () => {
+  assert.equal(isModernToolsetList({ toolsets: [{ name: 'EditorToolset.AssetToolset' }] }), true);
+  assert.equal(isModernToolsetList({ toolsets: [{ name: 'editor_toolset.toolsets.asset.AssetTools' }, { name: 'EditorToolset.EditorAppToolset' }] }), false);
 });
 
 console.log(`${n - fails}/${n} test geçti · ${files.length} efekt dosyası, ${emitters} emitter, ${steps} adım`);

@@ -40,6 +40,30 @@ Bazı projelerde (ör. oyun projesi, ue-mcp 1.4.13) ue-mcp kategori araçların�
 listelemez; hepsi tek `tools` geçidinden çağrılır: `tools { action:'call', category, method, args }`. İstemci sunucunun araç listesini
 bir kez okur; kategori aracı yoksa ve `tools` varsa çağrıyı kendiliğinden geçide çevirir (VFX ve animasyon ikisi de). Yanıt biçimi aynı.
 
+### UE 5.9: C++ Epic araç setleri (`lib/ue-toolsets.js`)
+UE 5.9'da Epic'in Python araç setleri (`editor_toolset.toolsets.asset.AssetTools`, `…object.ObjectTools`, `…material.MaterialTools`,
+`…material_instance.MaterialInstanceTools`, `…texture.TextureTools`, `…static_mesh.StaticMeshTools`) kaldırıldı; yerlerinde C++
+`EditorToolset.AssetToolset` / `ObjectToolset` / `MaterialToolset` / `MaterialInstanceToolset` / `TextureToolset` / `StaticMeshToolset`
+var (projede `EditorToolset` ve `NiagaraToolsets` eklentileri etkin olmalı). Gönderici araçları hâlâ eski adlarla çağırır; `Ctx.call`
+gönderimin başında editörün araç seti listesinden kuşağı bir kez anlar (`[unreal] araç setleri: …` günlüğü) ve 5.9'da
+`translateCall` ile çevirir — eski motorlar (Elarion) değişmeden eski adları kullanır:
+- yöntem snake_case → PascalCase (`exists` → `Exists`, `add_expression` → `AddExpression`, MIT `create` → `Create`), üst düzey
+  argümanlar snake_case → camelCase (`material_or_function` → `materialOrFunction`, `folder_path` → `folderPath`; `{ refPath }` aynı);
+- `AssetTools.save_assets { asset_paths }` → her yol için `AssetToolset.SaveAsset { assetPath }`;
+- `AssetTools.import_file` / `import_asset` ve `StaticMeshTools.import_static_mesh`'in karşılığı yok (mesh: `StaticMeshToolset.ImportFile`,
+  doku: `TextureToolset.ImportFile`);
+- Niagara araç seti adı aynı, argüman adları değişti: `SetRendererData { renderer }` → `rendererRef`, `SetEmitterData { emitter }` →
+  `emitterRef`, `RemoveRenderer { rendererToRemove }` → `rendererRef`, `RemoveEmitter { emitterToRemove }` → `emitterRef`.
+
+5.9'un davranış farkları (2026-11-13, oyun projesi A3 worktree'sinde 7 katana efektiyle doğrulandı):
+- **`-nullrhi` editörde materyal derlenmez** (`Recompile`: "this editor has no renderer"). Başsız test için editörü
+  `-RenderOffscreen -unattended -nosplash -NoSound` ile aç.
+- `MaterialExpressionDynamicParameter` çıkışları görünen adlarıyla bağlanır (`Param1..4`; eski motorda `R/G/B/A`). `ensureBaseMaterial`
+  bağlantı hata verirse `GetExpressionOutputNames` ile aynı sıradaki ada düşer.
+- `SetObjectProperties` EditCondition'ı zorlar: başka bir özelliğe bağlı özellik (ör. ışıkta `DefaultExponent` ← `!bUseInverseSquaredFalloff`)
+  aynı çağrıda değiştirilemez. `SetRendererData` toplu ayarı bu hatayı alırsa önce kalanları, sonra bağlı olanları ayrı çağrıda ayarlar.
+- Tek Python araç seti `editor_toolset.toolsets.python_scripting.PythonScriptingTools` kaldı (gönderici kullanmaz).
+
 ### ue-mcp sürümü
 ue-mcp sunucusu ile projedeki `UE_MCP_Bridge` eklentisi birlikte sürümlenir; farklı sürümler eylem adlarında/parametrelerde
 uyuşmayabilir. Projeler farklı sürümde: oyun projesi (`D:\Can You Hear Me Director`) köprüsü ve `.mcp.json`'u **1.4.13** (npm'deki
@@ -134,7 +158,7 @@ Kendi parçacık öznitelikleri `Particles.UPE_*` (R, R2, Col0, Size0, Rot0, Ang
 | `renderer.blend distortion` (+ `renderer.distortion` mode/strength/frequency/scroll) | `MI_UPE_<doku>_Distort_<özet>` ← `M_UPE_Particle_Distortion` (Translucent, Unlit): Custom HLSL (önizleme `DIST_FRAG` ile aynı ofset) → `float4(ofset.x, −ofset.y, maske, 0)` → `SceneColor(OffsetFraction).rgb` → Emissive, maske → Opacity | SceneColor = arkadaki sahne (önizlemedeki sahne hedefi); Refraction/Pixel Normal Offset yerine seçildi çünkü formül önizlemeyle birebir. Önündeki saydamları bükmez |
 | `renderer.material` + `distortion` | `M_UPE_<shader>_Distort` + `MI_UPE_<materyal>_Distort_<güç×1000>`: `frag()` rg = yön, a = maske; `UPE_DistortStrength` | aynı `wireDistortionOutput` |
 | `customData` (x,y,z,w ömür eğrileri) | `Particles.DynamicMaterialParameter` (UPE_Look / UPE_TrailLook) → materyalde `DynamicParameter` (Param1..4) → UPE-SL `i.custom` | Unity'de `i.custom` = 0 (Custom Vertex Streams bağlanmadı) |
-| `light` single | ayrı emitter `<ad>_Isik`: aynı EmitterState, 1 parçacık (SpawnBurst 0), ömür = süre, `NiagaraLightRendererProperties` (`bUseInverseSquaredFalloff` false, `DefaultExponent` 2); `Particles.Color = doğrusal renk × yoğunluk × LIGHT_K × eğri(NormalizedAge)`, `Particles.LightRadius = yarıçap cm` | parlaklık birimi yaklaşık (önizleme three.js kandela); `LIGHT_K = 1` görsel kalibrasyon bekliyor; gölge yok |
+| `light` single | ayrı emitter `<ad>_Isik`: aynı EmitterState, 1 parçacık (SpawnBurst 0), ömür = süre, `NiagaraLightRendererProperties` (`bUseInverseSquaredFalloff` true; `DefaultExponent` ayarlanmaz: ters karede kullanılmaz, UE 5.9 EditCondition reddeder); `Particles.Color = doğrusal renk × yoğunluk × LIGHT_K × eğri(NormalizedAge)`, `Particles.LightRadius = yarıçap cm` | parlaklık birimi yaklaşık (önizleme three.js kandela); `LIGHT_K = 1` görsel kalibrasyon bekliyor; gölge yok |
 | `light` perParticle | ayrı emitter: kaynak emitter'ın adımları **aynı RandomSeed** ile kopyalanır (Niagara determinizmi → aynı parçacıklar), renk adımı yerine `UPE_Light` | doğrulanmadı; `maxLights` Niagara'da sınır değil (uyarı) |
 | `bladeTrail.width`, `taper` | `RibbonWidth = uzunluk × width(yaş) × sizeOverLifetime`; `Particles.Position` = tip: `lerp(uç, kök, w/2)`, root: `lerp(kök, uç, w/2)`, center: orta | |
 | `bladeTrail.uvMode tile`, `tileLength` | Ribbon `UV0Settings { DistributionMode: TiledOverRibbonLength, TilingLength: cm }` | UPE uç yolu, Niagara şerit merkezi uzunluğu (yaklaşık) |
